@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-neutral-50 text-neutral-900 antialiased;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  .dark body,
+  body.dark {
+    @apply bg-neutral-900 text-neutral-50;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white dark:bg-neutral-800 border border-semantic-border rounded-lg shadow-sm;
+  }
+
+  .input-base {
+    @apply w-full rounded-md border border-neutral-200 bg-white px-3 py-2 text-body text-neutral-900
+           placeholder:text-neutral-400
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500
+           disabled:bg-neutral-50 disabled:text-neutral-400 disabled:cursor-not-allowed
+           dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-50 dark:placeholder:text-neutral-500;
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-neutral-100 dark:bg-neutral-800;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 dark:bg-neutral-600 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-400 dark:bg-neutral-500;
+}
+
+/* PWA install animation */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
