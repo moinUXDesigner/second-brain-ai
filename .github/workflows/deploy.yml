@@ -21,6 +21,8 @@ jobs:
           node-version: 18
       - run: npm install
       - run: npm run build
+        env:
+          VITE_GAS_WEB_APP_URL: ${{ secrets.VITE_GAS_WEB_APP_URL }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
