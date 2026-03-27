@@ -224,7 +224,11 @@ function handleGetDailyState(dateStr) {
   var stateSheet = ss.getSheetByName("Daily_State");
   if (!stateSheet) return null;
 
-  var data = stateSheet.getDataRange().getValues();
+  var lastRow = stateSheet.getLastRow();
+  if (lastRow < 2) return null;
+
+  // Read all 6 columns explicitly (A:F) to always include Available_Time
+  var data = stateSheet.getRange(1, 1, lastRow, 6).getValues();
 
   // If looking for a specific date, find it
   if (dateStr) {
@@ -239,8 +243,8 @@ function handleGetDailyState(dateStr) {
             energy: Number(data[i][1]) || 5,
             mood: Number(data[i][2]) || 5,
             focus: Number(data[i][3]) || 5,
-            notes: data[i][4] || "",
-            availableTime: Number(data[i][5]) || 120
+            notes: data[i][4] != null ? String(data[i][4]) : "",
+            availableTime: data[i][5] ? Number(data[i][5]) : 120
           };
         }
       }
@@ -248,21 +252,18 @@ function handleGetDailyState(dateStr) {
   }
 
   // Return latest entry
-  if (data.length > 1) {
-    var last = data[data.length - 1];
-    var lastDate = last[0] ? Utilities.formatDate(new Date(last[0]), Session.getScriptTimeZone(), "yyyy-MM-dd") : "";
-    return {
-      id: String(data.length - 1),
-      date: lastDate,
-      energy: Number(last[1]) || 5,
-      mood: Number(last[2]) || 5,
-      focus: Number(last[3]) || 5,
-      notes: last[4] || "",
-      availableTime: Number(last[5]) || 120
-    };
-  }
-
-  return null;
+  var last = data[data.length - 1];
+  var lastDate = "";
+  try { if (last[0]) lastDate = Utilities.formatDate(new Date(last[0]), Session.getScriptTimeZone(), "yyyy-MM-dd"); } catch (_) {}
+  return {
+    id: String(data.length - 1),
+    date: lastDate,
+    energy: Number(last[1]) || 5,
+    mood: Number(last[2]) || 5,
+    focus: Number(last[3]) || 5,
+    notes: last[4] != null ? String(last[4]) : "",
+    availableTime: last[5] ? Number(last[5]) : 120
+  };
 }
 
 function handleGetDashboard() {
@@ -303,30 +304,38 @@ function handleGetProfile() {
   if (data.length < 2) return null;
 
   var row = data[1];
+
+  var dobStr = "";
+  try { if (row[8]) dobStr = Utilities.formatDate(new Date(row[8]), Session.getScriptTimeZone(), "yyyy-MM-dd"); } catch (_) {}
+  var updStr = "";
+  try { if (row[12]) updStr = Utilities.formatDate(new Date(row[12]), Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss"); } catch (_) {}
+
   return {
-    userId: row[0] || "",
-    name: row[1] || "",
-    workType: row[2] || "",
-    routineType: row[3] || "",
-    availableTime: row[4] || "Medium",
-    commuteTime: row[5] || "",
-    usePersonalData: row[6] === true || row[6] === "TRUE" || row[6] === "Yes",
-    age: row[7] || "",
-    dob: row[8] ? Utilities.formatDate(new Date(row[8]), Session.getScriptTimeZone(), "yyyy-MM-dd") : "",
-    financialStatus: row[9] || "",
-    healthStatus: row[10] || "",
-    customNotes: row[11] || "",
-    updatedAt: row[12] ? Utilities.formatDate(new Date(row[12]), Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss") : ""
+    userId: String(row[0] || ""),
+    name: String(row[1] || ""),
+    workType: String(row[2] || ""),
+    routineType: String(row[3] || ""),
+    availableTime: String(row[4] || "Medium"),
+    commuteTime: String(row[5] || ""),
+    usePersonalData: row[6] === true || String(row[6]).toUpperCase() === "TRUE" || String(row[6]).toUpperCase() === "YES",
+    age: String(row[7] || ""),
+    dob: dobStr,
+    financialStatus: String(row[9] || ""),
+    healthStatus: String(row[10] || ""),
+    customNotes: String(row[11] || ""),
+    updatedAt: updStr
   };
 }
 
 function handleSaveProfile(body) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var sheet = ss.getSheetByName("User_Profile");
-  if (!sheet) return null;
+  if (!sheet) throw new Error("User_Profile sheet not found");
 
   var data = sheet.getDataRange().getValues();
   var now = new Date();
+  var usePersonal = !!body.usePersonalData;
+  var availTime = body.availableTime || "Medium";
 
   if (data.length < 2) {
     if (data.length === 0) {
@@ -339,9 +348,9 @@ function handleSaveProfile(body) {
       body.name || "",
       body.workType || "",
       body.routineType || "",
-      body.availableTime || "Medium",
+      availTime,
       body.commuteTime || "",
-      body.usePersonalData ? "TRUE" : "FALSE",
+      usePersonal,
       body.age || "",
       body.dob || "",
       body.financialStatus || "",
@@ -350,28 +359,31 @@ function handleSaveProfile(body) {
       now
     ]);
   } else {
-    sheet.getRange(2, 2).setValue(body.name || "");
-    sheet.getRange(2, 3).setValue(body.workType || "");
-    sheet.getRange(2, 4).setValue(body.routineType || "");
-    sheet.getRange(2, 5).setValue(body.availableTime || "Medium");
-    sheet.getRange(2, 6).setValue(body.commuteTime || "");
-    sheet.getRange(2, 7).setValue(body.usePersonalData ? "TRUE" : "FALSE");
-    sheet.getRange(2, 8).setValue(body.age || "");
-    sheet.getRange(2, 9).setValue(body.dob || "");
-    sheet.getRange(2, 10).setValue(body.financialStatus || "");
-    sheet.getRange(2, 11).setValue(body.healthStatus || "");
-    sheet.getRange(2, 12).setValue(body.customNotes || "");
-    sheet.getRange(2, 13).setValue(now);
+    var row = [
+      body.name || "",
+      body.workType || "",
+      body.routineType || "",
+      availTime,
+      body.commuteTime || "",
+      usePersonal,
+      body.age || "",
+      body.dob || "",
+      body.financialStatus || "",
+      body.healthStatus || "",
+      body.customNotes || "",
+      now
+    ];
+    sheet.getRange(2, 2, 1, 12).setValues([row]);
   }
 
   return {
-    userId: data.length >= 2 ? (data[1][0] || "U1") : "U1",
+    userId: data.length >= 2 ? String(data[1][0] || "U1") : "U1",
     name: body.name || "",
     workType: body.workType || "",
     routineType: body.routineType || "",
-    availableTime: body.availableTime || "Medium",
+    availableTime: availTime,
     commuteTime: body.commuteTime || "",
-    usePersonalData: !!body.usePersonalData,
+    usePersonalData: usePersonal,
     age: body.age || "",
     dob: body.dob || "",
     financialStatus: body.financialStatus || "",
@@ -586,11 +598,18 @@ function handleDeleteProject(projectId) {
 function handleSaveDailyState(body) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var stateSheet = ss.getSheetByName("Daily_State");
-  if (!stateSheet) return null;
+  if (!stateSheet) throw new Error("Daily_State sheet not found");
 
-  var data = stateSheet.getDataRange().getValues();
+  var lastRow = stateSheet.getLastRow();
   var dateStr = body.date || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
-  var availMins = Number(body.availableTime) || 120;
+  var availMins = (body.availableTime != null && body.availableTime !== "") ? Number(body.availableTime) : 120;
+  var energyVal = body.energy || 5;
+  var moodVal = body.mood || 5;
+  var focusVal = body.focus || 5;
+  var notesVal = (body.notes != null && body.notes !== undefined) ? String(body.notes) : "";
+
+  // Read all 6 columns explicitly to always include Available_Time
+  var data = lastRow >= 1 ? stateSheet.getRange(1, 1, lastRow, 6).getValues() : [];
 
   // Check if entry for this date already exists
   for (var i = 1; i < data.length; i++) {
@@ -598,27 +617,23 @@ function handleSaveDailyState(body) {
     if (rowDate) {
       var formatted = Utilities.formatDate(new Date(rowDate), Session.getScriptTimeZone(), "yyyy-MM-dd");
       if (formatted === dateStr) {
-        // Update existing
-        stateSheet.getRange(i + 1, 2).setValue(body.energy || 5);
-        stateSheet.getRange(i + 1, 3).setValue(body.mood || 5);
-        stateSheet.getRange(i + 1, 4).setValue(body.focus || 5);
-        if (body.notes !== undefined) stateSheet.getRange(i + 1, 5).setValue(body.notes);
-        stateSheet.getRange(i + 1, 6).setValue(availMins);
-        return { id: String(i), date: dateStr, energy: body.energy, mood: body.mood, focus: body.focus, notes: body.notes || "", availableTime: availMins };
+        // Update existing row — write all 5 data columns at once (B:F)
+        stateSheet.getRange(i + 1, 2, 1, 5).setValues([[energyVal, moodVal, focusVal, notesVal, availMins]]);
+        return { id: String(i), date: dateStr, energy: energyVal, mood: moodVal, focus: focusVal, notes: notesVal, availableTime: availMins };
       }
     }
   }
 
   // Create new entry
-  stateSheet.appendRow([new Date(dateStr), body.energy || 5, body.mood || 5, body.focus || 5, body.notes || "", availMins]);
+  stateSheet.appendRow([new Date(dateStr), energyVal, moodVal, focusVal, notesVal, availMins]);
 
   return {
     id: String(data.length),
     date: dateStr,
-    energy: body.energy || 5,
-    mood: body.mood || 5,
-    focus: body.focus || 5,
-    notes: body.notes || "",
+    energy: energyVal,
+    mood: moodVal,
+    focus: focusVal,
+    notes: notesVal,
     availableTime: availMins
   };
 }
@@ -871,7 +886,6 @@ function generateSmartTodayView() {
 
   var data = taskSheet.getDataRange().getValues();
   var profileData = profileSheet.getDataRange().getValues();
-  var stateData = stateSheet.getDataRange().getValues();
   var projectData = projectSheet.getDataRange().getValues();
 
   var projectPriorityMap = {};
@@ -883,10 +897,13 @@ function generateSmartTodayView() {
   }
 
   var profile = profileData[1];
-  var lastState = stateData[stateData.length - 1];
 
-  var energy = toLevel(lastState[1]);
-  var availableMinutes = Number(lastState[5]) || 120;
+  // Read last daily state — explicitly get 6 columns to include Available_Time (col F)
+  var stateLastRow = stateSheet.getLastRow();
+  var stateRow = stateLastRow >= 2 ? stateSheet.getRange(stateLastRow, 1, 1, 6).getValues()[0] : [null, 5, 5, 5, "", 120];
+
+  var energy = toLevel(stateRow[1]);
+  var availableMinutes = stateRow[5] ? Number(stateRow[5]) : 120;
 
   var tasks = [];
 
