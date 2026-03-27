@@ -53,16 +53,50 @@ export function LoginPage() {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-sm"
       >
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 text-white font-bold text-h2 mb-4">
-            SB
-          </div>
-          <h1 className="text-h2 text-neutral-900 dark:text-neutral-50">{APP_NAME}</h1>
-          <p className="text-body text-neutral-500 mt-1">Sign in to your account</p>
-        </div>
+        <div className="card p-8 space-y-6">
+          {/* Title */}
+          <h1 className="text-h1 text-center text-neutral-900 dark:text-neutral-50">Login</h1>
 
-        <div className="card p-6 space-y-6">
+          {/* Email Form */}
+          <form onSubmit={handleEmailLogin} className="space-y-4">
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="password" className="text-body font-medium text-neutral-700 dark:text-neutral-300">Password</label>
+                <button type="button" className="text-caption text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                  Forgot password?
+                </button>
+              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            {error && <p className="text-caption text-danger-500">{error}</p>}
+            <Button type="submit" className="w-full" isLoading={submitting}>
+              Login
+            </Button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-neutral-200 dark:border-neutral-700" />
+            </div>
+            <div className="relative flex justify-center text-caption">
+              <span className="bg-white dark:bg-neutral-800 px-2 text-neutral-500">or</span>
+            </div>
+          </div>
+
           {/* Google */}
           <Button variant="secondary" className="w-full" onClick={handleGoogleLogin}>
             <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -83,41 +117,15 @@ export function LoginPage() {
                 fill="#EA4335"
               />
             </svg>
-            Continue with Google
+            Sign in with Google
           </Button>
 
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-neutral-200 dark:border-neutral-700" />
-            </div>
-            <div className="relative flex justify-center text-caption">
-              <span className="bg-white dark:bg-neutral-800 px-2 text-neutral-500">or continue with email</span>
-            </div>
-          </div>
-
-          {/* Email Form */}
-          <form onSubmit={handleEmailLogin} className="space-y-4">
-            <Input
-              id="email"
-              label="Email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <Input
-              id="password"
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-            {error && <p className="text-caption text-danger-500">{error}</p>}
-            <Button type="submit" className="w-full" isLoading={submitting}>
-              Sign In
-            </Button>
-          </form>
+          <p className="text-center text-body text-neutral-500">
+            Don't have an account?{' '}
+            <button type="button" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium underline">
+              Sign up
+            </button>
+          </p>
         </div>
       </motion.div>
     </div>

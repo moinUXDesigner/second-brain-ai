@@ -3,9 +3,27 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-bg: #f8f9fa;
+    --color-surface: #ffffff;
+    --color-border: #e5e7eb;
+    --color-text: #111827;
+    --color-text-secondary: #6b7280;
+  }
+
+  .dark {
+    --color-bg: #111827;
+    --color-surface: #1f2937;
+    --color-border: #374151;
+    --color-text: #f9fafb;
+    --color-text-secondary: #9ca3af;
+  }
+
   body {
     @apply bg-neutral-50 text-neutral-900 antialiased;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text);
   }
 
   .dark body,

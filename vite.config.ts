@@ -81,7 +81,7 @@ export default defineConfig(({ mode }) => {
           name: 'Second Brain AI',
           short_name: 'SecondBrain',
           description: 'AI-powered task management and daily planning',
-          theme_color: '#2f3187',
+          theme_color: '#16a34a',
           background_color: '#f8f9fa',
           display: 'standalone',
           orientation: 'portrait',
