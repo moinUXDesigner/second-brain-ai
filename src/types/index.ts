@@ -14,7 +14,6 @@ export interface Profile {
   name: string;
   workType: string;
   routineType: string;
-  availableTime: 'Low' | 'Medium' | 'High';
   commuteTime: string;
   usePersonalData: boolean;
   age: string;
@@ -88,6 +87,7 @@ export interface DailyState {
   energy: number;
   mood: number;
   focus: number;
+  availableTime?: number;
   notes?: string;
   userId?: string;
 }

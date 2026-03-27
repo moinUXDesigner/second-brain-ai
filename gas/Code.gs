@@ -239,7 +239,8 @@ function handleGetDailyState(dateStr) {
             energy: Number(data[i][1]) || 5,
             mood: Number(data[i][2]) || 5,
             focus: Number(data[i][3]) || 5,
-            notes: data[i][4] || ""
+            notes: data[i][4] || "",
+            availableTime: Number(data[i][5]) || 120
           };
         }
       }
@@ -256,7 +257,8 @@ function handleGetDailyState(dateStr) {
       energy: Number(last[1]) || 5,
       mood: Number(last[2]) || 5,
       focus: Number(last[3]) || 5,
-      notes: last[4] || ""
+      notes: last[4] || "",
+      availableTime: Number(last[5]) || 120
     };
   }
 
@@ -588,6 +590,7 @@ function handleSaveDailyState(body) {
 
   var data = stateSheet.getDataRange().getValues();
   var dateStr = body.date || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+  var availMins = Number(body.availableTime) || 120;
 
   // Check if entry for this date already exists
   for (var i = 1; i < data.length; i++) {
@@ -600,13 +603,14 @@ function handleSaveDailyState(body) {
         stateSheet.getRange(i + 1, 3).setValue(body.mood || 5);
         stateSheet.getRange(i + 1, 4).setValue(body.focus || 5);
         if (body.notes !== undefined) stateSheet.getRange(i + 1, 5).setValue(body.notes);
-        return { id: String(i), date: dateStr, energy: body.energy, mood: body.mood, focus: body.focus, notes: body.notes || "" };
+        stateSheet.getRange(i + 1, 6).setValue(availMins);
+        return { id: String(i), date: dateStr, energy: body.energy, mood: body.mood, focus: body.focus, notes: body.notes || "", availableTime: availMins };
       }
     }
   }
 
   // Create new entry
-  stateSheet.appendRow([new Date(dateStr), body.energy || 5, body.mood || 5, body.focus || 5, body.notes || ""]);
+  stateSheet.appendRow([new Date(dateStr), body.energy || 5, body.mood || 5, body.focus || 5, body.notes || "", availMins]);
 
   return {
     id: String(data.length),
@@ -614,7 +618,8 @@ function handleSaveDailyState(body) {
     energy: body.energy || 5,
     mood: body.mood || 5,
     focus: body.focus || 5,
-    notes: body.notes || ""
+    notes: body.notes || "",
+    availableTime: availMins
   };
 }
 
@@ -881,8 +886,7 @@ function generateSmartTodayView() {
   var lastState = stateData[stateData.length - 1];
 
   var energy = toLevel(lastState[1]);
-
-  var maxTasks = 5;
+  var availableMinutes = Number(lastState[5]) || 120;
 
   var tasks = [];
 
@@ -894,6 +898,8 @@ function generateSmartTodayView() {
     var status = clean(data[i][16]);
     var projectId = data[i][6];
     var taskId = data[i][0];
+    var effort = Number(data[i][9]) || 5;
+    var timeEstStr = String(data[i][10] || "");
 
     if (!task || status === "Done") continue;
 
@@ -902,21 +908,64 @@ function generateSmartTodayView() {
 
     var category = getCategory(adjustedPriority, fit, energy);
 
-    tasks.push([taskId, task, adjustedPriority, fit, category, "Pending"]);
+    // Parse time estimate: column K may be "30 min", "1 hour", "2h", "90", etc.
+    var taskMins = parseTimeEstimate(timeEstStr, effort);
+
+    tasks.push([taskId, task, adjustedPriority, fit, category, "Pending", taskMins]);
   }
 
   tasks.sort(function (a, b) { return b[2] - a[2]; });
 
+  // Pick tasks that fit within the available time budget
   var output = [["Task_ID", "Task", "Priority", "Fit", "Category", "Status"]];
+  var totalMins = 0;
 
-  tasks.slice(0, maxTasks).forEach(function (t) {
-    output.push(t);
-  });
+  for (var j = 0; j < tasks.length; j++) {
+    var tMins = tasks[j][6];
+    if (totalMins + tMins > availableMinutes && output.length > 1) break;
+    totalMins += tMins;
+    output.push([tasks[j][0], tasks[j][1], tasks[j][2], tasks[j][3], tasks[j][4], tasks[j][5]]);
+  }
 
   todaySheet.clear();
   todaySheet.getRange(1, 1, output.length, 6).setValues(output);
 
-  Logger.log("Today View Generated");
+  Logger.log("Today View Generated: " + (output.length - 1) + " tasks, " + totalMins + "/" + availableMinutes + " min");
+}
+
+/**
+ * Parse a time-estimate string into minutes.
+ * Accepts formats like "30 min", "1 hour", "2h", "1.5h", "90", "1h 30m".
+ * Falls back to effort-based estimate if empty or unparseable.
+ */
+function parseTimeEstimate(str, effort) {
+  if (!str || str.trim() === "") {
+    // Fallback: estimate from effort (1-10)
+    if (effort <= 3) return 30;
+    if (effort <= 6) return 60;
+    return 120;
+  }
+  var s = str.toLowerCase().trim();
+  var total = 0;
+
+  // Match hours component: "2h", "2 hours", "1.5 hour"
+  var hMatch = s.match(/(\d+\.?\d*)\s*h(?:ours?|r)?/);
+  if (hMatch) total += parseFloat(hMatch[1]) * 60;
+
+  // Match minutes component: "30m", "30 min", "45 minutes"
+  var mMatch = s.match(/(\d+)\s*m(?:in(?:utes?)?)?/);
+  if (mMatch) total += parseInt(mMatch[1], 10);
+
+  // If only a plain number, treat as minutes
+  if (total === 0) {
+    var num = parseFloat(s);
+    if (!isNaN(num)) return num > 0 ? num : 60;
+    // Unparseable, fallback
+    if (effort <= 3) return 30;
+    if (effort <= 6) return 60;
+    return 120;
+  }
+  return total;
 }
 
 function generateSmartTodayView_AI() {

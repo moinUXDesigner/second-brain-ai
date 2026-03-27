@@ -7,8 +7,6 @@ import { useAuthStore } from '@/app/store/authStore';
 import type { Profile } from '@/types';
 import toast from 'react-hot-toast';
 
-const TIME_OPTIONS: Profile['availableTime'][] = ['Low', 'Medium', 'High'];
-
 export function ProfilePage() {
   const authUser = useAuthStore((s) => s.user);
   const clearAuth = useAuthStore((s) => s.clearAuth);
@@ -20,7 +18,6 @@ export function ProfilePage() {
     name: '',
     workType: '',
     routineType: '',
-    availableTime: 'Medium',
     commuteTime: '',
     usePersonalData: false,
     age: '',
@@ -185,29 +182,6 @@ export function ProfilePage() {
           />
         </div>
 
-        <div className="space-y-1.5">
-          <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
-            Daily Available Time
-          </label>
-          <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            Used by the AI to determine how many tasks to suggest
-          </p>
-          <div className="flex gap-2 pt-1">
-            {TIME_OPTIONS.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => update('availableTime', opt)}
-                className="flex-1 py-2.5 rounded-md text-body font-medium transition-colors"
-                style={{
-                  backgroundColor: profile.availableTime === opt ? 'var(--primary-600)' : 'var(--color-muted)',
-                  color: profile.availableTime === opt ? '#fff' : 'var(--color-text)',
-                }}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
-        </div>
       </Card>
 
       {/* Health & Status */}
