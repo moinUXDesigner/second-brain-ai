@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/app/store/authStore';
 import { useUiStore } from '@/app/store/uiStore';
@@ -23,6 +23,7 @@ const adminItem = {
 export function Sidebar() {
   const role = useAuthStore((s) => s.role);
   const { isSidebarOpen, toggleSidebar } = useUiStore();
+  const navigate = useNavigate();
 
   const allItems = role && hasPermission(role, 'admin:access')
     ? [...navItems, adminItem]
@@ -56,6 +57,26 @@ export function Sidebar() {
           <span className="text-body font-semibold truncate" style={{ color: 'var(--sidebar-fg)' }}>
             {APP_NAME}
           </span>
+        </div>
+
+        {/* Create button */}
+        <div className="p-3">
+          <button
+            onClick={() => {
+              navigate('/create');
+              if (window.innerWidth < 1024) toggleSidebar();
+            }}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-body font-medium transition-colors"
+            style={{
+              backgroundColor: 'var(--primary-600)',
+              color: '#fff',
+            }}
+          >
+            <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            <span>Create New</span>
+          </button>
         </div>
 
         {/* Nav */}
