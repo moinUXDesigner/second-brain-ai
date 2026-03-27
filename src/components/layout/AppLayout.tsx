@@ -5,7 +5,7 @@ import { BottomNav } from './BottomNav';
 
 export function AppLayout() {
   return (
-    <div className="flex h-screen overflow-hidden bg-neutral-50 dark:bg-neutral-900">
+    <div className="flex h-screen overflow-hidden" style={{ backgroundColor: 'var(--color-bg)' }}>
       <Sidebar />
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         <Header />

@@ -12,8 +12,8 @@ function ThemeInit() {
       document.documentElement.classList.add('dark');
     }
     const colorScheme = localStorage.getItem('colorScheme');
-    if (colorScheme === 'green') {
-      document.documentElement.classList.add('theme-green');
+    if (colorScheme === 'wellness') {
+      document.documentElement.classList.add('theme-wellness');
     }
   }, []);
   return null;

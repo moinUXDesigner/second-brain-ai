@@ -40,14 +40,14 @@ export function LoginPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-900">
+      <div className="flex h-screen items-center justify-center" style={{ backgroundColor: 'var(--color-bg)' }}>
         <div className="animate-spin h-8 w-8 border-4 border-primary-600 border-t-transparent rounded-full" />
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-50 dark:bg-neutral-900 px-4">
+    <div className="flex min-h-screen items-center justify-center px-4" style={{ backgroundColor: 'var(--color-bg)' }}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -55,7 +55,7 @@ export function LoginPage() {
       >
         <div className="card p-8 space-y-6">
           {/* Title */}
-          <h1 className="text-h1 text-center text-neutral-900 dark:text-neutral-50">Login</h1>
+          <h1 className="text-h1 text-center" style={{ color: 'var(--color-text)' }}>Login</h1>
 
           {/* Email Form */}
           <form onSubmit={handleEmailLogin} className="space-y-4">
@@ -69,8 +69,8 @@ export function LoginPage() {
             />
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label htmlFor="password" className="text-body font-medium text-neutral-700 dark:text-neutral-300">Password</label>
-                <button type="button" className="text-caption text-neutral-500 hover:text-primary-600 dark:hover:text-primary-400 transition-colors">
+                <label htmlFor="password" className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Password</label>
+                <button type="button" className="text-caption text-primary-600 hover:text-primary-700 transition-colors">
                   Forgot password?
                 </button>
               </div>
@@ -90,10 +90,10 @@ export function LoginPage() {
 
           <div className="relative">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-neutral-200 dark:border-neutral-700" />
+              <div className="w-full border-t" style={{ borderColor: 'var(--color-border)' }} />
             </div>
             <div className="relative flex justify-center text-caption">
-              <span className="bg-white dark:bg-neutral-800 px-2 text-neutral-500">or</span>
+              <span className="px-2" style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text-secondary)' }}>or</span>
             </div>
           </div>
 
@@ -120,9 +120,9 @@ export function LoginPage() {
             Sign in with Google
           </Button>
 
-          <p className="text-center text-body text-neutral-500">
+          <p className="text-center text-body" style={{ color: 'var(--color-text-secondary)' }}>
             Don't have an account?{' '}
-            <button type="button" className="text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium underline">
+            <button type="button" className="text-primary-600 hover:text-primary-700 font-medium underline">
               Sign up
             </button>
           </p>

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-type ColorScheme = 'blue' | 'green';
+type ColorScheme = 'blue' | 'wellness';
 
 interface UiState {
   isSidebarOpen: boolean;
@@ -17,7 +17,7 @@ interface UiState {
 }
 
 function applyColorScheme(scheme: ColorScheme) {
-  document.documentElement.classList.toggle('theme-green', scheme === 'green');
+  document.documentElement.classList.toggle('theme-wellness', scheme === 'wellness');
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -36,7 +36,7 @@ export const useUiStore = create<UiState>()((set) => ({
     }),
   toggleColorScheme: () =>
     set((s) => {
-      const next: ColorScheme = s.colorScheme === 'blue' ? 'green' : 'blue';
+      const next: ColorScheme = s.colorScheme === 'blue' ? 'wellness' : 'blue';
       localStorage.setItem('colorScheme', next);
       applyColorScheme(next);
       return { colorScheme: next };

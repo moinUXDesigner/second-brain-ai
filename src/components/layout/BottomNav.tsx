@@ -31,7 +31,7 @@ const bottomNavItems = [
 
 export function BottomNav() {
   return (
-    <nav className="fixed bottom-0 inset-x-0 z-50 flex items-center justify-around border-t border-semantic-border bg-white dark:bg-neutral-900 h-16 lg:hidden safe-bottom">
+    <nav className="fixed bottom-0 inset-x-0 z-50 flex items-center justify-around border-t h-16 lg:hidden safe-bottom" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}>
       {bottomNavItems.map((item) => (
         <NavLink
           key={item.to}
@@ -41,10 +41,13 @@ export function BottomNav() {
             cn(
               'flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-[10px] font-medium transition-colors',
               isActive
-                ? 'text-primary-600 dark:text-primary-400'
-                : 'text-neutral-400 dark:text-neutral-500',
+                ? 'text-primary-600'
+                : '',
             )
           }
+          style={({ isActive }) => ({
+            color: isActive ? undefined : 'var(--color-muted-fg)',
+          })}
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
             <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />

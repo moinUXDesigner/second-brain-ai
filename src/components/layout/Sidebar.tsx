@@ -42,19 +42,18 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col bg-white dark:bg-neutral-900 border-r border-semantic-border transition-transform duration-200 w-64',
-          // Mobile: slide in/out
+          'fixed inset-y-0 left-0 z-50 flex flex-col transition-transform duration-200 w-64',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
-          // Desktop: always visible
           'lg:relative lg:translate-x-0',
         )}
+        style={{ backgroundColor: 'var(--sidebar-bg)', borderRight: '1px solid var(--sidebar-border)' }}
       >
         {/* Logo */}
-        <div className="flex h-16 items-center gap-3 px-4 border-b border-semantic-border">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600 text-white font-bold text-body shrink-0">
+        <div className="flex h-16 items-center gap-3 px-4" style={{ borderBottom: '1px solid var(--sidebar-border)' }}>
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500 text-white font-bold text-body shrink-0">
             SB
           </div>
-          <span className="text-body font-semibold text-neutral-900 dark:text-neutral-50 truncate">
+          <span className="text-body font-semibold truncate" style={{ color: 'var(--sidebar-fg)' }}>
             {APP_NAME}
           </span>
         </div>
@@ -70,10 +69,14 @@ export function Sidebar() {
                 cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors',
                   isActive
-                    ? 'bg-primary-50 text-primary-700 font-medium dark:bg-primary-900/30 dark:text-primary-300'
-                    : 'text-neutral-600 hover:bg-neutral-50 dark:text-neutral-400 dark:hover:bg-neutral-800',
+                    ? 'font-medium'
+                    : 'hover:opacity-80',
                 )
               }
+              style={({ isActive }) => ({
+                backgroundColor: isActive ? 'var(--sidebar-active-bg)' : undefined,
+                color: isActive ? 'var(--sidebar-active-fg)' : 'var(--color-text-secondary)',
+              })}
             >
               <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />

@@ -5,27 +5,29 @@ export function ThemeToggle() {
 
   return (
     <div className="flex items-center gap-1">
-      {/* Color scheme toggle (blue / green) */}
+      {/* Color scheme toggle (blue / wellness) */}
       <button
         onClick={toggleColorScheme}
         className="rounded-md p-2 transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800"
         aria-label="Toggle color scheme"
-        title={colorScheme === 'blue' ? 'Switch to green theme' : 'Switch to blue theme'}
+        title={colorScheme === 'blue' ? 'Switch to Wellness theme' : 'Switch to Blue theme'}
       >
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
           <span
             className={`block h-4 w-4 rounded-full border-2 transition-all ${
               colorScheme === 'blue'
-                ? 'bg-blue-500 border-blue-600 scale-110'
-                : 'bg-blue-300 border-blue-400 opacity-50'
+                ? 'border-blue-600 scale-110 ring-2 ring-blue-200'
+                : 'border-transparent opacity-50'
             }`}
+            style={{ backgroundColor: '#3b82f6' }}
           />
           <span
             className={`block h-4 w-4 rounded-full border-2 transition-all ${
-              colorScheme === 'green'
-                ? 'bg-green-500 border-green-600 scale-110'
-                : 'bg-green-300 border-green-400 opacity-50'
+              colorScheme === 'wellness'
+                ? 'border-green-700 scale-110 ring-2 ring-green-200'
+                : 'border-transparent opacity-50'
             }`}
+            style={{ backgroundColor: '#9eb384' }}
           />
         </div>
       </button>
@@ -33,7 +35,8 @@ export function ThemeToggle() {
       {/* Dark / Light toggle */}
       <button
         onClick={toggleDarkMode}
-        className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 dark:text-neutral-400 transition-colors"
+        className="rounded-md p-2 transition-colors"
+        style={{ color: 'var(--color-text-secondary)' }}
         aria-label="Toggle theme"
       >
         {isDarkMode ? (

@@ -10,11 +10,12 @@ export function Header() {
   const { logout } = useAuth();
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between border-b border-semantic-border bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm px-3 lg:px-6 gap-2">
+    <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between border-b px-3 lg:px-6 gap-2" style={{ borderColor: 'var(--color-border)', backgroundColor: 'color-mix(in srgb, var(--color-surface) 80%, transparent)', backdropFilter: 'blur(8px)' }}>
       {/* Left — hamburger for mobile/tablet */}
       <button
         onClick={toggleSidebar}
-        className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 lg:hidden shrink-0"
+        className="rounded-md p-2 lg:hidden shrink-0 transition-colors"
+        style={{ color: 'var(--color-text-secondary)' }}
         aria-label="Toggle sidebar"
       >
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -24,7 +25,7 @@ export function Header() {
 
       {/* Search placeholder — mobile-visible */}
       <div className="flex-1 max-w-md">
-        <div className="flex items-center gap-2 rounded-lg bg-neutral-100 dark:bg-neutral-800 px-3 py-1.5 text-caption text-neutral-400">
+        <div className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-caption" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-muted-fg)' }}>
           <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
@@ -41,17 +42,18 @@ export function Header() {
             <div className="hidden md:flex items-center gap-2">
               <Badge variant="primary">{user.role.replace('_', ' ')}</Badge>
               <div className="text-right">
-                <p className="text-body font-medium text-neutral-900 dark:text-neutral-50 leading-tight">{user.name}</p>
-                <p className="text-caption text-neutral-500">{user.email}</p>
+                <p className="text-body font-medium leading-tight" style={{ color: 'var(--color-text)' }}>{user.name}</p>
+                <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>{user.email}</p>
               </div>
             </div>
             {/* Avatar for mobile */}
-            <div className="md:hidden flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700 font-bold text-caption dark:bg-primary-900 dark:text-primary-300">
+            <div className="md:hidden flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700 font-bold text-caption">
               {user.name?.charAt(0).toUpperCase() || 'U'}
             </div>
             <button
               onClick={logout}
-              className="rounded-md p-2 text-neutral-500 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              className="rounded-md p-2 transition-colors"
+              style={{ color: 'var(--color-text-secondary)' }}
               aria-label="Logout"
             >
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
