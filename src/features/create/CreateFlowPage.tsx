@@ -78,6 +78,10 @@ export function CreateFlowPage() {
       const res = await inputService.createTaskOrProject({
         text: wizardData.text,
         type: wizardData.type,
+        area: wizardData.area || undefined,
+        category: wizardData.category,
+        priority: wizardData.priority,
+        estimatedTime: wizardData.estimatedTime,
       });
 
       if (wizardData.type === 'task' && res.data.task) {

@@ -113,4 +113,8 @@ export interface PaginatedResponse<T> {
 export interface CreateInput {
   text: string;
   type: 'task' | 'project';
+  area?: string;
+  category?: string;
+  priority?: string;
+  estimatedTime?: string;
 }

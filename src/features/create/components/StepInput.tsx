@@ -1,3 +1,4 @@
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 
 interface StepInputProps {
@@ -18,8 +19,29 @@ const AREA_OPTIONS = [
   'Home',
 ];
 
+const CUSTOM_KEY = '__custom__';
+
 export function StepInput({ text, area, onChange, onNext }: StepInputProps) {
+  const isCustom = area !== '' && !AREA_OPTIONS.includes(area);
+  const [showCustomInput, setShowCustomInput] = useState(isCustom);
+  const customInputRef = useRef<HTMLInputElement>(null);
   const canProceed = text.trim().length > 0;
+
+  useEffect(() => {
+    if (showCustomInput) {
+      customInputRef.current?.focus();
+    }
+  }, [showCustomInput]);
+
+  const handleChipClick = (opt: string) => {
+    if (opt === CUSTOM_KEY) {
+      setShowCustomInput(true);
+      onChange({ area: '' });
+    } else {
+      setShowCustomInput(false);
+      onChange({ area: area === opt ? '' : opt });
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -60,15 +82,15 @@ export function StepInput({ text, area, onChange, onNext }: StepInputProps) {
               <button
                 key={opt}
                 type="button"
-                onClick={() => onChange({ area: area === opt ? '' : opt })}
+                onClick={() => handleChipClick(opt)}
                 className="px-3 py-1.5 rounded-full text-caption font-medium transition-all"
                 style={{
                   backgroundColor:
-                    area === opt ? 'var(--primary-100)' : 'var(--color-muted)',
+                    area === opt && !showCustomInput ? 'var(--primary-100)' : 'var(--color-muted)',
                   color:
-                    area === opt ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+                    area === opt && !showCustomInput ? 'var(--primary-700)' : 'var(--color-text-secondary)',
                   border:
-                    area === opt
+                    area === opt && !showCustomInput
                       ? '1px solid var(--primary-300)'
                       : '1px solid transparent',
                 }}
@@ -76,7 +98,37 @@ export function StepInput({ text, area, onChange, onNext }: StepInputProps) {
                 {opt}
               </button>
             ))}
+            {/* Custom chip */}
+            <button
+              type="button"
+              onClick={() => handleChipClick(CUSTOM_KEY)}
+              className="px-3 py-1.5 rounded-full text-caption font-medium transition-all"
+              style={{
+                backgroundColor:
+                  showCustomInput ? 'var(--primary-100)' : 'var(--color-muted)',
+                color:
+                  showCustomInput ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+                border:
+                  showCustomInput
+                    ? '1px solid var(--primary-300)'
+                    : '1px solid transparent',
+              }}
+            >
+              + Custom
+            </button>
           </div>
+
+          {/* Custom area input */}
+          {showCustomInput && (
+            <input
+              ref={customInputRef}
+              type="text"
+              value={isCustom ? area : ''}
+              onChange={(e) => onChange({ area: e.target.value })}
+              placeholder="Enter custom area…"
+              className="input-base text-body mt-2"
+            />
+          )}
         </div>
       </div>
 
