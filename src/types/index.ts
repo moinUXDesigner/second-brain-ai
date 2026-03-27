@@ -10,11 +10,19 @@ export interface User {
 }
 
 export interface Profile {
+  userId: string;
   name: string;
-  email: string;
-  role: string;
-  goals: string;
+  workType: string;
+  routineType: string;
   availableTime: 'Low' | 'Medium' | 'High';
+  commuteTime: string;
+  usePersonalData: boolean;
+  age: string;
+  dob: string;
+  financialStatus: string;
+  healthStatus: string;
+  customNotes: string;
+  updatedAt?: string;
 }
 
 export type TaskStatus = 'Pending' | 'Done';

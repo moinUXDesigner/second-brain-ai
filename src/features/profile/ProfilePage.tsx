@@ -15,47 +15,50 @@ export function ProfilePage() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState('');
-  const [goals, setGoals] = useState('');
-  const [availableTime, setAvailableTime] = useState<Profile['availableTime']>('Medium');
+  const [profile, setProfile] = useState<Profile>({
+    userId: '',
+    name: '',
+    workType: '',
+    routineType: '',
+    availableTime: 'Medium',
+    commuteTime: '',
+    usePersonalData: false,
+    age: '',
+    dob: '',
+    financialStatus: '',
+    healthStatus: '',
+    customNotes: '',
+  });
 
   useEffect(() => {
     profileService.getProfile()
       .then((res) => {
         if (res.data) {
-          setName(res.data.name || authUser?.name || '');
-          setEmail(res.data.email || authUser?.email || '');
-          setRole(res.data.role || '');
-          setGoals(res.data.goals || '');
-          setAvailableTime(res.data.availableTime || 'Medium');
+          setProfile((prev) => ({ ...prev, ...res.data, name: res.data.name || authUser?.name || '' }));
         } else {
-          setName(authUser?.name || '');
-          setEmail(authUser?.email || '');
+          setProfile((prev) => ({ ...prev, name: authUser?.name || '' }));
         }
       })
       .catch(() => {
-        setName(authUser?.name || '');
-        setEmail(authUser?.email || '');
+        setProfile((prev) => ({ ...prev, name: authUser?.name || '' }));
       })
       .finally(() => setLoading(false));
   }, [authUser]);
 
+  const update = (field: keyof Profile, value: string | boolean) => {
+    setProfile((prev) => ({ ...prev, [field]: value }));
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
-      await profileService.saveProfile({ name, email, role, goals, availableTime });
+      await profileService.saveProfile(profile);
       toast.success('Profile saved');
     } catch {
       toast.error('Failed to save profile');
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleLogout = () => {
-    clearAuth();
   };
 
   if (loading) {
@@ -85,64 +88,100 @@ export function ProfilePage() {
           className="flex h-14 w-14 items-center justify-center rounded-full text-xl font-bold text-white shrink-0"
           style={{ backgroundColor: 'var(--primary-600)' }}
         >
-          {name ? name.charAt(0).toUpperCase() : '?'}
+          {profile.name ? profile.name.charAt(0).toUpperCase() : '?'}
         </div>
         <div className="min-w-0">
           <p className="text-body font-semibold truncate" style={{ color: 'var(--color-text)' }}>
-            {name || 'No name set'}
+            {profile.name || 'No name set'}
           </p>
           <p className="text-caption truncate" style={{ color: 'var(--color-text-secondary)' }}>
-            {email}
+            {profile.workType || 'No work type set'}
           </p>
         </div>
       </Card>
 
-      {/* Profile form */}
+      {/* Personal Info */}
       <Card className="space-y-5">
+        <h2 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Personal Information</h2>
+
         <div className="space-y-1.5">
           <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Name</label>
           <input
             type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
+            value={profile.name}
+            onChange={(e) => update('name', e.target.value)}
             placeholder="Your name"
             className="input-base text-body"
           />
         </div>
 
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Age</label>
+            <input
+              type="text"
+              value={profile.age}
+              onChange={(e) => update('age', e.target.value)}
+              placeholder="e.g. 28"
+              className="input-base text-body"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Date of Birth</label>
+            <input
+              type="date"
+              value={profile.dob}
+              onChange={(e) => update('dob', e.target.value)}
+              className="input-base text-body"
+            />
+          </div>
+        </div>
+      </Card>
+
+      {/* Work & Routine */}
+      <Card className="space-y-5">
+        <h2 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Work &amp; Routine</h2>
+
         <div className="space-y-1.5">
-          <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
+          <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Work Type</label>
+          <select
+            value={profile.workType}
+            onChange={(e) => update('workType', e.target.value)}
             className="input-base text-body"
-            disabled
-          />
-          <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            Email is linked to your login account
-          </p>
+          >
+            <option value="">Select work type</option>
+            <option value="Full-Time">Full-Time</option>
+            <option value="Part-Time">Part-Time</option>
+            <option value="Freelance">Freelance</option>
+            <option value="Student">Student</option>
+            <option value="Unemployed">Unemployed</option>
+            <option value="Retired">Retired</option>
+          </select>
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Role / Occupation</label>
+          <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Routine Type</label>
+          <select
+            value={profile.routineType}
+            onChange={(e) => update('routineType', e.target.value)}
+            className="input-base text-body"
+          >
+            <option value="">Select routine type</option>
+            <option value="Morning Person">Morning Person</option>
+            <option value="Night Owl">Night Owl</option>
+            <option value="Flexible">Flexible</option>
+            <option value="Shift-Based">Shift-Based</option>
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Commute Time</label>
           <input
             type="text"
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            placeholder="e.g. Software Engineer, Student, Designer"
+            value={profile.commuteTime}
+            onChange={(e) => update('commuteTime', e.target.value)}
+            placeholder="e.g. 30 mins, 1 hour, Remote"
             className="input-base text-body"
-          />
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Goals</label>
-          <textarea
-            value={goals}
-            onChange={(e) => setGoals(e.target.value)}
-            placeholder="What are you working towards?"
-            className="input-base min-h-[80px] resize-y text-body"
           />
         </div>
 
@@ -151,17 +190,17 @@ export function ProfilePage() {
             Daily Available Time
           </label>
           <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            Used by the AI to determine how many tasks to suggest each day
+            Used by the AI to determine how many tasks to suggest
           </p>
           <div className="flex gap-2 pt-1">
             {TIME_OPTIONS.map((opt) => (
               <button
                 key={opt}
-                onClick={() => setAvailableTime(opt)}
+                onClick={() => update('availableTime', opt)}
                 className="flex-1 py-2.5 rounded-md text-body font-medium transition-colors"
                 style={{
-                  backgroundColor: availableTime === opt ? 'var(--primary-600)' : 'var(--color-muted)',
-                  color: availableTime === opt ? '#fff' : 'var(--color-text)',
+                  backgroundColor: profile.availableTime === opt ? 'var(--primary-600)' : 'var(--color-muted)',
+                  color: profile.availableTime === opt ? '#fff' : 'var(--color-text)',
                 }}
               >
                 {opt}
@@ -169,6 +208,73 @@ export function ProfilePage() {
             ))}
           </div>
         </div>
+      </Card>
+
+      {/* Health & Status */}
+      <Card className="space-y-5">
+        <h2 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Status</h2>
+
+        <div className="space-y-1.5">
+          <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Financial Status</label>
+          <select
+            value={profile.financialStatus}
+            onChange={(e) => update('financialStatus', e.target.value)}
+            className="input-base text-body"
+          >
+            <option value="">Select status</option>
+            <option value="Stable">Stable</option>
+            <option value="Growing">Growing</option>
+            <option value="Tight">Tight</option>
+            <option value="Critical">Critical</option>
+          </select>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Health Status</label>
+          <select
+            value={profile.healthStatus}
+            onChange={(e) => update('healthStatus', e.target.value)}
+            className="input-base text-body"
+          >
+            <option value="">Select status</option>
+            <option value="Excellent">Excellent</option>
+            <option value="Good">Good</option>
+            <option value="Fair">Fair</option>
+            <option value="Poor">Poor</option>
+          </select>
+        </div>
+      </Card>
+
+      {/* Notes & Preferences */}
+      <Card className="space-y-5">
+        <h2 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Preferences</h2>
+
+        <div className="space-y-1.5">
+          <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Custom Notes</label>
+          <textarea
+            value={profile.customNotes}
+            onChange={(e) => update('customNotes', e.target.value)}
+            placeholder="Anything the AI should know about you…"
+            className="input-base min-h-[80px] resize-y text-body"
+          />
+        </div>
+
+        <label className="flex items-center gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={profile.usePersonalData}
+            onChange={(e) => update('usePersonalData', e.target.checked)}
+            className="h-5 w-5 rounded accent-primary-600"
+          />
+          <div>
+            <span className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
+              Use personal data for AI suggestions
+            </span>
+            <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+              Allow the system to use your profile data to personalize task recommendations
+            </p>
+          </div>
+        </label>
 
         <Button onClick={handleSave} isLoading={saving} className="w-full">
           Save Profile
@@ -178,7 +284,7 @@ export function ProfilePage() {
       {/* Logout */}
       <Card>
         <button
-          onClick={handleLogout}
+          onClick={clearAuth}
           className="w-full py-2.5 rounded-md text-body font-medium transition-colors"
           style={{ color: 'var(--accent-danger-500)' }}
         >

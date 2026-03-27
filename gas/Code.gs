@@ -288,7 +288,9 @@ function handleGetDashboard() {
 
 /***********************
  * PROFILE HANDLERS
- * User_Profile sheet columns: A=Name, B=Email, C=Role, D=Goals, E=AvailableTime
+ * User_Profile columns: A=User_ID, B=Name, C=Work_Type, D=Routine_Type,
+ * E=Available_Time, F=Commute_Time, G=Use_Personal_Data, H=Age, I=DOB,
+ * J=Financial_Status, K=Health_Status, L=Custom_Notes, M=Updated_At
  ***********************/
 function handleGetProfile() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -300,11 +302,19 @@ function handleGetProfile() {
 
   var row = data[1];
   return {
-    name: row[0] || "",
-    email: row[1] || "",
-    role: row[2] || "",
-    goals: row[3] || "",
-    availableTime: row[4] || "Medium"
+    userId: row[0] || "",
+    name: row[1] || "",
+    workType: row[2] || "",
+    routineType: row[3] || "",
+    availableTime: row[4] || "Medium",
+    commuteTime: row[5] || "",
+    usePersonalData: row[6] === true || row[6] === "TRUE" || row[6] === "Yes",
+    age: row[7] || "",
+    dob: row[8] ? Utilities.formatDate(new Date(row[8]), Session.getScriptTimeZone(), "yyyy-MM-dd") : "",
+    financialStatus: row[9] || "",
+    healthStatus: row[10] || "",
+    customNotes: row[11] || "",
+    updatedAt: row[12] ? Utilities.formatDate(new Date(row[12]), Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss") : ""
   };
 }
 
@@ -314,34 +324,58 @@ function handleSaveProfile(body) {
   if (!sheet) return null;
 
   var data = sheet.getDataRange().getValues();
+  var now = new Date();
 
   if (data.length < 2) {
-    // Create header + data row
     if (data.length === 0) {
-      sheet.appendRow(["Name", "Email", "Role", "Goals", "AvailableTime"]);
+      sheet.appendRow(["User_ID", "Name", "Work_Type", "Routine_Type", "Available_Time",
+        "Commute_Time", "Use_Personal_Data", "Age", "DOB", "Financial_Status",
+        "Health_Status", "Custom_Notes", "Updated_At"]);
     }
     sheet.appendRow([
+      body.userId || "U1",
       body.name || "",
-      body.email || "",
-      body.role || "",
-      body.goals || "",
-      body.availableTime || "Medium"
+      body.workType || "",
+      body.routineType || "",
+      body.availableTime || "Medium",
+      body.commuteTime || "",
+      body.usePersonalData ? "TRUE" : "FALSE",
+      body.age || "",
+      body.dob || "",
+      body.financialStatus || "",
+      body.healthStatus || "",
+      body.customNotes || "",
+      now
     ]);
   } else {
-    // Update existing row 2
-    sheet.getRange(2, 1).setValue(body.name || "");
-    sheet.getRange(2, 2).setValue(body.email || "");
-    sheet.getRange(2, 3).setValue(body.role || "");
-    sheet.getRange(2, 4).setValue(body.goals || "");
+    sheet.getRange(2, 2).setValue(body.name || "");
+    sheet.getRange(2, 3).setValue(body.workType || "");
+    sheet.getRange(2, 4).setValue(body.routineType || "");
     sheet.getRange(2, 5).setValue(body.availableTime || "Medium");
+    sheet.getRange(2, 6).setValue(body.commuteTime || "");
+    sheet.getRange(2, 7).setValue(body.usePersonalData ? "TRUE" : "FALSE");
+    sheet.getRange(2, 8).setValue(body.age || "");
+    sheet.getRange(2, 9).setValue(body.dob || "");
+    sheet.getRange(2, 10).setValue(body.financialStatus || "");
+    sheet.getRange(2, 11).setValue(body.healthStatus || "");
+    sheet.getRange(2, 12).setValue(body.customNotes || "");
+    sheet.getRange(2, 13).setValue(now);
   }
 
   return {
+    userId: data.length >= 2 ? (data[1][0] || "U1") : "U1",
     name: body.name || "",
-    email: body.email || "",
-    role: body.role || "",
-    goals: body.goals || "",
-    availableTime: body.availableTime || "Medium"
+    workType: body.workType || "",
+    routineType: body.routineType || "",
+    availableTime: body.availableTime || "Medium",
+    commuteTime: body.commuteTime || "",
+    usePersonalData: !!body.usePersonalData,
+    age: body.age || "",
+    dob: body.dob || "",
+    financialStatus: body.financialStatus || "",
+    healthStatus: body.healthStatus || "",
+    customNotes: body.customNotes || "",
+    updatedAt: Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss")
   };
 }
 
