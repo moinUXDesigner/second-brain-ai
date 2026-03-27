@@ -11,6 +11,10 @@ function ThemeInit() {
     if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');
     }
+    const colorScheme = localStorage.getItem('colorScheme');
+    if (colorScheme === 'green') {
+      document.documentElement.classList.add('theme-green');
+    }
   }, []);
   return null;
 }
