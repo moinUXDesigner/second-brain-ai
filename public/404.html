@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Second Brain AI</title>
+    <script>
+      // GitHub Pages SPA redirect: stores the intended URL and redirects to index.html
+      var pathSegmentsToKeep = 1; // '/second-brain-ai' = 1 segment
+      var l = window.location;
+      var repo = l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/');
+      sessionStorage.redirect = l.href;
+      l.replace(repo + '/');
+    </script>
+  </head>
+  <body></body>
+</html>
