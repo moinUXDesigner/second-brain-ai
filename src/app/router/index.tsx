@@ -12,6 +12,7 @@ import { DailyStatePage } from '@/features/daily-state/DailyStatePage';
 import { AdminPage } from '@/features/admin/AdminPage';
 import { CreateFlowPage } from '@/features/create/CreateFlowPage';
 import { CompletedTasksPage } from '@/features/tasks/CompletedTasksPage';
+import { ProfilePage } from '@/features/profile/ProfilePage';
 
 const basename = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
       { path: 'daily-state', element: <DailyStatePage /> },
+      { path: 'profile', element: <ProfilePage /> },
       {
         path: 'admin',
         element: (

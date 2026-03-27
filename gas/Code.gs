@@ -28,6 +28,9 @@ function doGet(e) {
       case "getDashboard":
         result = { success: true, data: handleGetDashboard() };
         break;
+      case "getProfile":
+        result = { success: true, data: handleGetProfile() };
+        break;
       default:
         result = { success: false, data: null, message: "Unknown GET action: " + action };
     }
@@ -90,6 +93,9 @@ function doPost(e) {
         break;
       case "createInput":
         result = { success: true, data: handleCreateInput(body) };
+        break;
+      case "saveProfile":
+        result = { success: true, data: handleSaveProfile(body) };
         break;
       default:
         result = { success: false, data: null, message: "Unknown POST action: " + action };
@@ -277,6 +283,65 @@ function handleGetDashboard() {
     tasks: tasks,
     todayTasks: todayTasks,
     projects: projects
+  };
+}
+
+/***********************
+ * PROFILE HANDLERS
+ * User_Profile sheet columns: A=Name, B=Email, C=Role, D=Goals, E=AvailableTime
+ ***********************/
+function handleGetProfile() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("User_Profile");
+  if (!sheet) return null;
+
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return null;
+
+  var row = data[1];
+  return {
+    name: row[0] || "",
+    email: row[1] || "",
+    role: row[2] || "",
+    goals: row[3] || "",
+    availableTime: row[4] || "Medium"
+  };
+}
+
+function handleSaveProfile(body) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("User_Profile");
+  if (!sheet) return null;
+
+  var data = sheet.getDataRange().getValues();
+
+  if (data.length < 2) {
+    // Create header + data row
+    if (data.length === 0) {
+      sheet.appendRow(["Name", "Email", "Role", "Goals", "AvailableTime"]);
+    }
+    sheet.appendRow([
+      body.name || "",
+      body.email || "",
+      body.role || "",
+      body.goals || "",
+      body.availableTime || "Medium"
+    ]);
+  } else {
+    // Update existing row 2
+    sheet.getRange(2, 1).setValue(body.name || "");
+    sheet.getRange(2, 2).setValue(body.email || "");
+    sheet.getRange(2, 3).setValue(body.role || "");
+    sheet.getRange(2, 4).setValue(body.goals || "");
+    sheet.getRange(2, 5).setValue(body.availableTime || "Medium");
+  }
+
+  return {
+    name: body.name || "",
+    email: body.email || "",
+    role: body.role || "",
+    goals: body.goals || "",
+    availableTime: body.availableTime || "Medium"
   };
 }
 

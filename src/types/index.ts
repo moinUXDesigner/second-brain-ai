@@ -9,6 +9,14 @@ export interface User {
   createdAt?: string;
 }
 
+export interface Profile {
+  name: string;
+  email: string;
+  role: string;
+  goals: string;
+  availableTime: 'Low' | 'Medium' | 'High';
+}
+
 export type TaskStatus = 'Pending' | 'Done';
 export type TaskCategory =
   | 'Deep Work'
