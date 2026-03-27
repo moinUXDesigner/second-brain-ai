@@ -11,6 +11,8 @@ import { AnalyticsPage } from '@/features/analytics/AnalyticsPage';
 import { DailyStatePage } from '@/features/daily-state/DailyStatePage';
 import { AdminPage } from '@/features/admin/AdminPage';
 
+const basename = import.meta.env.BASE_URL.replace(/\/+$/, '');
+
 export const router = createBrowserRouter([
   {
     path: '/login',
@@ -39,4 +41,4 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]);
+], { basename });

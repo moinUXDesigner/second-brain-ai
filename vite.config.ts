@@ -85,8 +85,8 @@ export default defineConfig(({ mode }) => {
           background_color: '#f8f9fa',
           display: 'standalone',
           orientation: 'portrait',
-          scope: '/',
-          start_url: '/',
+          scope: '/second-brain-ai/',
+          start_url: '/second-brain-ai/',
           icons: [
             {
               src: 'pwa-icon.svg',
