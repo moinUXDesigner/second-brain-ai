@@ -7,8 +7,8 @@ export const todayService = {
     return { data, success: true };
   },
 
-  async runPipeline(): Promise<ApiResponse<Task[]>> {
-    const data = await gasClient.post<Task[]>('runPipeline');
+  async generateTodayView(): Promise<ApiResponse<Task[]>> {
+    const data = await gasClient.post<Task[]>('generateTodayView');
     return { data: data ?? [], success: true };
   },
 };

@@ -68,17 +68,15 @@ export function useCreateTask() {
   });
 }
 
-export function useRunPipeline() {
+export function useGenerateTodayView() {
   const queryClient = useQueryClient();
   const { log } = useAudit();
 
   return useMutation({
-    mutationFn: () => todayService.runPipeline(),
+    mutationFn: () => todayService.generateTodayView(),
     onSuccess: () => {
       log('RUN_PIPELINE', 'system');
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
     },
   });
 }

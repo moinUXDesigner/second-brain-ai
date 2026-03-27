@@ -781,12 +781,9 @@ function generateSmartTodayView() {
   var profile = profileData[1];
   var lastState = stateData[stateData.length - 1];
 
-  var availableTime = clean(profile[4]);
-  var energy = clean(lastState[1]);
+  var energy = toLevel(lastState[1]);
 
-  var maxTasks = 8;
-  if (availableTime === "Low") maxTasks = 5;
-  if (availableTime === "High") maxTasks = 12;
+  var maxTasks = 5;
 
   var tasks = [];
 
@@ -1349,9 +1346,9 @@ function calculateFitScores() {
 
   var lastState = stateData[stateData.length - 1];
 
-  var energy = clean(lastState[1]);
-  var mood = clean(lastState[2]);
-  var focus = clean(lastState[3]);
+  var energy = toLevel(lastState[1]);
+  var mood = toLevel(lastState[2]);
+  var focus = toLevel(lastState[3]);
 
   var updates = [];
 
@@ -1429,6 +1426,21 @@ function runFullPipeline() {
   generateSmartTodayView();
 
   Logger.log("Full Pipeline Completed");
+}
+
+/**
+ * Convert a numeric value (1-10) or string to Low/Medium/High.
+ */
+function toLevel(val) {
+  var n = Number(val);
+  if (!isNaN(n) && n > 0) {
+    if (n <= 3) return "Low";
+    if (n <= 6) return "Medium";
+    return "High";
+  }
+  var s = String(val || "").trim();
+  if (s === "Low" || s === "Medium" || s === "High") return s;
+  return "Medium";
 }
 
 function getCategory(priority, fit, energy) {
