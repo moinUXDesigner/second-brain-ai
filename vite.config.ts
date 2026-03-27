@@ -4,11 +4,6 @@ import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 import type { IncomingMessage } from 'http';
 
-/**
- * Custom Vite plugin that proxies /gas requests to the GAS web app.
- * Uses Node.js fetch which properly follows GAS 302 redirects.
- * For POST requests, redirects are followed manually to preserve method + body.
- */
 function gasProxyPlugin(gasUrl: string): Plugin {
   async function readBody(req: IncomingMessage): Promise<string> {
     return new Promise((resolve) => {
@@ -19,8 +14,6 @@ function gasProxyPlugin(gasUrl: string): Plugin {
   }
 
   async function fetchFollowingPost(url: string, init: RequestInit): Promise<Response> {
-    // GAS processes the POST on the initial URL, then 302-redirects to a
-    // googleusercontent result URL that only accepts GET.
     const res = await fetch(url, { ...init, redirect: 'manual' });
     if (res.status >= 300 && res.status < 400) {
       const location = res.headers.get('location');
@@ -77,6 +70,8 @@ export default defineConfig(({ mode }) => {
   const gasUrl = env.VITE_GAS_WEB_APP_URL || '';
 
   return {
+    base: '/second-brain-ai/', // ✅ THIS LINE ADDED
+
     plugins: [
       react(),
       VitePWA({
