@@ -124,45 +124,46 @@ export function CreateFlowPage() {
 
   return (
     <div
-      className="flex flex-col min-h-[calc(100vh-3.5rem)] lg:min-h-[calc(100vh-4rem)]"
+      className="fixed inset-0 z-50 flex flex-col"
       style={{ backgroundColor: 'var(--color-bg)' }}
     >
-      {/* Back arrow */}
-      <div className="px-4 pt-4">
-        <button
-          onClick={step === 1 ? () => navigate(-1) : goBack}
-          className="p-2 -ml-2 rounded-md transition-colors"
-          style={{ color: 'var(--color-text)' }}
-          aria-label="Go back"
-        >
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Step indicator */}
-      <div className="px-6 pt-2 pb-6">
-        <StepIndicator
-          currentStep={step}
-          labels={STEP_LABELS}
-          completedSteps={completedSteps}
-        />
-      </div>
-
-      {/* Step content */}
-      <div className="flex-1 px-6 pb-6 overflow-hidden">
-        <AnimatePresence mode="wait" custom={direction}>
-          <motion.div
-            key={step}
-            custom={direction}
-            variants={slideVariants}
-            initial="enter"
-            animate="center"
-            exit="exit"
-            transition={{ duration: 0.2, ease: 'easeInOut' }}
-            className="h-full"
+      <div className="flex-1 flex flex-col overflow-y-auto w-full max-w-lg mx-auto">
+        {/* Back arrow */}
+        <div className="px-4 pt-4 shrink-0">
+          <button
+            onClick={step === 1 ? () => navigate(-1) : goBack}
+            className="p-2 -ml-2 rounded-md transition-colors"
+            style={{ color: 'var(--color-text)' }}
+            aria-label="Go back"
           >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Step indicator */}
+        <div className="px-6 pt-2 pb-6 shrink-0">
+          <StepIndicator
+            currentStep={step}
+            labels={STEP_LABELS}
+            completedSteps={completedSteps}
+          />
+        </div>
+
+        {/* Step content */}
+        <div className="flex-1 px-6 pb-6 flex flex-col min-h-0">
+          <AnimatePresence mode="wait" custom={direction}>
+            <motion.div
+              key={step}
+              custom={direction}
+              variants={slideVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="flex-1 flex flex-col"
+            >
             {step === 1 && (
               <StepInput
                 text={wizardData.text}
@@ -198,6 +199,7 @@ export function CreateFlowPage() {
             )}
           </motion.div>
         </AnimatePresence>
+      </div>
       </div>
     </div>
   );

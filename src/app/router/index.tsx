@@ -20,6 +20,14 @@ export const router = createBrowserRouter([
     element: <LoginPage />,
   },
   {
+    path: '/create',
+    element: (
+      <ProtectedRoute>
+        <CreateFlowPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
     element: (
       <ProtectedRoute>
         <AppLayout />
@@ -32,7 +40,6 @@ export const router = createBrowserRouter([
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
       { path: 'daily-state', element: <DailyStatePage /> },
-      { path: 'create', element: <CreateFlowPage /> },
       {
         path: 'admin',
         element: (
