@@ -3,9 +3,10 @@ import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
 import { useTasks } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
-import type { Task } from '@/types';
 
 type SortField = 'newest' | 'oldest' | 'priority' | 'impact';
+
+const PAGE_SIZE = 10;
 
 export function TasksPage() {
   const { data: tasks, isLoading } = useTasks();
@@ -14,8 +15,8 @@ export function TasksPage() {
   const [filterArea, setFilterArea] = useState('');
   const [filterUrgency, setFilterUrgency] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [page, setPage] = useState(1);
 
-  // Derive unique area values from tasks
   const areas = useMemo(() => {
     if (!tasks) return [];
     const set = new Set(tasks.map((t) => t.area).filter(Boolean));
@@ -24,7 +25,6 @@ export function TasksPage() {
 
   const urgencies = ['High', 'Medium', 'Low'];
 
-  // Filter: only pending, then apply user filters + sort
   const filtered = useMemo(() => {
     if (!tasks) return [];
 
@@ -48,7 +48,6 @@ export function TasksPage() {
       list = list.filter((t) => t.urgency === filterUrgency);
     }
 
-    // Sort
     const sorted = [...list];
     switch (sortBy) {
       case 'newest':
@@ -68,21 +67,30 @@ export function TasksPage() {
     return sorted;
   }, [tasks, sortBy, filterArea, filterUrgency, searchQuery]);
 
+  // Reset to page 1 when filters change
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(page, totalPages);
+  if (safePage !== page) setPage(safePage);
+
+  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const pendingCount = tasks?.filter((t) => t.status === 'Pending').length ?? 0;
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
-      {/* Header */}
-      <div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="flex flex-col h-[calc(100vh-3.5rem-2rem)] lg:h-[calc(100vh-4rem-3rem)]"
+    >
+      {/* Header — fixed */}
+      <div className="shrink-0">
         <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Tasks</h1>
         <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-          {pendingCount} pending task{pendingCount !== 1 ? 's' : ''}
+          {filtered.length} of {pendingCount} pending task{pendingCount !== 1 ? 's' : ''}
         </p>
       </div>
 
-      {/* Search + Sort + Filters bar */}
-      <div className="space-y-3">
-        {/* Search */}
+      {/* Search + Filters — fixed */}
+      <div className="shrink-0 space-y-3 pt-4 pb-3">
         <div className="relative">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
@@ -97,18 +105,16 @@ export function TasksPage() {
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
             placeholder="Search tasks…"
             className="input-base pl-9 text-body"
           />
         </div>
 
-        {/* Filters row */}
         <div className="flex flex-wrap gap-2">
-          {/* Sort */}
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortField)}
+            onChange={(e) => { setSortBy(e.target.value as SortField); setPage(1); }}
             className="input-base text-caption w-auto pr-8"
             style={{ minWidth: 'auto' }}
           >
@@ -118,10 +124,9 @@ export function TasksPage() {
             <option value="impact">Impact</option>
           </select>
 
-          {/* Area filter */}
           <select
             value={filterArea}
-            onChange={(e) => setFilterArea(e.target.value)}
+            onChange={(e) => { setFilterArea(e.target.value); setPage(1); }}
             className="input-base text-caption w-auto pr-8"
             style={{ minWidth: 'auto' }}
           >
@@ -131,10 +136,9 @@ export function TasksPage() {
             ))}
           </select>
 
-          {/* Urgency filter */}
           <select
             value={filterUrgency}
-            onChange={(e) => setFilterUrgency(e.target.value)}
+            onChange={(e) => { setFilterUrgency(e.target.value); setPage(1); }}
             className="input-base text-caption w-auto pr-8"
             style={{ minWidth: 'auto' }}
           >
@@ -144,10 +148,9 @@ export function TasksPage() {
             ))}
           </select>
 
-          {/* Clear filters */}
           {(filterArea || filterUrgency || searchQuery) && (
             <button
-              onClick={() => { setFilterArea(''); setFilterUrgency(''); setSearchQuery(''); }}
+              onClick={() => { setFilterArea(''); setFilterUrgency(''); setSearchQuery(''); setPage(1); }}
               className="px-3 py-1.5 rounded-sm text-caption font-medium transition-colors"
               style={{ color: 'var(--primary-600)' }}
             >
@@ -157,7 +160,67 @@ export function TasksPage() {
         </div>
       </div>
 
-      {isLoading ? <TableSkeleton /> : <TaskList tasks={filtered} />}
+      {/* Task list — scrollable area */}
+      <div className="flex-1 min-h-0 overflow-y-auto">
+        {isLoading ? <TableSkeleton /> : <TaskList tasks={paginated} />}
+      </div>
+
+      {/* Pagination — fixed at bottom */}
+      {totalPages > 1 && (
+        <div className="shrink-0 flex items-center justify-between pt-3 pb-1">
+          <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+            Page {safePage} of {totalPages}
+          </span>
+          <div className="flex gap-1">
+            <button
+              disabled={safePage <= 1}
+              onClick={() => setPage(safePage - 1)}
+              className="px-3 py-1.5 rounded-sm text-caption font-medium transition-colors disabled:opacity-40"
+              style={{
+                backgroundColor: 'var(--color-muted)',
+                color: 'var(--color-text)',
+              }}
+            >
+              Previous
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+              .reduce<(number | 'dots')[]>((acc, p, idx, arr) => {
+                if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('dots');
+                acc.push(p);
+                return acc;
+              }, [])
+              .map((p, idx) =>
+                p === 'dots' ? (
+                  <span key={`dots-${idx}`} className="px-2 py-1.5 text-caption" style={{ color: 'var(--color-text-secondary)' }}>…</span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => setPage(p)}
+                    className="h-8 w-8 rounded-sm text-caption font-medium transition-colors"
+                    style={{
+                      backgroundColor: p === safePage ? 'var(--primary-600)' : 'var(--color-muted)',
+                      color: p === safePage ? '#fff' : 'var(--color-text)',
+                    }}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+            <button
+              disabled={safePage >= totalPages}
+              onClick={() => setPage(safePage + 1)}
+              className="px-3 py-1.5 rounded-sm text-caption font-medium transition-colors disabled:opacity-40"
+              style={{
+                backgroundColor: 'var(--color-muted)',
+                color: 'var(--color-text)',
+              }}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
