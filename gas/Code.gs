@@ -853,8 +853,15 @@ function derivePriorityFromRule(rule) {
  * ROW → OBJECT MAPPER
  ***********************/
 function mapRowToTask(row) {
+  var taskId = String(row[0] || "");
+  // Derive createdAt from Task_ID timestamp (e.g. "T1711612345678" → epoch millis)
+  var createdAt = "";
+  var tsMatch = taskId.match(/^T(\d{13,})$/);
+  if (tsMatch) {
+    createdAt = new Date(Number(tsMatch[1])).toISOString();
+  }
   return {
-    id: String(row[0] || ""),
+    id: taskId,
     title: String(row[1] || ""),
     type: String(row[2] || ""),
     area: String(row[3] || ""),
@@ -873,7 +880,7 @@ function mapRowToTask(row) {
     status: String(row[16] || "Pending"),
     source: String(row[17] || ""),
     completedAt: row[20] ? (row[20] instanceof Date ? row[20].toISOString() : String(row[20])) : "",
-    createdAt: "",
+    createdAt: createdAt,
     updatedAt: ""
   };
 }
