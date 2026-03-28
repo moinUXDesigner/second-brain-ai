@@ -4,11 +4,12 @@ import { cn } from '@/utils/cn';
 interface CardProps {
   children: ReactNode;
   className?: string;
+  onClick?: () => void;
 }
 
-export function Card({ children, className }: CardProps) {
+export function Card({ children, className, onClick }: CardProps) {
   return (
-    <div className={cn('card p-6', className)}>
+    <div className={cn('card p-6', className)} onClick={onClick}>
       {children}
     </div>
   );

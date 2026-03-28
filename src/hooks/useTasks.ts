@@ -50,6 +50,7 @@ export function useUpdateTaskStatus() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
     },
   });
 }
@@ -85,6 +86,7 @@ export function useDeleteTask() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
     },
   });
 }

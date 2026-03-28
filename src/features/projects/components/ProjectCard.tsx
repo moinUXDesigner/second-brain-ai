@@ -1,12 +1,14 @@
+import { useNavigate } from 'react-router-dom';
 import type { Project } from '@/types';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 
 export function ProjectCard({ project }: { project: Project }) {
+  const navigate = useNavigate();
   const statusVariant = project.status === 'Completed' ? 'success' : project.status === 'Active' ? 'primary' : 'default';
 
   return (
-    <Card className="flex flex-col gap-4">
+    <Card className="flex flex-col gap-4 cursor-pointer transition-shadow hover:shadow-md" onClick={() => navigate(`/projects/${project.id}`)}>
       <div className="flex items-start justify-between">
         <h3 className="text-body font-semibold text-neutral-900 dark:text-neutral-50">{project.title}</h3>
         <Badge variant={statusVariant}>{project.status}</Badge>

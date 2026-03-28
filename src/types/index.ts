@@ -75,6 +75,8 @@ export interface Project {
   title: string;
   description?: string;
   status: 'Active' | 'Completed' | 'Archived';
+  priority?: number;
+  dueDate?: string;
   progress: number;
   subtasks: Task[];
   createdAt?: string;
