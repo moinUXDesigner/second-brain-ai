@@ -713,6 +713,12 @@ function handleAnalyzeInput(body) {
     }
   }
 
+  // Normalize subtasks to plain strings (AI may return objects like {subtask: "..."} )
+  var normalizedSubtasks = subtasks.map(function(st) {
+    if (typeof st === "string") return st;
+    return st.subtask || st.title || st.text || st.name || JSON.stringify(st);
+  });
+
   return {
     type: type,
     title: text,
@@ -720,7 +726,7 @@ function handleAnalyzeInput(body) {
     category: category,
     priority: priority,
     estimatedTime: estimatedTime,
-    subtasks: subtasks,
+    subtasks: normalizedSubtasks,
     confidence: confidence,
     source: source
   };
