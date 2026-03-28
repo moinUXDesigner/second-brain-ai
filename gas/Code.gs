@@ -536,11 +536,13 @@ function handleCreateProject(body) {
 
   var subtasks = [];
   subtaskTexts.forEach(function (subtask) {
+    // Normalize: AI may return objects like {subtask: "..."}
+    var subtaskTitle = typeof subtask === "string" ? subtask : (subtask.subtask || subtask.title || subtask.text || subtask.name || JSON.stringify(subtask));
     var subId = "T" + new Date().getTime() + Math.floor(Math.random() * 1000);
-    taskSheet.appendRow([subId, subtask, "Task", area, "", "", projectId, "", "", "", "", "", "", "", "", "", "Pending"]);
+    taskSheet.appendRow([subId, subtaskTitle, "Task", area, "", "", projectId, "", "", "", "", "", "", "", "", "", "Pending"]);
     subtasks.push({
       id: subId,
-      title: subtask,
+      title: subtaskTitle,
       type: "Task",
       area: area,
       projectId: projectId,
@@ -548,6 +550,15 @@ function handleCreateProject(body) {
     });
     Utilities.sleep(10); // Ensure unique timestamps
   });
+
+  // Run classification on new subtasks
+  try {
+    classifyTasks();
+    calculatePriorityScores();
+    calculateFitScores();
+  } catch (e) {
+    Logger.log("Post-project classification failed: " + e);
+  }
 
   return {
     id: projectId,
@@ -1818,9 +1829,11 @@ function createProject(taskText, area, notes, rowIndex) {
   }
 
   subtasks.forEach(function (subtask) {
+    // Normalize: AI may return objects like {subtask: "..."}
+    var subtaskTitle = typeof subtask === "string" ? subtask : (subtask.subtask || subtask.title || subtask.text || subtask.name || JSON.stringify(subtask));
     taskSheet.appendRow([
       "",
-      subtask,
+      subtaskTitle,
       "Task",
       area || "",
       "",
