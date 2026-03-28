@@ -292,8 +292,8 @@ function handleGetDashboard() {
 /***********************
  * PROFILE HANDLERS
  * User_Profile columns: A=User_ID, B=Name, C=Work_Type, D=Routine_Type,
- * E=Available_Time, F=Commute_Time, G=Use_Personal_Data, H=Age, I=DOB,
- * J=Financial_Status, K=Health_Status, L=Custom_Notes, M=Updated_At
+ * E=Commute_Time, F=Use_Personal_Data, G=Age, H=DOB,
+ * I=Financial_Status, J=Health_Status, K=Custom_Notes, L=Updated_At
  ***********************/
 function handleGetProfile() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -306,23 +306,22 @@ function handleGetProfile() {
   var row = data[1];
 
   var dobStr = "";
-  try { if (row[8]) dobStr = Utilities.formatDate(new Date(row[8]), Session.getScriptTimeZone(), "yyyy-MM-dd"); } catch (_) {}
+  try { if (row[7]) dobStr = Utilities.formatDate(new Date(row[7]), Session.getScriptTimeZone(), "yyyy-MM-dd"); } catch (_) {}
   var updStr = "";
-  try { if (row[12]) updStr = Utilities.formatDate(new Date(row[12]), Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss"); } catch (_) {}
+  try { if (row[11]) updStr = Utilities.formatDate(new Date(row[11]), Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss"); } catch (_) {}
 
   return {
     userId: String(row[0] || ""),
     name: String(row[1] || ""),
     workType: String(row[2] || ""),
     routineType: String(row[3] || ""),
-    availableTime: String(row[4] || "Medium"),
-    commuteTime: String(row[5] || ""),
-    usePersonalData: row[6] === true || String(row[6]).toUpperCase() === "TRUE" || String(row[6]).toUpperCase() === "YES",
-    age: String(row[7] || ""),
+    commuteTime: String(row[4] || ""),
+    usePersonalData: row[5] === true || String(row[5]).toUpperCase() === "TRUE" || String(row[5]).toUpperCase() === "YES",
+    age: String(row[6] || ""),
     dob: dobStr,
-    financialStatus: String(row[9] || ""),
-    healthStatus: String(row[10] || ""),
-    customNotes: String(row[11] || ""),
+    financialStatus: String(row[8] || ""),
+    healthStatus: String(row[9] || ""),
+    customNotes: String(row[10] || ""),
     updatedAt: updStr
   };
 }
@@ -335,11 +334,10 @@ function handleSaveProfile(body) {
   var data = sheet.getDataRange().getValues();
   var now = new Date();
   var usePersonal = !!body.usePersonalData;
-  var availTime = body.availableTime || "Medium";
 
   if (data.length < 2) {
     if (data.length === 0) {
-      sheet.appendRow(["User_ID", "Name", "Work_Type", "Routine_Type", "Available_Time",
+      sheet.appendRow(["User_ID", "Name", "Work_Type", "Routine_Type",
         "Commute_Time", "Use_Personal_Data", "Age", "DOB", "Financial_Status",
         "Health_Status", "Custom_Notes", "Updated_At"]);
     }
@@ -348,7 +346,6 @@ function handleSaveProfile(body) {
       body.name || "",
       body.workType || "",
       body.routineType || "",
-      availTime,
       body.commuteTime || "",
       usePersonal,
       body.age || "",
@@ -363,7 +360,6 @@ function handleSaveProfile(body) {
       body.name || "",
       body.workType || "",
       body.routineType || "",
-      availTime,
       body.commuteTime || "",
       usePersonal,
       body.age || "",
@@ -373,7 +369,7 @@ function handleSaveProfile(body) {
       body.customNotes || "",
       now
     ];
-    sheet.getRange(2, 2, 1, 12).setValues([row]);
+    sheet.getRange(2, 2, 1, 11).setValues([row]);
   }
 
   return {
@@ -381,7 +377,6 @@ function handleSaveProfile(body) {
     name: body.name || "",
     workType: body.workType || "",
     routineType: body.routineType || "",
-    availableTime: availTime,
     commuteTime: body.commuteTime || "",
     usePersonalData: usePersonal,
     age: body.age || "",
@@ -1008,12 +1003,15 @@ function generateSmartTodayView_AI() {
   var profile = profileData[1];
   var lastState = stateData[stateData.length - 1];
 
-  var availableTime = profile[4];
+  // Available time now comes from Daily_State col F (minutes), not profile
+  var stateLastRow = stateSheet.getLastRow();
+  var stateRow = stateLastRow >= 2 ? stateSheet.getRange(stateLastRow, 1, 1, 6).getValues()[0] : [null, 5, 5, 5, "", 120];
+  var availableMinutes = stateRow[5] ? Number(stateRow[5]) : 120;
   var energy = lastState[1];
 
-  var maxTasks = 8;
-  if (availableTime === "Low") maxTasks = 5;
-  if (availableTime === "High") maxTasks = 12;
+  // Convert minutes to a descriptive label for the AI prompt
+  var availableTime = availableMinutes <= 60 ? "Low" : (availableMinutes >= 240 ? "High" : "Medium");
+  var maxTasks = Math.max(3, Math.round(availableMinutes / 30));
 
   var taskList = [];
 

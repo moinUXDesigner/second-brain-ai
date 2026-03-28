@@ -14,7 +14,6 @@ export interface Profile {
   name: string;
   workType: string;
   routineType: string;
-  availableTime?: string;
   commuteTime: string;
   usePersonalData: boolean;
   age: string;
