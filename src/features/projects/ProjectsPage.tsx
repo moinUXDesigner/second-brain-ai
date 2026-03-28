@@ -1,10 +1,25 @@
+import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
-import { useProjects } from '@/hooks/useProjects';
+import { useProjects, useDeleteProject } from '@/hooks/useProjects';
 import { ProjectCard } from './components/ProjectCard';
 import { CardSkeleton } from '@/components/ui/Skeleton';
 
 export function ProjectsPage() {
   const { data: projects, isLoading, isError } = useProjects();
+  const deleteProject = useDeleteProject();
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  const handleDelete = (id: string) => {
+    setConfirmId(id);
+  };
+
+  const handleConfirmDelete = () => {
+    if (confirmId) {
+      deleteProject.mutate(confirmId);
+      setConfirmId(null);
+    }
+  };
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -28,9 +43,43 @@ export function ProjectsPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {projects.map((p) => (
-            <ProjectCard key={p.id} project={p} />
+            <ProjectCard
+              key={p.id}
+              project={p}
+              onDelete={handleDelete}
+              deleting={deleteProject.isPending && deleteProject.variables === p.id}
+            />
           ))}
         </div>
+      )}
+
+      {/* Delete confirmation modal */}
+      {confirmId && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="card p-6 max-w-sm w-full space-y-4">
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Delete Project?</h3>
+            <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+              This will permanently delete the project and remove it from the list. Subtasks will remain in your tasks.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmId(null)}
+                className="px-4 py-2 rounded-md text-caption font-medium transition-colors"
+                style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-md text-caption font-medium transition-colors !text-white"
+                style={{ backgroundColor: 'var(--color-danger, #ef4444)' }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </motion.div>
   );

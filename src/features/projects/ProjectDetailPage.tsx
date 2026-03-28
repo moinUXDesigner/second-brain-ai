@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useProject } from '@/hooks/useProjects';
+import { useProject, useDeleteProject } from '@/hooks/useProjects';
 import { useUpdateTaskStatus, useDeleteTask } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/Badge';
 import { TableSkeleton } from '@/components/ui/Skeleton';
@@ -163,6 +164,15 @@ export function ProjectDetailPage() {
   const { data: project, isLoading } = useProject(id!);
   const updateStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteTask();
+  const deleteProject = useDeleteProject();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  const handleDeleteProject = () => {
+    deleteProject.mutate(id!, {
+      onSuccess: () => navigate('/projects'),
+    });
+    setShowDeleteConfirm(false);
+  };
 
   const { pending, inProgress, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
     if (!project?.subtasks) return { pending: [], inProgress: [], completed: [], overdue: [], highPriority: [], suggestedNext: null };
@@ -350,6 +360,50 @@ export function ProjectDetailPage() {
             )}
           </div>
         </div>
+      )}
+
+      {/* Delete Project */}
+      <div className="card p-5">
+        <button
+          onClick={() => setShowDeleteConfirm(true)}
+          disabled={deleteProject.isPending}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-md text-caption font-medium transition-colors !text-white disabled:opacity-40"
+          style={{ backgroundColor: 'var(--color-danger, #ef4444)' }}
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Delete Project
+        </button>
+      </div>
+
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="card p-6 max-w-sm w-full space-y-4">
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Delete Project?</h3>
+            <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+              This will permanently delete "{project.title}" and remove it from the list. Subtasks will remain in your tasks.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 rounded-md text-caption font-medium transition-colors"
+                style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteProject}
+                className="px-4 py-2 rounded-md text-caption font-medium transition-colors !text-white"
+                style={{ backgroundColor: 'var(--color-danger, #ef4444)' }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </motion.div>
   );

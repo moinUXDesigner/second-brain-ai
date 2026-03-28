@@ -38,3 +38,17 @@ export function useCreateProject() {
     },
   });
 }
+
+export function useDeleteProject() {
+  const queryClient = useQueryClient();
+  const { log } = useAudit();
+
+  return useMutation({
+    mutationFn: (id: string) => projectService.deleteProject(id),
+    onSuccess: (_, id) => {
+      log('DELETE_PROJECT', 'project', id);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+    },
+  });
+}

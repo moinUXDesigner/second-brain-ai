@@ -101,6 +101,7 @@ export type AuditAction =
   | 'DELETE_TASK'
   | 'CREATE_PROJECT'
   | 'UPDATE_PROJECT'
+  | 'DELETE_PROJECT'
   | 'RUN_PIPELINE'
   | 'GENERATE_TODAY'
   | 'LOGIN'
