@@ -501,7 +501,9 @@ function handleDeleteTask(taskId) {
 
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]) === String(taskId)) {
-      sheet.deleteRow(i + 1);
+      // Soft-delete: set status to "Deleted" (col Q=17) and completedAt (col U=21)
+      sheet.getRange(i + 1, 17).setValue("Deleted");
+      sheet.getRange(i + 1, 21).setValue(new Date());
       return { deleted: true, taskId: taskId };
     }
   }

@@ -17,7 +17,7 @@ export function CompletedTasksPage() {
   const areas = useMemo(() => {
     if (!tasks) return [];
     const set = new Set(
-      tasks.filter((t) => t.status === 'Done').map((t) => t.area).filter(Boolean),
+      tasks.filter((t) => t.status === 'Done' || t.status === 'Deleted').map((t) => t.area).filter(Boolean),
     );
     return Array.from(set).sort();
   }, [tasks]);
@@ -25,7 +25,7 @@ export function CompletedTasksPage() {
   const filtered = useMemo(() => {
     if (!tasks) return [];
 
-    let list = tasks.filter((t) => t.status === 'Done');
+    let list = tasks.filter((t) => t.status === 'Done' || t.status === 'Deleted');
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -52,7 +52,7 @@ export function CompletedTasksPage() {
   if (safePage !== page) setPage(safePage);
 
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-  const doneCount = tasks?.filter((t) => t.status === 'Done').length ?? 0;
+  const doneCount = tasks?.filter((t) => t.status === 'Done' || t.status === 'Deleted').length ?? 0;
 
   const handleReopen = (id: string) => {
     updateStatus.mutate({ id, status: 'Pending' });
@@ -66,7 +66,7 @@ export function CompletedTasksPage() {
     >
       {/* Header */}
       <div className="shrink-0">
-        <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Completed</h1>
+        <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Completed / Deleted</h1>
         <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
           {filtered.length} of {doneCount} completed task{doneCount !== 1 ? 's' : ''}
         </p>
@@ -144,7 +144,7 @@ export function CompletedTasksPage() {
                         <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>{task.area}</p>
                       )}
                     </div>
-                    <Badge variant="success">Done</Badge>
+                    <Badge variant={task.status === 'Deleted' ? 'danger' : 'success'}>{task.status === 'Deleted' ? 'Deleted' : 'Done'}</Badge>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap text-caption">
@@ -180,6 +180,7 @@ export function CompletedTasksPage() {
                       <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Title</th>
                       <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Type</th>
                       <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Area</th>
+                      <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Status</th>
                       <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Completed</th>
                       <th className="px-4 py-3 text-right text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Action</th>
                     </tr>
@@ -203,6 +204,9 @@ export function CompletedTasksPage() {
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell">
                           <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>{task.area || '—'}</span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={task.status === 'Deleted' ? 'danger' : 'success'}>{task.status === 'Deleted' ? 'Deleted' : 'Done'}</Badge>
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>

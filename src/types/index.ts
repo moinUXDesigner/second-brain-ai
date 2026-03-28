@@ -24,7 +24,7 @@ export interface Profile {
   updatedAt?: string;
 }
 
-export type TaskStatus = 'Pending' | 'Done';
+export type TaskStatus = 'Pending' | 'Done' | 'Deleted';
 export type TaskCategory =
   | 'Deep Work'
   | 'Light Work'

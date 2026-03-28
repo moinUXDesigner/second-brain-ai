@@ -1,7 +1,7 @@
 import type { Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 
-export function TaskList({ tasks }: { tasks: Task[] }) {
+export function TaskList({ tasks, onDelete }: { tasks: Task[]; onDelete?: (id: string) => void }) {
   if (tasks.length === 0) {
     return (
       <div className="card p-12 text-center">
@@ -49,6 +49,18 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                 <span style={{ color: 'var(--primary-600)' }}>{task.projectName}</span>
               )}
             </div>
+            {onDelete && (
+              <button
+                onClick={() => onDelete(task.id)}
+                className="shrink-0 p-1.5 rounded-md transition-colors hover:opacity-80"
+                style={{ color: 'var(--color-danger, #ef4444)' }}
+                title="Delete task"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            )}
           </div>
         ))}
       </div>
@@ -68,6 +80,9 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Urgency</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Project</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Updated</th>
+                {onDelete && (
+                  <th className="px-4 py-3 text-right text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}></th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -121,6 +136,20 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                       {task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : '—'}
                     </span>
                   </td>
+                  {onDelete && (
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => onDelete(task.id)}
+                        className="p-1.5 rounded-md transition-colors hover:opacity-80"
+                        style={{ color: 'var(--color-danger, #ef4444)' }}
+                        title="Delete task"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

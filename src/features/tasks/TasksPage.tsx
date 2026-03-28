@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
-import { useTasks } from '@/hooks/useTasks';
+import { useTasks, useDeleteTask } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 
 type SortField = 'newest' | 'oldest' | 'priority' | 'impact';
@@ -10,6 +10,7 @@ const PAGE_SIZE = 10;
 
 export function TasksPage() {
   const { data: tasks, isLoading } = useTasks();
+  const deleteTask = useDeleteTask();
 
   const [sortBy, setSortBy] = useState<SortField>('newest');
   const [filterArea, setFilterArea] = useState('');
@@ -162,7 +163,7 @@ export function TasksPage() {
 
       {/* Task list — scrollable area */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {isLoading ? <TableSkeleton /> : <TaskList tasks={paginated} />}
+        {isLoading ? <TableSkeleton /> : <TaskList tasks={paginated} onDelete={(id) => deleteTask.mutate(id)} />}
       </div>
 
       {/* Pagination — fixed at bottom */}

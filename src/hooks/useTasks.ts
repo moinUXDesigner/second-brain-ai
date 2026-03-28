@@ -42,7 +42,7 @@ export function useUpdateTaskStatus() {
       taskService.updateTaskStatus(id, status),
     onMutate: async ({ id, status }) => {
       await queryClient.cancelQueries({ queryKey: QUERY_KEYS.todayTasks });
-      updateTaskInStore(id, { status, completedAt: status === 'Done' ? new Date().toISOString() : undefined });
+      updateTaskInStore(id, { status, completedAt: status === 'Done' || status === 'Deleted' ? new Date().toISOString() : undefined });
     },
     onSuccess: (_, { id, status }) => {
       log('UPDATE_TASK', 'task', id, { status });
@@ -62,6 +62,27 @@ export function useCreateTask() {
     mutationFn: (payload: Partial<Task>) => taskService.createTask(payload),
     onSuccess: (res) => {
       log('CREATE_TASK', 'task', res.data.id, { title: res.data.title });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+    },
+  });
+}
+
+export function useDeleteTask() {
+  const queryClient = useQueryClient();
+  const { updateTaskInStore } = useTaskStore();
+  const { log } = useAudit();
+
+  return useMutation({
+    mutationFn: (id: string) => taskService.deleteTask(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.tasks });
+      updateTaskInStore(id, { status: 'Deleted', completedAt: new Date().toISOString() });
+    },
+    onSuccess: (_, id) => {
+      log('DELETE_TASK', 'task', id);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
     },
