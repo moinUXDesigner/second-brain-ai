@@ -45,6 +45,9 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                   {task.urgency}
                 </Badge>
               )}
+              {task.projectName && (
+                <span style={{ color: 'var(--primary-600)' }}>{task.projectName}</span>
+              )}
             </div>
           </div>
         ))}
@@ -63,6 +66,8 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Effort</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Priority</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Urgency</th>
+                <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Project</th>
+                <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Updated</th>
               </tr>
             </thead>
             <tbody>
@@ -105,6 +110,16 @@ export function TaskList({ tasks }: { tasks: Task[] }) {
                     ) : (
                       <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>—</span>
                     )}
+                  </td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    <span className="text-caption" style={{ color: task.projectName ? 'var(--primary-600)' : 'var(--color-text-secondary)' }}>
+                      {task.projectName || '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                      {task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : '—'}
+                    </span>
                   </td>
                 </tr>
               ))}

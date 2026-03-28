@@ -66,6 +66,7 @@ export interface Task {
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;
+  projectName?: string;
   userId?: string;
 }
 

@@ -119,13 +119,26 @@ function doPost(e) {
  * HANDLER FUNCTIONS
  ***********************/
 function handleGetTasks() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TASK_SHEET_NAME);
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName(TASK_SHEET_NAME);
   var data = sheet.getDataRange().getValues();
-  var tasks = [];
 
+  // Build project name map
+  var projectNameMap = {};
+  var projectSheet = ss.getSheetByName("Projects");
+  if (projectSheet) {
+    var pData = projectSheet.getDataRange().getValues();
+    for (var p = 1; p < pData.length; p++) {
+      if (pData[p][0]) projectNameMap[String(pData[p][0])] = String(pData[p][1] || "");
+    }
+  }
+
+  var tasks = [];
   for (var i = 1; i < data.length; i++) {
     if (!data[i][1]) continue;
-    tasks.push(mapRowToTask(data[i]));
+    var task = mapRowToTask(data[i]);
+    task.projectName = task.projectId ? (projectNameMap[task.projectId] || "") : "";
+    tasks.push(task);
   }
 
   return tasks;
@@ -897,7 +910,7 @@ function mapRowToTask(row) {
     source: String(row[17] || ""),
     completedAt: row[20] ? (row[20] instanceof Date ? row[20].toISOString() : String(row[20])) : "",
     createdAt: createdAt,
-    updatedAt: ""
+    updatedAt: createdAt
   };
 }
 
