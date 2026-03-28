@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 
@@ -187,7 +188,7 @@ export function TaskList({ tasks, onDelete, deletingId }: { tasks: Task[]; onDel
       </div>
 
       {/* Delete confirmation modal */}
-      {confirmId && (
+      {confirmId && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="card p-6 max-w-sm w-full space-y-4">
             <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Delete Task?</h3>
@@ -211,7 +212,8 @@ export function TaskList({ tasks, onDelete, deletingId }: { tasks: Task[]; onDel
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
