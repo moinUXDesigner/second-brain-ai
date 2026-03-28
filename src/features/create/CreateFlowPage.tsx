@@ -20,6 +20,7 @@ export interface WizardData {
   priority: 'Low' | 'Medium' | 'High';
   estimatedTime: string;
   linkedProjectId?: string;
+  subtasks?: string[];
 }
 
 const STEP_LABELS = ['Input', 'AI Review', 'Confirm'];
@@ -81,6 +82,7 @@ export function CreateFlowPage() {
         category: wizardData.category,
         priority: wizardData.priority,
         estimatedTime: wizardData.estimatedTime,
+        subtasks: wizardData.subtasks,
       });
 
       if (wizardData.type === 'task' && res.data.task) {

@@ -537,22 +537,27 @@ function handleCreateProject(body) {
   var area = body.area || "";
   var notes = body.description || "";
 
-  var cacheKey = "SUBTASK_" + taskText;
-  var cached = getFromCache(cacheKey);
-
-  if (cached && cached.subtasks) {
-    subtaskTexts = cached.subtasks;
+  // Use frontend-provided subtasks if available; otherwise generate
+  if (body.subtasks && body.subtasks.length > 0) {
+    subtaskTexts = body.subtasks;
   } else {
-    var isComplex = taskText.length > 40 || taskText.includes(" and ");
-    if (isComplex) {
-      try {
-        subtaskTexts = generateSubtasksAI(taskText, area, notes);
-        saveToCache(cacheKey, { maslow: "", impact: "", effort: "", subtasks: subtaskTexts });
-      } catch (e) {
+    var cacheKey = "SUBTASK_" + taskText;
+    var cached = getFromCache(cacheKey);
+
+    if (cached && cached.subtasks) {
+      subtaskTexts = cached.subtasks;
+    } else {
+      var isComplex = taskText.length > 40 || taskText.includes(" and ");
+      if (isComplex) {
+        try {
+          subtaskTexts = generateSubtasksAI(taskText, area, notes);
+          saveToCache(cacheKey, { maslow: "", impact: "", effort: "", subtasks: subtaskTexts });
+        } catch (e) {
+          subtaskTexts = generateSubtasks(taskText);
+        }
+      } else {
         subtaskTexts = generateSubtasks(taskText);
       }
-    } else {
-      subtaskTexts = generateSubtasks(taskText);
     }
   }
 
@@ -725,7 +730,8 @@ function handleCreateInput(body) {
     var project = handleCreateProject({
       title: text,
       description: body.notes || "",
-      area: body.area || ""
+      area: body.area || "",
+      subtasks: body.subtasks || []
     });
     return { project: project };
   } else {

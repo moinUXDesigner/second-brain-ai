@@ -47,22 +47,24 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
         aiEnabled,
       });
       const r: AnalyzeResult = res.data;
-      onChange({
-        type: r.type,
-        category: r.category,
-        priority: r.priority,
-        estimatedTime: r.estimatedTime,
-      });
-      // Normalize subtasks: AI may return objects like {subtask: "..."} instead of strings
+      // Normalize subtasks before storing
       const rawSubs = r.subtasks || [];
-      setSubtasks(rawSubs.map((st: unknown) => {
+      const normalizedSubs = rawSubs.map((st: unknown) => {
         if (typeof st === 'string') return st;
         if (st && typeof st === 'object') {
           const obj = st as Record<string, unknown>;
           return String(obj.subtask || obj.title || obj.text || obj.name || JSON.stringify(st));
         }
         return String(st);
-      }));
+      });
+      onChange({
+        type: r.type,
+        category: r.category,
+        priority: r.priority,
+        estimatedTime: r.estimatedTime,
+        subtasks: normalizedSubs,
+      });
+      setSubtasks(normalizedSubs);
       setConfidence(r.confidence);
       setSource(r.source);
     } catch {

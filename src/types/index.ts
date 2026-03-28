@@ -136,6 +136,7 @@ export interface CreateInput {
   category?: string;
   priority?: string;
   estimatedTime?: string;
+  subtasks?: string[];
 }
 
 export interface AnalyzeResult {
