@@ -19,12 +19,12 @@ export function TodayPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-h1 text-neutral-900 dark:text-neutral-50">Today</h1>
           <p className="text-body text-neutral-500 mt-1">{today()}</p>
         </div>
-        <Button onClick={handleGenerate} isLoading={generateView.isPending} variant="primary" className="self-start sm:self-auto">
+        <Button onClick={handleGenerate} isLoading={generateView.isPending} variant="primary" style={{ color: '#fff' }}>
           <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
