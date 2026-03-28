@@ -51,8 +51,9 @@ export function ProfilePage() {
     try {
       await profileService.saveProfile(profile);
       toast.success('Profile saved');
-    } catch {
-      toast.error('Failed to save profile');
+    } catch (err) {
+      console.error('Profile save error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to save profile');
     } finally {
       setSaving(false);
     }
