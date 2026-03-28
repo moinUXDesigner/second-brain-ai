@@ -22,6 +22,9 @@ function doGet(e) {
       case "getProjects":
         result = { success: true, data: handleGetProjects() };
         break;
+      case "getDeletedProjects":
+        result = { success: true, data: handleGetDeletedProjects() };
+        break;
       case "getDailyState":
         result = { success: true, data: handleGetDailyState(e.parameter.date) };
         break;
@@ -218,6 +221,8 @@ function handleGetProjects() {
     var projectId = clean(row[0]);
     if (!projectId) continue;
 
+    if (String(row[3]).toLowerCase() === "deleted") continue;
+
     var subtasks = subtaskMap[projectId] || [];
     var doneCount = subtasks.filter(function (s) { return s.status === "Done"; }).length;
     var progress = subtasks.length > 0 ? Math.round((doneCount / subtasks.length) * 100) : 0;
@@ -227,6 +232,51 @@ function handleGetProjects() {
       title: row[1] || "",
       description: row[2] || "",
       status: row[3] || "Active",
+      priority: Number(row[4]) || 0,
+      progress: progress,
+      subtasks: subtasks,
+      createdAt: row[5] ? new Date(row[5]).toISOString() : "",
+      updatedAt: row[7] ? new Date(row[7]).toISOString() : ""
+    });
+  }
+
+  return projects;
+}
+
+function handleGetDeletedProjects() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var projectSheet = ss.getSheetByName("Projects");
+  if (!projectSheet) return [];
+
+  var projectData = projectSheet.getDataRange().getValues();
+  var taskSheet = ss.getSheetByName(TASK_SHEET_NAME);
+  var taskData = taskSheet.getDataRange().getValues();
+
+  var subtaskMap = {};
+  for (var j = 1; j < taskData.length; j++) {
+    var pid = clean(taskData[j][6]);
+    if (pid) {
+      if (!subtaskMap[pid]) subtaskMap[pid] = [];
+      subtaskMap[pid].push(mapRowToTask(taskData[j]));
+    }
+  }
+
+  var projects = [];
+  for (var i = 1; i < projectData.length; i++) {
+    var row = projectData[i];
+    var projectId = clean(row[0]);
+    if (!projectId) continue;
+    if (String(row[3]).toLowerCase() !== "deleted") continue;
+
+    var subtasks = subtaskMap[projectId] || [];
+    var doneCount = subtasks.filter(function (s) { return s.status === "Done"; }).length;
+    var progress = subtasks.length > 0 ? Math.round((doneCount / subtasks.length) * 100) : 0;
+
+    projects.push({
+      id: projectId,
+      title: row[1] || "",
+      description: row[2] || "",
+      status: row[3] || "Deleted",
       priority: Number(row[4]) || 0,
       progress: progress,
       subtasks: subtasks,
@@ -623,7 +673,8 @@ function handleDeleteProject(projectId) {
 
   for (var i = 1; i < data.length; i++) {
     if (String(data[i][0]) === String(projectId)) {
-      projectSheet.deleteRow(i + 1);
+      projectSheet.getRange(i + 1, 4).setValue("Deleted");
+      projectSheet.getRange(i + 1, 9).setValue(new Date());
       return { deleted: true, projectId: projectId };
     }
   }

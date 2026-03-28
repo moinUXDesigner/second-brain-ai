@@ -24,6 +24,11 @@ export const projectService = {
     return { data: { id, ...payload } as Project, success: true };
   },
 
+  async getDeletedProjects(): Promise<ApiResponse<Project[]>> {
+    const data = await gasClient.get<Project[]>('getDeletedProjects');
+    return { data, success: true };
+  },
+
   async deleteProject(id: string): Promise<void> {
     await gasClient.post<unknown>('deleteProject', { projectId: id });
   },

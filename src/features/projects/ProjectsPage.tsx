@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProjects, useDeleteProject } from '@/hooks/useProjects';
 import { ProjectCard } from './components/ProjectCard';
@@ -23,9 +24,21 @@ export function ProjectsPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <div>
-        <h1 className="text-h1 text-neutral-900 dark:text-neutral-50">Projects</h1>
-        <p className="text-body text-neutral-500 mt-1">Track multi-step goals</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-h1 text-neutral-900 dark:text-neutral-50">Projects</h1>
+          <p className="text-body text-neutral-500 mt-1">Track multi-step goals</p>
+        </div>
+        <Link
+          to="/projects/deleted"
+          className="flex items-center gap-1.5 text-caption font-medium transition-colors hover:opacity-80"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Deleted
+        </Link>
       </div>
 
       {isLoading ? (

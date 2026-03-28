@@ -47,6 +47,7 @@ export const QUERY_KEYS = {
   tasks: ['tasks'] as const,
   todayTasks: ['tasks', 'today'] as const,
   projects: ['projects'] as const,
+  deletedProjects: ['projects', 'deleted'] as const,
   project: (id: string) => ['projects', id] as const,
   dailyState: (date: string) => ['daily-state', date] as const,
   auditLogs: ['audit-logs'] as const,

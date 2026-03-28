@@ -39,6 +39,16 @@ export function useCreateProject() {
   });
 }
 
+export function useDeletedProjects() {
+  return useQuery({
+    queryKey: QUERY_KEYS.deletedProjects,
+    queryFn: async () => {
+      const res = await projectService.getDeletedProjects();
+      return res.data;
+    },
+  });
+}
+
 export function useDeleteProject() {
   const queryClient = useQueryClient();
   const { log } = useAudit();
@@ -48,6 +58,7 @@ export function useDeleteProject() {
     onSuccess: (_, id) => {
       log('DELETE_PROJECT', 'project', id);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.deletedProjects });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
     },
   });
