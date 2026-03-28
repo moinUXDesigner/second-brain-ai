@@ -395,12 +395,16 @@ function handleSaveProfile(body) {
 }
 
 function handleCreateTask(body) {
+  var title = (body.title || "").trim();
+  if (!title) {
+    throw new Error("Task title is required");
+  }
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TASK_SHEET_NAME);
   var taskId = "T" + new Date().getTime();
 
   var row = [
     taskId,                        // A: Task_ID
-    body.title || "",              // B: Task
+    title,                         // B: Task
     body.type || "Task",           // C: Type
     body.area || "",               // D: Area
     body.dueDate || "",            // E: Due Date
@@ -669,8 +673,20 @@ function handleCleanupTasks() {
     }
   }
 
+  // Pass 1b: Delete rows with empty titles (iterate backwards to avoid index shift)
+  var deletedCount = 0;
+  var refreshData = sheet.getDataRange().getValues();
+  for (var d = refreshData.length - 1; d >= 1; d--) {
+    var t = String(refreshData[d][1] || "").trim();
+    if (!t) {
+      sheet.deleteRow(d + 1);
+      deletedCount++;
+    }
+  }
+
   // Pass 2: Clear stale classification data so everything gets re-scored
-  var rowCount = data.length - 1;
+  var finalData = sheet.getDataRange().getValues();
+  var rowCount = finalData.length - 1;
   if (rowCount > 0) {
     // Clear columns H-N (Maslow, Impact, Effort, TimeEstimate, Urgency, TypeDerived, Confidence)
     sheet.getRange(2, 8, rowCount, 7).clearContent();
@@ -683,7 +699,7 @@ function handleCleanupTasks() {
   calculatePriorityScores();
   calculateFitScores();
 
-  return { fixedTitles: fixedCount, totalTasks: rowCount, message: "Cleanup complete" };
+  return { fixedTitles: fixedCount, deletedEmpty: deletedCount, totalTasks: rowCount, message: "Cleanup complete" };
 }
 
 function handleCreateInput(body) {
