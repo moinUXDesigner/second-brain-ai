@@ -6,11 +6,13 @@ interface UiState {
   isSidebarOpen: boolean;
   isDarkMode: boolean;
   colorScheme: ColorScheme;
+  aiEnabled: boolean;
   isLoading: boolean;
   activeModal: string | null;
   toggleSidebar: () => void;
   toggleDarkMode: () => void;
   toggleColorScheme: () => void;
+  toggleAI: () => void;
   setLoading: (loading: boolean) => void;
   openModal: (modal: string) => void;
   closeModal: () => void;
@@ -24,6 +26,7 @@ export const useUiStore = create<UiState>()((set) => ({
   isSidebarOpen: typeof window !== 'undefined' && window.innerWidth >= 1024,
   isDarkMode: localStorage.getItem('theme') === 'dark',
   colorScheme: (localStorage.getItem('colorScheme') as ColorScheme) || 'blue',
+  aiEnabled: localStorage.getItem('aiEnabled') !== 'false',
   isLoading: false,
   activeModal: null,
   toggleSidebar: () => set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
@@ -40,6 +43,12 @@ export const useUiStore = create<UiState>()((set) => ({
       localStorage.setItem('colorScheme', next);
       applyColorScheme(next);
       return { colorScheme: next };
+    }),
+  toggleAI: () =>
+    set((s) => {
+      const next = !s.aiEnabled;
+      localStorage.setItem('aiEnabled', String(next));
+      return { aiEnabled: next };
     }),
   setLoading: (isLoading) => set({ isLoading }),
   openModal: (activeModal) => set({ activeModal }),

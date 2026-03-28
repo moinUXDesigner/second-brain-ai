@@ -94,6 +94,9 @@ function doPost(e) {
       case "createInput":
         result = { success: true, data: handleCreateInput(body) };
         break;
+      case "analyzeInput":
+        result = { success: true, data: handleAnalyzeInput(body) };
+        break;
       case "saveProfile":
         result = { success: true, data: handleSaveProfile(body) };
         break;
@@ -653,6 +656,141 @@ function handleCreateInput(body) {
     });
     return { task: task };
   }
+}
+
+/***********************
+ * ANALYZE INPUT (AI)
+ ***********************/
+function handleAnalyzeInput(body) {
+  var text = (body.text || "").trim();
+  var area = (body.area || "").trim();
+  var aiEnabled = body.aiEnabled !== false;
+
+  if (!text) {
+    return { error: "Text is required" };
+  }
+
+  // Step 1: Rule-based analysis (always runs — instant)
+  var rule = ruleBasedClassificationAdvanced(text, "");
+  var type = looksLikeProjectGAS(text) ? "project" : "task";
+  var category = deriveCategoryFromRule(rule);
+  var priority = derivePriorityFromRule(rule);
+  var estimatedTime = deriveTime(text);
+  var subtasks = [];
+  var confidence = rule.confidence;
+  var source = "RULE";
+
+  // Step 2: AI analysis (if enabled)
+  if (aiEnabled) {
+    try {
+      var aiResult = analyzeInputWithAI(text, area);
+      if (aiResult) {
+        type = aiResult.type || type;
+        category = aiResult.category || category;
+        priority = aiResult.priority || priority;
+        estimatedTime = aiResult.estimatedTime || estimatedTime;
+        if (aiResult.subtasks && aiResult.subtasks.length > 0) {
+          subtasks = aiResult.subtasks;
+        }
+        confidence = 0.9;
+        source = "AI";
+      }
+    } catch (e) {
+      Logger.log("AI analysis failed, using rule-based: " + e);
+    }
+  }
+
+  // If project detected and no subtasks yet, generate them
+  if (type === "project" && subtasks.length === 0) {
+    try {
+      if (aiEnabled) {
+        subtasks = generateSubtasksAI(text, area, "");
+      } else {
+        subtasks = generateSubtasks(text);
+      }
+    } catch (e) {
+      subtasks = generateSubtasks(text);
+    }
+  }
+
+  return {
+    type: type,
+    title: text,
+    area: area,
+    category: category,
+    priority: priority,
+    estimatedTime: estimatedTime,
+    subtasks: subtasks,
+    confidence: confidence,
+    source: source
+  };
+}
+
+function analyzeInputWithAI(text, area) {
+  var apiKey = PropertiesService.getScriptProperties().getProperty("OPENAI_API_KEY");
+  if (!apiKey) return null;
+
+  var payload = {
+    model: "gpt-4o-mini",
+    temperature: 0.2,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a productivity assistant that analyzes user input.\n" +
+          "Determine if the input is a task or project, and classify it.\n" +
+          "Return ONLY valid JSON with these fields:\n" +
+          '{\n' +
+          '  "type": "task" or "project",\n' +
+          '  "category": one of "Deep Work", "Light Work", "Admin", "Recovery",\n' +
+          '  "priority": "Low", "Medium", or "High",\n' +
+          '  "estimatedTime": e.g. "30 minutes", "1 hour", "2 hours", "4 hours", "1 day",\n' +
+          '  "subtasks": [] (array of strings, only if type is "project", 4-6 items)\n' +
+          "}"
+      },
+      {
+        role: "user",
+        content: "Input: " + text + (area ? "\nArea: " + area : "")
+      }
+    ]
+  };
+
+  var response = UrlFetchApp.fetch("https://api.openai.com/v1/chat/completions", {
+    method: "post",
+    contentType: "application/json",
+    headers: { Authorization: "Bearer " + apiKey },
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+
+  var json = JSON.parse(response.getContentText());
+  if (!json.choices || !json.choices[0]) return null;
+
+  var content = json.choices[0].message.content.replace(/```json|```/g, "").trim();
+  return JSON.parse(content);
+}
+
+function looksLikeProjectGAS(text) {
+  var lower = text.toLowerCase();
+  var keywords = ["build", "create", "design", "develop", "launch", "plan", "setup", "implement", "redesign", "migrate", "app", "website", "system", "platform", "project"];
+  var count = 0;
+  for (var i = 0; i < keywords.length; i++) {
+    if (lower.indexOf(keywords[i]) >= 0) count++;
+  }
+  return count >= 2;
+}
+
+function deriveCategoryFromRule(rule) {
+  if (rule.effort >= 7) return "Deep Work";
+  if (rule.effort <= 3) return "Light Work";
+  if (rule.maslow === "Physiological") return "Recovery";
+  return "Admin";
+}
+
+function derivePriorityFromRule(rule) {
+  if (rule.impact >= 8) return "High";
+  if (rule.impact >= 5) return "Medium";
+  return "Low";
 }
 
 /***********************

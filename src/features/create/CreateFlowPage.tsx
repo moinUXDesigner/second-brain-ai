@@ -9,8 +9,7 @@ import { QUERY_KEYS } from '@/constants';
 import type { Task, Project } from '@/types';
 import { StepIndicator } from './components/StepIndicator';
 import { StepInput } from './components/StepInput';
-import { StepSelectType } from './components/StepSelectType';
-import { StepAISuggestions } from './components/StepAISuggestions';
+import { StepAIReview } from './components/StepAIReview';
 import { StepConfirm } from './components/StepConfirm';
 
 export interface WizardData {
@@ -23,7 +22,7 @@ export interface WizardData {
   linkedProjectId?: string;
 }
 
-const STEP_LABELS = ['Input', 'Select Type', 'AI Suggestions', 'Confirm'];
+const STEP_LABELS = ['Input', 'AI Review', 'Confirm'];
 
 const slideVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),
@@ -55,12 +54,12 @@ export function CreateFlowPage() {
 
   const completedSteps = new Set<number>();
   for (let i = 1; i < step; i++) completedSteps.add(i);
-  // Step 4 is "completed" only after submission
-  if (step === 4 && (createdTask || createdProject)) completedSteps.add(4);
+  // Step 3 is "completed" only after submission
+  if (step === 3 && (createdTask || createdProject)) completedSteps.add(3);
 
   const goNext = () => {
     setDirection(1);
-    setStep((s) => Math.min(s + 1, 4));
+    setStep((s) => Math.min(s + 1, 3));
   };
 
   const goBack = () => {
@@ -110,7 +109,7 @@ export function CreateFlowPage() {
 
       // Move to confirm step
       setDirection(1);
-      setStep(4);
+      setStep(3);
     } catch {
       toast.error('Failed to create. Please try again.');
     } finally {
@@ -177,15 +176,7 @@ export function CreateFlowPage() {
               />
             )}
             {step === 2 && (
-              <StepSelectType
-                text={wizardData.text}
-                type={wizardData.type}
-                onChange={update}
-                onNext={goNext}
-              />
-            )}
-            {step === 3 && (
-              <StepAISuggestions
+              <StepAIReview
                 data={wizardData}
                 onChange={update}
                 onBack={goBack}
@@ -193,7 +184,7 @@ export function CreateFlowPage() {
                 submitting={submitting}
               />
             )}
-            {step === 4 && (
+            {step === 3 && (
               <StepConfirm
                 data={wizardData}
                 task={createdTask}

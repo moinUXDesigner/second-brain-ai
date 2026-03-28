@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 
 export function Header() {
   const user = useAuthStore((s) => s.user);
-  const { toggleSidebar } = useUiStore();
+  const { toggleSidebar, aiEnabled, toggleAI } = useUiStore();
   const { logout } = useAuth();
 
   return (
@@ -35,6 +35,23 @@ export function Header() {
 
       {/* Right */}
       <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        {/* AI toggle */}
+        <button
+          onClick={toggleAI}
+          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-caption font-medium transition-all"
+          style={{
+            backgroundColor: aiEnabled ? 'var(--primary-100)' : 'var(--color-muted)',
+            color: aiEnabled ? 'var(--primary-700)' : 'var(--color-muted-fg)',
+          }}
+          aria-label="Toggle AI"
+          title={aiEnabled ? 'AI enabled' : 'AI disabled'}
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+          </svg>
+          <span className="hidden sm:inline">AI</span>
+        </button>
+
         <ThemeToggle />
 
         {user && (

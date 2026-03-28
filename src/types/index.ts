@@ -134,3 +134,15 @@ export interface CreateInput {
   priority?: string;
   estimatedTime?: string;
 }
+
+export interface AnalyzeResult {
+  type: 'task' | 'project';
+  title: string;
+  area: string;
+  category: string;
+  priority: 'Low' | 'Medium' | 'High';
+  estimatedTime: string;
+  subtasks: string[];
+  confidence: number;
+  source: 'AI' | 'RULE';
+}
