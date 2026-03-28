@@ -97,6 +97,9 @@ function doPost(e) {
       case "analyzeInput":
         result = { success: true, data: handleAnalyzeInput(body) };
         break;
+      case "cleanupTasks":
+        result = { success: true, data: handleCleanupTasks() };
+        break;
       case "saveProfile":
         result = { success: true, data: handleSaveProfile(body) };
         break;
@@ -645,6 +648,42 @@ function handleSaveDailyState(body) {
     notes: notesVal,
     availableTime: availMins
   };
+}
+
+/***********************
+ * CLEANUP: fix {subtask=...} titles + re-score all tasks
+ ***********************/
+function handleCleanupTasks() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TASK_SHEET_NAME);
+  var data = sheet.getDataRange().getValues();
+  var fixedCount = 0;
+
+  // Pass 1: Fix corrupted titles like {subtask=Some text.}
+  for (var i = 1; i < data.length; i++) {
+    var title = String(data[i][1] || "");
+    // Match patterns: {subtask=..., key=value} or {subtask=...}
+    var match = title.match(/^\{subtask=(.+?)(?:,\s*\w+=.*)?\}$/);
+    if (match) {
+      sheet.getRange(i + 1, 2).setValue(match[1].trim());
+      fixedCount++;
+    }
+  }
+
+  // Pass 2: Clear stale classification data so everything gets re-scored
+  var rowCount = data.length - 1;
+  if (rowCount > 0) {
+    // Clear columns H-N (Maslow, Impact, Effort, TimeEstimate, Urgency, TypeDerived, Confidence)
+    sheet.getRange(2, 8, rowCount, 7).clearContent();
+    // Clear column R (Source)
+    sheet.getRange(2, 18, rowCount, 1).clearContent();
+  }
+
+  // Pass 3: Run full pipeline
+  classifyTasks();
+  calculatePriorityScores();
+  calculateFitScores();
+
+  return { fixedTitles: fixedCount, totalTasks: rowCount, message: "Cleanup complete" };
 }
 
 function handleCreateInput(body) {
