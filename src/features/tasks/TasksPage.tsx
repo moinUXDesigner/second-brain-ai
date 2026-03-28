@@ -163,7 +163,7 @@ export function TasksPage() {
 
       {/* Task list — scrollable area */}
       <div className="flex-1 min-h-0 overflow-y-auto">
-        {isLoading ? <TableSkeleton /> : <TaskList tasks={paginated} onDelete={(id) => deleteTask.mutate(id)} />}
+        {isLoading ? <TableSkeleton /> : <TaskList tasks={paginated} onDelete={(id) => deleteTask.mutate(id)} deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null} />}
       </div>
 
       {/* Pagination — fixed at bottom */}

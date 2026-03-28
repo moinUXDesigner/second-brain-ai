@@ -1,7 +1,20 @@
+import { useState } from 'react';
 import type { Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 
-export function TaskList({ tasks, onDelete }: { tasks: Task[]; onDelete?: (id: string) => void }) {
+export function TaskList({ tasks, onDelete, deletingId }: { tasks: Task[]; onDelete?: (id: string) => void; deletingId?: string | null }) {
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
+  const handleDeleteClick = (id: string) => {
+    setConfirmId(id);
+  };
+
+  const handleConfirm = () => {
+    if (confirmId && onDelete) {
+      onDelete(confirmId);
+      setConfirmId(null);
+    }
+  };
   if (tasks.length === 0) {
     return (
       <div className="card p-12 text-center">
@@ -51,14 +64,22 @@ export function TaskList({ tasks, onDelete }: { tasks: Task[]; onDelete?: (id: s
             </div>
             {onDelete && (
               <button
-                onClick={() => onDelete(task.id)}
-                className="shrink-0 p-1.5 rounded-md transition-colors hover:opacity-80"
+                onClick={() => handleDeleteClick(task.id)}
+                disabled={deletingId === task.id}
+                className="shrink-0 p-1.5 rounded-md transition-colors hover:opacity-80 disabled:opacity-40"
                 style={{ color: 'var(--color-danger, #ef4444)' }}
                 title="Delete task"
               >
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
+                {deletingId === task.id ? (
+                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                  </svg>
+                ) : (
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                )}
               </button>
             )}
           </div>
@@ -139,14 +160,22 @@ export function TaskList({ tasks, onDelete }: { tasks: Task[]; onDelete?: (id: s
                   {onDelete && (
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() => onDelete(task.id)}
-                        className="p-1.5 rounded-md transition-colors hover:opacity-80"
+                        onClick={() => handleDeleteClick(task.id)}
+                        disabled={deletingId === task.id}
+                        className="p-1.5 rounded-md transition-colors hover:opacity-80 disabled:opacity-40"
                         style={{ color: 'var(--color-danger, #ef4444)' }}
                         title="Delete task"
                       >
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
+                        {deletingId === task.id ? (
+                          <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                        ) : (
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        )}
                       </button>
                     </td>
                   )}
@@ -156,6 +185,34 @@ export function TaskList({ tasks, onDelete }: { tasks: Task[]; onDelete?: (id: s
           </table>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {confirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="card p-6 max-w-sm w-full space-y-4">
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Delete Task?</h3>
+            <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+              This task will be moved to the Completed/Deleted list. You can reopen it later.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmId(null)}
+                className="px-4 py-2 rounded-md text-caption font-medium transition-colors"
+                style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="px-4 py-2 rounded-md text-caption font-medium transition-colors !text-white"
+                style={{ backgroundColor: 'var(--color-danger, #ef4444)' }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
