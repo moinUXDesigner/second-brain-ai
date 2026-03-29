@@ -8,155 +8,79 @@ import { Badge } from '@/components/ui/Badge';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import type { Task } from '@/types';
 
-function SmartSummary({ pending, inProgress, completed, overdue, highPriority, suggestedNext }: {
-  pending: Task[];
-  inProgress: Task[];
-  completed: Task[];
-  overdue: Task[];
-  highPriority: Task[];
-  suggestedNext: Task | null;
-}) {
-  const navigate = useNavigate();
-  return (
-    <div className="card p-5 space-y-3">
-      <h2 className="text-body font-bold" style={{ color: 'var(--color-text)' }}>Smart Summary</h2>
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="text-base">✅</span>
-          <span className="text-caption" style={{ color: 'var(--color-text)' }}>
-            <strong>{completed.length}</strong> tasks <span style={{ color: 'var(--color-success, #22c55e)' }}>completed</span>
-          </span>
-        </div>
-        {overdue.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-base">🟠</span>
-            <span className="text-caption" style={{ color: 'var(--color-text)' }}>
-              <strong>{overdue.length}</strong> tasks <span style={{ color: 'var(--color-warning, #f59e0b)' }}>overdue</span>
-            </span>
-          </div>
-        )}
-        {highPriority.length > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-base">🔥</span>
-            <span className="text-caption" style={{ color: 'var(--color-text)' }}>
-              <strong>{highPriority.length}</strong> <span style={{ color: 'var(--color-danger, #ef4444)' }}>high priority</span>
-            </span>
-          </div>
-        )}
-        {suggestedNext && (
-          <div className="flex items-center gap-2 pt-1">
-            <span className="text-base">💡</span>
-            <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-              Suggested next step: {suggestedNext.title}
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+// ── Task Row ──
 
-function TaskGroup({ title, tasks, onToggle, onDelete, deletingId, toggleLabel, toggleIcon, emptyText }: {
-  title: string;
-  tasks: Task[];
+function TaskRow({ task, variant, onToggle, onDelete, deletingId }: {
+  task: Task;
+  variant: 'pending' | 'done';
   onToggle: (id: string) => void;
   onDelete?: (id: string) => void;
   deletingId?: string | null;
-  toggleLabel: string;
-  toggleIcon: string;
-  emptyText: string;
 }) {
-  if (tasks.length === 0) return null;
-
+  const isDone = variant === 'done';
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h3 className="text-body font-bold" style={{ color: 'var(--color-text)' }}>{title}</h3>
-        <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>{tasks.length}</span>
+    <div className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-black/[.015] dark:hover:bg-white/[.015]">
+      <button
+        onClick={() => onToggle(task.id)}
+        className="shrink-0 flex items-center justify-center h-[20px] w-[20px] rounded-full border-[1.5px] transition-all"
+        style={{
+          borderColor: isDone ? 'var(--success-500, #22c55e)' : 'var(--color-border)',
+          backgroundColor: isDone ? 'var(--success-500, #22c55e)' : 'transparent',
+        }}
+      >
+        {isDone && (
+          <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+        )}
+      </button>
+
+      <div className="flex-1 min-w-0">
+        <p
+          className="text-sm truncate"
+          style={{
+            color: isDone ? 'var(--color-muted-fg)' : 'var(--color-text)',
+            textDecoration: isDone ? 'line-through' : undefined,
+          }}
+        >
+          {task.title}
+        </p>
       </div>
-      <div className="space-y-1">
-        {tasks.map((task) => (
-          <div
-            key={task.id}
-            className="card flex items-center gap-3 px-4 py-3"
+
+      <div className="shrink-0 flex items-center gap-2">
+        {task.urgency === 'High' && !isDone && (
+          <Badge variant="danger" className="!text-[9px] !px-1.5 !py-0">HIGH</Badge>
+        )}
+        {task.dueDate && (
+          <span className="text-[11px] hidden sm:inline" style={{ color: 'var(--color-muted-fg)' }}>
+            {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          </span>
+        )}
+        {onDelete && !isDone && (
+          <button
+            onClick={() => onDelete(task.id)}
+            disabled={deletingId === task.id}
+            className="p-1 rounded-md transition-colors opacity-60 hover:opacity-100 disabled:opacity-30"
+            style={{ color: 'var(--color-danger, #ef4444)' }}
           >
-            {/* Toggle button */}
-            <button
-              onClick={() => onToggle(task.id)}
-              className="shrink-0 h-5 w-5 rounded border flex items-center justify-center transition-colors"
-              style={{
-                borderColor: title === 'Completed' ? 'var(--color-success, #22c55e)' : 'var(--color-border)',
-                backgroundColor: title === 'Completed' ? 'var(--color-success, #22c55e)' : 'transparent',
-                color: title === 'Completed' ? '#fff' : 'var(--color-text-secondary)',
-              }}
-              title={toggleLabel}
-            >
-              {title === 'Completed' && (
-                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </button>
-
-            {/* Task info */}
-            <div className="flex-1 min-w-0">
-              <p
-                className="text-body font-medium truncate"
-                style={{
-                  color: 'var(--color-text)',
-                  textDecoration: title === 'Completed' ? 'line-through' : undefined,
-                  opacity: title === 'Completed' ? 0.6 : 1,
-                }}
-              >
-                {task.title}
-              </p>
-              {title === 'In Progress' && (
-                <p className="text-caption" style={{ color: 'var(--primary-600)' }}>In Progress</p>
-              )}
-            </div>
-
-            {/* Meta: due date, urgency badge */}
-            <div className="shrink-0 flex items-center gap-2">
-              {task.dueDate && (
-                <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-                  {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
-              )}
-              {task.urgency === 'High' && <Badge variant="danger">HIGH</Badge>}
-              {title === 'Completed' && (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: 'var(--color-success, #22c55e)' }}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-            </div>
-
-            {/* Delete button for pending/in-progress */}
-            {onDelete && title !== 'Completed' && (
-              <button
-                onClick={() => onDelete(task.id)}
-                disabled={deletingId === task.id}
-                className="shrink-0 p-1 rounded transition-colors hover:opacity-80 disabled:opacity-40"
-                style={{ color: 'var(--color-danger, #ef4444)' }}
-                title="Delete task"
-              >
-                {deletingId === task.id ? (
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : (
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                )}
-              </button>
+            {deletingId === task.id ? (
+              <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
             )}
-          </div>
-        ))}
+          </button>
+        )}
       </div>
     </div>
   );
 }
+
+// ── Main Page ──
 
 export function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -166,20 +90,13 @@ export function ProjectDetailPage() {
   const deleteTask = useDeleteTask();
   const deleteProject = useDeleteProject();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showCompleted, setShowCompleted] = useState(false);
 
-  const handleDeleteProject = () => {
-    deleteProject.mutate(id!, {
-      onSuccess: () => navigate('/projects'),
-    });
-    setShowDeleteConfirm(false);
-  };
-
-  const { pending, inProgress, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
-    if (!project?.subtasks) return { pending: [], inProgress: [], completed: [], overdue: [], highPriority: [], suggestedNext: null };
+  const { pending, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
+    if (!project?.subtasks) return { pending: [], completed: [], overdue: [], highPriority: [], suggestedNext: null };
 
     const now = new Date();
     const p: Task[] = [];
-    const ip: Task[] = [];
     const c: Task[] = [];
     const od: Task[] = [];
     const hp: Task[] = [];
@@ -187,83 +104,67 @@ export function ProjectDetailPage() {
     project.subtasks.forEach((t) => {
       if (t.status === 'Done') {
         c.push(t);
-      } else if (t.status === 'Deleted') {
-        // skip deleted
-      } else {
+      } else if (t.status !== 'Deleted') {
         p.push(t);
         if (t.dueDate && new Date(t.dueDate) < now) od.push(t);
         if (t.urgency === 'High' || (t.priority && t.priority >= 8)) hp.push(t);
       }
     });
 
-    // Sort pending by priority desc
     p.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
-
-    // Suggested next: highest priority pending task
-    const suggested = p.length > 0 ? p[0] : null;
-
-    return { pending: p, inProgress: ip, completed: c, overdue: od, highPriority: hp, suggestedNext: suggested };
+    return { pending: p, completed: c, overdue: od, highPriority: hp, suggestedNext: p[0] ?? null };
   }, [project]);
 
   const totalTasks = pending.length + completed.length;
   const progress = totalTasks > 0 ? Math.round((completed.length / totalTasks) * 100) : 0;
 
-  const handleMarkDone = (taskId: string) => {
-    updateStatus.mutate({ id: taskId, status: 'Done' });
+  const handleDeleteProject = () => {
+    deleteProject.mutate(id!, { onSuccess: () => navigate('/projects') });
+    setShowDeleteConfirm(false);
   };
-
-  const handleReopen = (taskId: string) => {
-    updateStatus.mutate({ id: taskId, status: 'Pending' });
-  };
-
-  const handleDelete = (taskId: string) => {
-    deleteTask.mutate(taskId);
-  };
-
-  const priorityLabel = project?.priority
-    ? project.priority >= 8 ? 'High' : project.priority >= 5 ? 'Medium' : 'Low'
-    : null;
 
   if (isLoading) {
-    return (
-      <div className="space-y-6 p-4">
-        <TableSkeleton />
-      </div>
-    );
+    return <div className="space-y-6 p-4"><TableSkeleton /></div>;
   }
 
   if (!project) {
     return (
-      <div className="card p-12 text-center">
-        <p className="text-body" style={{ color: 'var(--color-text-secondary)' }}>Project not found.</p>
-        <button onClick={() => navigate('/projects')} className="mt-4 text-caption font-medium" style={{ color: 'var(--primary-600)' }}>
+      <div className="card p-12 text-center space-y-3">
+        <p className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Project not found</p>
+        <button onClick={() => navigate('/projects')} className="text-caption font-medium" style={{ color: 'var(--primary-600)' }}>
           ← Back to Projects
         </button>
       </div>
     );
   }
 
+  const priorityLabel = project.priority
+    ? project.priority >= 8 ? 'High' : project.priority >= 5 ? 'Medium' : 'Low'
+    : null;
+
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
-      {/* Back button */}
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
+      {/* Back */}
       <button
         onClick={() => navigate('/projects')}
-        className="flex items-center gap-1 text-caption font-medium transition-colors hover:opacity-80"
+        className="flex items-center gap-1 text-xs font-medium transition-colors hover:opacity-80"
         style={{ color: 'var(--primary-600)' }}
       >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
         </svg>
         Projects
       </button>
 
       {/* Header card */}
-      <div className="card p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div className="card p-5 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <h1 className="text-h1 leading-tight" style={{ color: 'var(--color-text)' }}>{project.title}</h1>
+            <h1 className="text-xl sm:text-2xl font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
+              {project.title}
+            </h1>
             {project.description && (
-              <p className="text-caption mt-1.5" style={{ color: 'var(--color-text-secondary)' }}>{project.description}</p>
+              <p className="text-caption mt-1" style={{ color: 'var(--color-text-secondary)' }}>{project.description}</p>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -278,150 +179,187 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
-        {/* Progress bar */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            <span><strong style={{ color: 'var(--color-text)' }}>{completed.length}/{totalTasks}</strong> Tasks Completed</span>
-            <span style={{ color: 'var(--primary-600)' }} className="font-semibold">{progress}%</span>
+        {/* Progress */}
+        <div>
+          <div className="flex items-center justify-between mb-1.5 text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+            <span>
+              <strong style={{ color: 'var(--color-text)' }}>{completed.length}/{totalTasks}</strong> Tasks Completed
+            </span>
+            <span className="font-bold" style={{ color: progress === 100 ? 'var(--success-600, #16a34a)' : 'var(--primary-600)' }}>
+              {progress}%
+            </span>
           </div>
-          <div className="h-2.5 rounded-full" style={{ backgroundColor: 'var(--color-muted)' }}>
+          <div className="h-2 rounded-full" style={{ backgroundColor: 'var(--color-muted)' }}>
             <div
-              className="h-full rounded-full transition-all"
-              style={{ width: `${progress}%`, backgroundColor: 'var(--primary-600)' }}
+              className="h-full rounded-full transition-all duration-500"
+              style={{
+                width: `${progress}%`,
+                backgroundColor: progress === 100 ? 'var(--success-500, #22c55e)' : 'var(--primary-500)',
+              }}
             />
           </div>
         </div>
 
         {/* Meta chips */}
-        <div className="flex flex-wrap items-center gap-3 text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-          {project.dueDate && (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md" style={{ backgroundColor: 'var(--color-muted)' }}>
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-              Due {new Date(project.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </span>
-          )}
+        <div className="flex flex-wrap items-center gap-2">
           {project.createdAt && (
-            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md" style={{ backgroundColor: 'var(--color-muted)' }}>
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <span
+              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md"
+              style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              Created {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            </span>
+          )}
+          {project.dueDate && (
+            <span
+              className="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md"
+              style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
+            >
+              <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              Due {new Date(project.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
         </div>
       </div>
 
-      {/* Two-column layout on desktop */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        {/* Left: Task Groups (2/3 width on desktop) */}
-        <div className="lg:col-span-2 space-y-5">
-          <TaskGroup
-            title="Pending"
-            tasks={pending}
-            onToggle={handleMarkDone}
-            onDelete={handleDelete}
-            deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
-            toggleLabel="Mark as done"
-            toggleIcon="□"
-            emptyText="No pending tasks"
-          />
-
-          <TaskGroup
-            title="Completed"
-            tasks={completed}
-            onToggle={handleReopen}
-            toggleLabel="Reopen task"
-            toggleIcon="☑"
-            emptyText="No completed tasks"
-          />
-        </div>
-
-        {/* Right sidebar: Summary + Timeline + Actions (1/3 width on desktop) */}
-        <div className="space-y-5">
-          {/* Smart Summary */}
-          <SmartSummary
-            pending={pending}
-            inProgress={inProgress}
-            completed={completed}
-            overdue={overdue}
-            highPriority={highPriority}
-            suggestedNext={suggestedNext}
-          />
-
-          {/* Quick Stats */}
-          <div className="card p-5">
-            <h3 className="text-body font-bold mb-3" style={{ color: 'var(--color-text)' }}>Stats</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
-                <div className="text-h1 font-bold" style={{ color: 'var(--primary-600)' }}>{pending.length}</div>
-                <div className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>Pending</div>
+      {/* Two-col layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Left: Task lists */}
+        <div className="lg:col-span-2 space-y-4">
+          {/* Pending */}
+          {pending.length > 0 && (
+            <div className="card overflow-hidden">
+              <div
+                className="px-4 py-3 flex items-center justify-between"
+                style={{ borderBottom: '1px solid var(--color-border)' }}
+              >
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Pending</h3>
+                <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}>
+                  {pending.length}
+                </span>
               </div>
-              <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
-                <div className="text-h1 font-bold" style={{ color: 'var(--color-success, #22c55e)' }}>{completed.length}</div>
-                <div className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>Done</div>
+              <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                {pending.map((t) => (
+                  <TaskRow
+                    key={t.id}
+                    task={t}
+                    variant="pending"
+                    onToggle={(tid) => updateStatus.mutate({ id: tid, status: 'Done' })}
+                    onDelete={(tid) => deleteTask.mutate(tid)}
+                    deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
+                  />
+                ))}
               </div>
-              {overdue.length > 0 && (
-                <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
-                  <div className="text-h1 font-bold" style={{ color: 'var(--color-warning, #f59e0b)' }}>{overdue.length}</div>
-                  <div className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>Overdue</div>
+            </div>
+          )}
+
+          {/* Completed */}
+          {completed.length > 0 && (
+            <div className="card overflow-hidden">
+              <button
+                onClick={() => setShowCompleted(!showCompleted)}
+                className="w-full px-4 py-3 flex items-center justify-between transition-colors hover:bg-black/[.01] dark:hover:bg-white/[.01]"
+                style={{ borderBottom: showCompleted ? '1px solid var(--color-border)' : undefined }}
+              >
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Completed</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--success-50, #f0fdf4)', color: 'var(--success-700, #15803d)' }}>
+                    {completed.length}
+                  </span>
+                  <svg
+                    className="h-3.5 w-3.5 transition-transform"
+                    style={{ color: 'var(--color-muted-fg)', transform: showCompleted ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                    fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </button>
+              {showCompleted && (
+                <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+                  {completed.map((t) => (
+                    <TaskRow
+                      key={t.id}
+                      task={t}
+                      variant="done"
+                      onToggle={(tid) => updateStatus.mutate({ id: tid, status: 'Pending' })}
+                    />
+                  ))}
                 </div>
               )}
-              {highPriority.length > 0 && (
-                <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
-                  <div className="text-h1 font-bold" style={{ color: 'var(--color-danger, #ef4444)' }}>{highPriority.length}</div>
-                  <div className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>High Priority</div>
+            </div>
+          )}
+
+          {/* Empty state */}
+          {totalTasks === 0 && (
+            <div className="card p-10 text-center">
+              <p className="text-body" style={{ color: 'var(--color-text-secondary)' }}>No subtasks in this project</p>
+            </div>
+          )}
+        </div>
+
+        {/* Right sidebar */}
+        <div className="space-y-4">
+          {/* Smart Summary */}
+          <div className="card p-4 space-y-2.5">
+            <h3 className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>Summary</h3>
+            <div className="space-y-1.5">
+              <SummaryRow icon="✅" text={`${completed.length} completed`} color="var(--success-600, #16a34a)" />
+              {overdue.length > 0 && <SummaryRow icon="🟠" text={`${overdue.length} overdue`} color="var(--warning-600, #d97706)" />}
+              {highPriority.length > 0 && <SummaryRow icon="🔥" text={`${highPriority.length} high priority`} color="var(--color-danger, #ef4444)" />}
+              {suggestedNext && (
+                <div className="pt-1 flex items-start gap-2">
+                  <span className="text-sm leading-none">💡</span>
+                  <span className="text-[12px] leading-tight" style={{ color: 'var(--color-text-secondary)' }}>
+                    Next: <strong style={{ color: 'var(--color-text)' }}>{suggestedNext.title}</strong>
+                  </span>
                 </div>
               )}
             </div>
           </div>
 
+          {/* Stats */}
+          <div className="card p-4">
+            <h3 className="text-sm font-bold mb-3" style={{ color: 'var(--color-text)' }}>Stats</h3>
+            <div className="grid grid-cols-2 gap-2">
+              <MiniStat value={pending.length} label="Pending" color="var(--primary-600)" />
+              <MiniStat value={completed.length} label="Done" color="var(--success-600, #16a34a)" />
+              {highPriority.length > 0 && <MiniStat value={highPriority.length} label="High Priority" color="var(--color-danger, #ef4444)" />}
+              {overdue.length > 0 && <MiniStat value={overdue.length} label="Overdue" color="var(--warning-600, #d97706)" />}
+            </div>
+          </div>
+
           {/* Timeline */}
           {project.createdAt && (
-            <div className="card p-5 space-y-3">
-              <h3 className="text-body font-bold" style={{ color: 'var(--color-text)' }}>Timeline</h3>
-              <div className="space-y-3 text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-                <div className="flex items-start gap-3">
-                  <div className="mt-0.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--primary-600)' }} />
-                  <span>Started {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                </div>
-                {completed.length > 0 && (
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--color-success, #22c55e)' }} />
-                    <span>{completed.length} task{completed.length !== 1 ? 's' : ''} completed</span>
-                  </div>
-                )}
-                {overdue.length > 0 && (
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--color-warning, #f59e0b)' }} />
-                    <span>{overdue.length} task{overdue.length !== 1 ? 's' : ''} overdue</span>
-                  </div>
-                )}
-                {pending.length > 0 && (
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--color-border)' }} />
-                    <span>{pending.length} task{pending.length !== 1 ? 's' : ''} remaining</span>
-                  </div>
-                )}
+            <div className="card p-4 space-y-2.5">
+              <h3 className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>Timeline</h3>
+              <div className="space-y-2">
+                <TimelineItem color="var(--primary-600)" text={`Started ${new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`} />
+                {completed.length > 0 && <TimelineItem color="var(--success-500, #22c55e)" text={`${completed.length} task${completed.length !== 1 ? 's' : ''} completed`} />}
+                {overdue.length > 0 && <TimelineItem color="var(--warning-500, #f59e0b)" text={`${overdue.length} task${overdue.length !== 1 ? 's' : ''} overdue`} />}
+                {pending.length > 0 && <TimelineItem color="var(--color-border)" text={`${pending.length} task${pending.length !== 1 ? 's' : ''} remaining`} />}
               </div>
             </div>
           )}
 
-          {/* Danger Zone */}
-          <div className="card p-5 space-y-3" style={{ borderColor: 'var(--color-danger, #ef4444)', borderWidth: '1px' }}>
-            <h3 className="text-body font-bold" style={{ color: 'var(--color-danger, #ef4444)' }}>Danger Zone</h3>
-            <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-              Deleting this project moves it to the deleted list. Subtasks will remain.
+          {/* Danger zone */}
+          <div className="card p-4 space-y-3" style={{ borderColor: 'var(--color-danger, #ef4444)', borderWidth: '1px' }}>
+            <h3 className="text-sm font-bold" style={{ color: 'var(--color-danger, #ef4444)' }}>Danger Zone</h3>
+            <p className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>
+              Deleting this project moves it to deleted list. Subtasks will remain.
             </p>
             <button
               onClick={() => setShowDeleteConfirm(true)}
               disabled={deleteProject.isPending}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md text-caption font-medium transition-colors !text-white disabled:opacity-40"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors !text-white disabled:opacity-40"
               style={{ backgroundColor: 'var(--color-danger, #ef4444)' }}
             >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
               </svg>
               Delete Project
@@ -430,7 +368,7 @@ export function ProjectDetailPage() {
         </div>
       </div>
 
-      {/* Delete confirmation modal */}
+      {/* Delete modal */}
       {showDeleteConfirm && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="card p-6 max-w-sm w-full space-y-4">
@@ -459,5 +397,34 @@ export function ProjectDetailPage() {
         document.body
       )}
     </motion.div>
+  );
+}
+
+// ── Sub-components ──
+
+function SummaryRow({ icon, text, color }: { icon: string; text: string; color: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-sm leading-none">{icon}</span>
+      <span className="text-[12px]" style={{ color }}>{text}</span>
+    </div>
+  );
+}
+
+function MiniStat({ value, label, color }: { value: number; label: string; color: string }) {
+  return (
+    <div className="rounded-lg p-2.5 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
+      <div className="text-lg font-bold" style={{ color }}>{value}</div>
+      <div className="text-[10px]" style={{ color: 'var(--color-text-secondary)' }}>{label}</div>
+    </div>
+  );
+}
+
+function TimelineItem({ color, text }: { color: string; text: string }) {
+  return (
+    <div className="flex items-start gap-2.5">
+      <div className="mt-1 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
+      <span className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>{text}</span>
+    </div>
   );
 }
