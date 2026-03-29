@@ -38,8 +38,8 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: <TodayPage /> },
-      { path: 'dashboard', element: <DashboardPage /> },
+      { index: true, element: <DashboardPage /> },
+      { path: 'today', element: <TodayPage /> },
       { path: 'tasks', element: <TasksPage /> },
       { path: 'completed', element: <CompletedTasksPage /> },
       { path: 'projects', element: <ProjectsPage /> },
