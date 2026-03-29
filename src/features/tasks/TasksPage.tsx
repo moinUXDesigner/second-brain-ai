@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
-import { useTasks, useDeleteTask } from '@/hooks/useTasks';
+import { useTasks, useDeleteTask, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 
 type SortField = 'newest' | 'oldest' | 'priority' | 'impact';
@@ -11,6 +11,7 @@ const PAGE_SIZE = 10;
 export function TasksPage() {
   const { data: tasks, isLoading } = useTasks();
   const deleteTask = useDeleteTask();
+  const completeTask = useUpdateTaskStatus();
 
   const [sortBy, setSortBy] = useState<SortField>('newest');
   const [filterArea, setFilterArea] = useState('');
@@ -80,18 +81,18 @@ export function TasksPage() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="flex flex-col h-[calc(100vh-3.5rem-2rem)] lg:h-[calc(100vh-4rem-3rem)]"
+      className="flex flex-col h-[calc(100vh-3.5rem-6.5rem)] lg:h-[calc(100vh-4rem-3rem)]"
     >
-      {/* Header — fixed */}
-      <div className="shrink-0">
+      {/* Header */}
+      <div className="shrink-0 flex items-baseline gap-2">
         <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Tasks</h1>
-        <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-          {filtered.length} of {pendingCount} pending task{pendingCount !== 1 ? 's' : ''}
-        </p>
+        <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+          {filtered.length} of {pendingCount} pending
+        </span>
       </div>
 
-      {/* Search + Filters — fixed */}
-      <div className="shrink-0 space-y-3 pt-4 pb-3">
+      {/* Search + Filters */}
+      <div className="shrink-0 space-y-2 pt-3 pb-2">
         <div className="relative">
           <svg
             className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
@@ -108,19 +109,19 @@ export function TasksPage() {
             value={searchQuery}
             onChange={(e) => { setSearchQuery(e.target.value); setPage(1); }}
             placeholder="Search tasks…"
-            className="input-base pl-9 text-body"
+            className="input-base pl-9 text-sm h-9"
           />
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
           <select
             value={sortBy}
             onChange={(e) => { setSortBy(e.target.value as SortField); setPage(1); }}
-            className="input-base text-caption w-auto pr-8"
-            style={{ minWidth: 'auto' }}
+            className="shrink-0 text-xs rounded-full py-1 pl-2.5 pr-6 border outline-none"
+            style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
           >
-            <option value="newest">Newest first</option>
-            <option value="oldest">Oldest first</option>
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
             <option value="priority">Priority</option>
             <option value="impact">Impact</option>
           </select>
@@ -128,8 +129,8 @@ export function TasksPage() {
           <select
             value={filterArea}
             onChange={(e) => { setFilterArea(e.target.value); setPage(1); }}
-            className="input-base text-caption w-auto pr-8"
-            style={{ minWidth: 'auto' }}
+            className="shrink-0 text-xs rounded-full py-1 pl-2.5 pr-6 border outline-none"
+            style={{ borderColor: filterArea ? 'var(--primary-500)' : 'var(--color-border)', backgroundColor: filterArea ? 'var(--primary-50)' : 'var(--color-surface)', color: filterArea ? 'var(--primary-700)' : 'var(--color-text)' }}
           >
             <option value="">All Areas</option>
             {areas.map((a) => (
@@ -140,8 +141,8 @@ export function TasksPage() {
           <select
             value={filterUrgency}
             onChange={(e) => { setFilterUrgency(e.target.value); setPage(1); }}
-            className="input-base text-caption w-auto pr-8"
-            style={{ minWidth: 'auto' }}
+            className="shrink-0 text-xs rounded-full py-1 pl-2.5 pr-6 border outline-none"
+            style={{ borderColor: filterUrgency ? 'var(--primary-500)' : 'var(--color-border)', backgroundColor: filterUrgency ? 'var(--primary-50)' : 'var(--color-surface)', color: filterUrgency ? 'var(--primary-700)' : 'var(--color-text)' }}
           >
             <option value="">All Urgency</option>
             {urgencies.map((u) => (
@@ -152,18 +153,18 @@ export function TasksPage() {
           {(filterArea || filterUrgency || searchQuery) && (
             <button
               onClick={() => { setFilterArea(''); setFilterUrgency(''); setSearchQuery(''); setPage(1); }}
-              className="px-3 py-1.5 rounded-sm text-caption font-medium transition-colors"
+              className="shrink-0 text-xs font-medium px-2 py-1 rounded-full"
               style={{ color: 'var(--primary-600)' }}
             >
-              Clear filters
+              ✕ Clear
             </button>
           )}
         </div>
       </div>
 
       {/* Task list — scrollable area */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {isLoading ? <TableSkeleton /> : <TaskList tasks={paginated} onDelete={(id) => deleteTask.mutate(id)} deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null} />}
+      <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
+        {isLoading ? <TableSkeleton /> : <TaskList tasks={paginated} onDelete={(id) => deleteTask.mutate(id)} deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null} onComplete={(id) => completeTask.mutate({ id, status: 'Done' })} completingId={completeTask.isPending ? (completeTask.variables?.id ?? null) : null} />}
       </div>
 
       {/* Pagination — fixed at bottom */}

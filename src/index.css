@@ -176,6 +176,15 @@
   background: var(--color-muted-fg);
 }
 
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* PWA install animation */
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(16px); }

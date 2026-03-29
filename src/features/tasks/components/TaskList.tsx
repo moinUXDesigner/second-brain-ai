@@ -1,12 +1,195 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 
-export function TaskList({ tasks, onDelete, deletingId }: { tasks: Task[]; onDelete?: (id: string) => void; deletingId?: string | null }) {
+interface TaskListProps {
+  tasks: Task[];
+  onDelete?: (id: string) => void;
+  onComplete?: (id: string) => void;
+  deletingId?: string | null;
+  completingId?: string | null;
+}
+
+const SWIPE_WIDTH = 72;
+
+function MobileTaskRow({
+  task,
+  onSwipeDelete,
+  onComplete,
+  isDeleting,
+  isCompleting,
+  isRevealed,
+  onReveal,
+}: {
+  task: Task;
+  onSwipeDelete: () => void;
+  onComplete?: () => void;
+  isDeleting: boolean;
+  isCompleting: boolean;
+  isRevealed: boolean;
+  onReveal: (id: string | null) => void;
+}) {
+  const rowRef = useRef<HTMLDivElement>(null);
+  const touchRef = useRef<{ startX: number; startY: number; locked: boolean | null } | null>(null);
+  const posRef = useRef(isRevealed ? -SWIPE_WIDTH : 0);
+
+  useEffect(() => {
+    if (!isRevealed && rowRef.current) {
+      rowRef.current.style.transition = 'transform 0.2s ease-out';
+      rowRef.current.style.transform = 'translateX(0)';
+      posRef.current = 0;
+    }
+  }, [isRevealed]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchRef.current = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      locked: null,
+    };
+    if (rowRef.current) rowRef.current.style.transition = 'none';
+  }, []);
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (!touchRef.current || !rowRef.current) return;
+      const dx = e.touches[0].clientX - touchRef.current.startX;
+      const dy = e.touches[0].clientY - touchRef.current.startY;
+
+      if (touchRef.current.locked === null) {
+        if (Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) {
+          touchRef.current.locked = true;
+        } else if (Math.abs(dy) > 8) {
+          touchRef.current.locked = false;
+        }
+      }
+
+      if (!touchRef.current.locked) return;
+
+      const base = isRevealed ? -SWIPE_WIDTH : 0;
+      const x = Math.max(-SWIPE_WIDTH - 10, Math.min(isRevealed ? 0 : 10, base + dx));
+      rowRef.current.style.transform = `translateX(${x}px)`;
+      posRef.current = x;
+    },
+    [isRevealed],
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    if (!touchRef.current || !rowRef.current) {
+      touchRef.current = null;
+      return;
+    }
+    rowRef.current.style.transition = 'transform 0.2s ease-out';
+
+    if (posRef.current < -SWIPE_WIDTH / 3) {
+      rowRef.current.style.transform = `translateX(-${SWIPE_WIDTH}px)`;
+      posRef.current = -SWIPE_WIDTH;
+      onReveal(task.id);
+    } else {
+      rowRef.current.style.transform = 'translateX(0)';
+      posRef.current = 0;
+      onReveal(null);
+    }
+    touchRef.current = null;
+  }, [task.id, onReveal]);
+
+  return (
+    <div className="relative overflow-hidden" style={{ borderBottom: '1px solid var(--color-border)' }}>
+      {/* Delete action behind */}
+      <div
+        className="absolute inset-y-0 right-0 flex items-center justify-center"
+        style={{ width: SWIPE_WIDTH, backgroundColor: '#ef4444' }}
+      >
+        <button
+          onClick={onSwipeDelete}
+          disabled={isDeleting}
+          className="flex items-center justify-center h-full w-full"
+        >
+          {isDeleting ? (
+            <svg className="h-5 w-5 text-white animate-spin" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+          ) : (
+            <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          )}
+        </button>
+      </div>
+
+      {/* Row content */}
+      <div
+        ref={rowRef}
+        className="relative flex items-center gap-3 px-4 py-2.5"
+        style={{ backgroundColor: 'var(--color-bg)', touchAction: 'pan-y', willChange: 'transform' }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
+        {/* Checkbox */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onComplete?.();
+          }}
+          disabled={isCompleting}
+          className="shrink-0 flex items-center justify-center h-[22px] w-[22px] rounded-full border-[1.5px] transition-all duration-200"
+          style={{
+            borderColor: isCompleting ? 'var(--primary-500)' : 'var(--color-border)',
+            backgroundColor: isCompleting ? 'var(--primary-500)' : 'transparent',
+          }}
+        >
+          {isCompleting && (
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          )}
+        </button>
+
+        {/* Content */}
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>
+            {task.title}
+          </p>
+          <div className="flex items-center gap-1 mt-0.5">
+            {task.area && (
+              <span className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                {task.area}
+              </span>
+            )}
+            {task.area && task.projectName && (
+              <span className="text-xs" style={{ color: 'var(--color-border)' }}>·</span>
+            )}
+            {task.projectName && (
+              <span className="text-xs truncate" style={{ color: 'var(--primary-600)' }}>
+                {task.projectName}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Urgency badge */}
+        {task.urgency && (
+          <Badge
+            variant={task.urgency === 'High' ? 'danger' : task.urgency === 'Medium' ? 'warning' : 'default'}
+            className="shrink-0 !text-[11px] !px-1.5 !py-0"
+          >
+            {task.urgency}
+          </Badge>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId }: TaskListProps) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [swipedId, setSwipedId] = useState<string | null>(null);
 
   const handleDeleteClick = (id: string) => {
+    setSwipedId(null);
     setConfirmId(id);
   };
 
@@ -16,9 +199,10 @@ export function TaskList({ tasks, onDelete, deletingId }: { tasks: Task[]; onDel
       setConfirmId(null);
     }
   };
+
   if (tasks.length === 0) {
     return (
-      <div className="card p-12 text-center">
+      <div className="py-12 text-center">
         <p className="text-body" style={{ color: 'var(--color-text-secondary)' }}>
           No pending tasks found. Tap + to create one.
         </p>
@@ -28,62 +212,19 @@ export function TaskList({ tasks, onDelete, deletingId }: { tasks: Task[]; onDel
 
   return (
     <>
-      {/* Mobile card layout */}
-      <div className="space-y-3 md:hidden">
+      {/* Mobile Gmail-like list */}
+      <div className="md:hidden" style={{ borderTop: '1px solid var(--color-border)' }}>
         {tasks.map((task) => (
-          <div key={task.id} className="card p-4 space-y-2">
-            <div className="flex items-start justify-between gap-2">
-              <div className="min-w-0">
-                <p className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
-                  {task.title}
-                </p>
-                {task.area && (
-                  <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>{task.area}</p>
-                )}
-              </div>
-              <Badge variant="warning">{task.status}</Badge>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap text-caption">
-              <Badge>{task.type || '—'}</Badge>
-              {task.priority != null && (
-                <span style={{ color: 'var(--color-text-secondary)' }}>P: {task.priority}</span>
-              )}
-              {task.impact != null && (
-                <span style={{ color: 'var(--color-text-secondary)' }}>Impact: {task.impact}</span>
-              )}
-              {task.effort != null && (
-                <span style={{ color: 'var(--color-text-secondary)' }}>Effort: {task.effort}</span>
-              )}
-              {task.urgency && (
-                <Badge variant={task.urgency === 'High' ? 'danger' : task.urgency === 'Medium' ? 'warning' : 'default'}>
-                  {task.urgency}
-                </Badge>
-              )}
-              {task.projectName && (
-                <span style={{ color: 'var(--primary-600)' }}>{task.projectName}</span>
-              )}
-            </div>
-            {onDelete && (
-              <button
-                onClick={() => handleDeleteClick(task.id)}
-                disabled={deletingId === task.id}
-                className="shrink-0 p-1.5 rounded-md transition-colors hover:opacity-80 disabled:opacity-40"
-                style={{ color: 'var(--color-danger, #ef4444)' }}
-                title="Delete task"
-              >
-                {deletingId === task.id ? (
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                  </svg>
-                ) : (
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                )}
-              </button>
-            )}
-          </div>
+          <MobileTaskRow
+            key={task.id}
+            task={task}
+            onSwipeDelete={() => handleDeleteClick(task.id)}
+            onComplete={() => onComplete?.(task.id)}
+            isDeleting={deletingId === task.id}
+            isCompleting={completingId === task.id}
+            isRevealed={swipedId === task.id}
+            onReveal={setSwipedId}
+          />
         ))}
       </div>
 
@@ -93,6 +234,7 @@ export function TaskList({ tasks, onDelete, deletingId }: { tasks: Task[]; onDel
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-muted)' }}>
+                {onComplete && <th className="w-10 px-3 py-3"></th>}
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Title</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Type</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Area</th>
@@ -116,6 +258,25 @@ export function TaskList({ tasks, onDelete, deletingId }: { tasks: Task[]; onDel
                     borderBottom: i < tasks.length - 1 ? '1px solid var(--color-border)' : undefined,
                   }}
                 >
+                  {onComplete && (
+                    <td className="px-3 py-3">
+                      <button
+                        onClick={() => onComplete(task.id)}
+                        disabled={completingId === task.id}
+                        className="flex items-center justify-center h-5 w-5 rounded-full border-[1.5px] transition-all duration-200"
+                        style={{
+                          borderColor: completingId === task.id ? 'var(--primary-500)' : 'var(--color-border)',
+                          backgroundColor: completingId === task.id ? 'var(--primary-500)' : 'transparent',
+                        }}
+                      >
+                        {completingId === task.id && (
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    </td>
+                  )}
                   <td className="px-4 py-3">
                     <p className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
                       {task.title}
@@ -193,11 +354,11 @@ export function TaskList({ tasks, onDelete, deletingId }: { tasks: Task[]; onDel
           <div className="card p-6 max-w-sm w-full space-y-4">
             <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Delete Task?</h3>
             <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-              This task will be moved to the Completed/Deleted list. You can reopen it later.
+              This task will be moved to the deleted list.
             </p>
             <div className="flex justify-end gap-2">
               <button
-                onClick={() => setConfirmId(null)}
+                onClick={() => { setConfirmId(null); setSwipedId(null); }}
                 className="px-4 py-2 rounded-md text-caption font-medium transition-colors"
                 style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
               >
