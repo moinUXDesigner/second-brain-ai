@@ -257,12 +257,33 @@ export function ProjectDetailPage() {
         Projects
       </button>
 
-      {/* Header: title + progress */}
-      <div className="space-y-3">
-        <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>{project.title}</h1>
+      {/* Header card */}
+      <div className="card p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-h1 leading-tight" style={{ color: 'var(--color-text)' }}>{project.title}</h1>
+            {project.description && (
+              <p className="text-caption mt-1.5" style={{ color: 'var(--color-text-secondary)' }}>{project.description}</p>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Badge variant={project.status === 'Active' ? 'primary' : project.status === 'Completed' ? 'success' : 'default'}>
+              {project.status}
+            </Badge>
+            {priorityLabel && (
+              <Badge variant={priorityLabel === 'High' ? 'danger' : priorityLabel === 'Medium' ? 'warning' : 'success'}>
+                {priorityLabel}
+              </Badge>
+            )}
+          </div>
+        </div>
 
         {/* Progress bar */}
         <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+            <span><strong style={{ color: 'var(--color-text)' }}>{completed.length}/{totalTasks}</strong> Tasks Completed</span>
+            <span style={{ color: 'var(--primary-600)' }} className="font-semibold">{progress}%</span>
+          </div>
           <div className="h-2.5 rounded-full" style={{ backgroundColor: 'var(--color-muted)' }}>
             <div
               className="h-full rounded-full transition-all"
@@ -271,110 +292,142 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
-        {/* Meta row: tasks count, due, priority */}
-        <div className="flex flex-wrap items-center gap-4 text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-          <span style={{ color: 'var(--color-text)' }}>
-            <strong>{completed.length}/{totalTasks}</strong> Tasks Completed
-          </span>
+        {/* Meta chips */}
+        <div className="flex flex-wrap items-center gap-3 text-caption" style={{ color: 'var(--color-text-secondary)' }}>
           {project.dueDate && (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md" style={{ backgroundColor: 'var(--color-muted)' }}>
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
                 <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              Due: {new Date(project.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              Due {new Date(project.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
             </span>
           )}
-          {priorityLabel && (
-            <span className="flex items-center gap-1">
-              <span style={{ color: priorityLabel === 'High' ? 'var(--color-danger, #ef4444)' : priorityLabel === 'Medium' ? 'var(--color-warning, #f59e0b)' : 'var(--color-success, #22c55e)' }}>♥</span>
-              <span style={{ color: priorityLabel === 'High' ? 'var(--color-danger, #ef4444)' : undefined }}>
-                {priorityLabel} Priority
-              </span>
+          {project.createdAt && (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md" style={{ backgroundColor: 'var(--color-muted)' }}>
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Created {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </span>
           )}
-          <Badge variant={project.status === 'Active' ? 'primary' : project.status === 'Completed' ? 'success' : 'default'}>
-            {project.status}
-          </Badge>
+        </div>
+      </div>
+
+      {/* Two-column layout on desktop */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Left: Task Groups (2/3 width on desktop) */}
+        <div className="lg:col-span-2 space-y-5">
+          <TaskGroup
+            title="Pending"
+            tasks={pending}
+            onToggle={handleMarkDone}
+            onDelete={handleDelete}
+            deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
+            toggleLabel="Mark as done"
+            toggleIcon="□"
+            emptyText="No pending tasks"
+          />
+
+          <TaskGroup
+            title="Completed"
+            tasks={completed}
+            onToggle={handleReopen}
+            toggleLabel="Reopen task"
+            toggleIcon="☑"
+            emptyText="No completed tasks"
+          />
         </div>
 
-        {project.description && (
-          <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>{project.description}</p>
-        )}
-      </div>
+        {/* Right sidebar: Summary + Timeline + Actions (1/3 width on desktop) */}
+        <div className="space-y-5">
+          {/* Smart Summary */}
+          <SmartSummary
+            pending={pending}
+            inProgress={inProgress}
+            completed={completed}
+            overdue={overdue}
+            highPriority={highPriority}
+            suggestedNext={suggestedNext}
+          />
 
-      {/* Smart Summary */}
-      <SmartSummary
-        pending={pending}
-        inProgress={inProgress}
-        completed={completed}
-        overdue={overdue}
-        highPriority={highPriority}
-        suggestedNext={suggestedNext}
-      />
-
-      {/* Task Groups */}
-      <div className="space-y-6">
-        <TaskGroup
-          title="Pending"
-          tasks={pending}
-          onToggle={handleMarkDone}
-          onDelete={handleDelete}
-          deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
-          toggleLabel="Mark as done"
-          toggleIcon="□"
-          emptyText="No pending tasks"
-        />
-
-        <TaskGroup
-          title="Completed"
-          tasks={completed}
-          onToggle={handleReopen}
-          toggleLabel="Reopen task"
-          toggleIcon="☑"
-          emptyText="No completed tasks"
-        />
-      </div>
-
-      {/* Timeline / Stats footer */}
-      {project.createdAt && (
-        <div className="card p-5 space-y-3">
-          <h3 className="text-body font-bold" style={{ color: 'var(--color-text)' }}>Timeline</h3>
-          <div className="space-y-2 text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            <div className="flex items-center gap-2">
-              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-              </svg>
-              Started {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-            </div>
-            <div className="flex items-center gap-2">
-              <span>✅</span>
-              <span>+{completed.length} Tasks completed</span>
-            </div>
-            {overdue.length > 0 && (
-              <div className="flex items-center gap-2">
-                <span>⚠️</span>
-                <span>{overdue.length} Tasks overdue</span>
+          {/* Quick Stats */}
+          <div className="card p-5">
+            <h3 className="text-body font-bold mb-3" style={{ color: 'var(--color-text)' }}>Stats</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
+                <div className="text-h1 font-bold" style={{ color: 'var(--primary-600)' }}>{pending.length}</div>
+                <div className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>Pending</div>
               </div>
-            )}
+              <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
+                <div className="text-h1 font-bold" style={{ color: 'var(--color-success, #22c55e)' }}>{completed.length}</div>
+                <div className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>Done</div>
+              </div>
+              {overdue.length > 0 && (
+                <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
+                  <div className="text-h1 font-bold" style={{ color: 'var(--color-warning, #f59e0b)' }}>{overdue.length}</div>
+                  <div className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>Overdue</div>
+                </div>
+              )}
+              {highPriority.length > 0 && (
+                <div className="rounded-lg p-3 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
+                  <div className="text-h1 font-bold" style={{ color: 'var(--color-danger, #ef4444)' }}>{highPriority.length}</div>
+                  <div className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>High Priority</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Timeline */}
+          {project.createdAt && (
+            <div className="card p-5 space-y-3">
+              <h3 className="text-body font-bold" style={{ color: 'var(--color-text)' }}>Timeline</h3>
+              <div className="space-y-3 text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--primary-600)' }} />
+                  <span>Started {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                </div>
+                {completed.length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--color-success, #22c55e)' }} />
+                    <span>{completed.length} task{completed.length !== 1 ? 's' : ''} completed</span>
+                  </div>
+                )}
+                {overdue.length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--color-warning, #f59e0b)' }} />
+                    <span>{overdue.length} task{overdue.length !== 1 ? 's' : ''} overdue</span>
+                  </div>
+                )}
+                {pending.length > 0 && (
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: 'var(--color-border)' }} />
+                    <span>{pending.length} task{pending.length !== 1 ? 's' : ''} remaining</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Danger Zone */}
+          <div className="card p-5 space-y-3" style={{ borderColor: 'var(--color-danger, #ef4444)', borderWidth: '1px' }}>
+            <h3 className="text-body font-bold" style={{ color: 'var(--color-danger, #ef4444)' }}>Danger Zone</h3>
+            <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+              Deleting this project moves it to the deleted list. Subtasks will remain.
+            </p>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={deleteProject.isPending}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md text-caption font-medium transition-colors !text-white disabled:opacity-40"
+              style={{ backgroundColor: 'var(--color-danger, #ef4444)' }}
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Delete Project
+            </button>
           </div>
         </div>
-      )}
-
-      {/* Delete Project */}
-      <div className="card p-5">
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          disabled={deleteProject.isPending}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-md text-caption font-medium transition-colors !text-white disabled:opacity-40"
-          style={{ backgroundColor: 'var(--color-danger, #ef4444)' }}
-        >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-          Delete Project
-        </button>
       </div>
 
       {/* Delete confirmation modal */}
@@ -383,7 +436,7 @@ export function ProjectDetailPage() {
           <div className="card p-6 max-w-sm w-full space-y-4">
             <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Delete Project?</h3>
             <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-              This will permanently delete "{project.title}" and remove it from the list. Subtasks will remain in your tasks.
+              This will delete "{project.title}" and move it to Deleted Projects. Subtasks will remain in your tasks.
             </p>
             <div className="flex justify-end gap-2">
               <button
