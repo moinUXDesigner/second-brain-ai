@@ -99,22 +99,35 @@ export type AuditAction =
   | 'CREATE_TASK'
   | 'UPDATE_TASK'
   | 'DELETE_TASK'
+  | 'COMPLETE_TASK'
   | 'CREATE_PROJECT'
   | 'UPDATE_PROJECT'
   | 'DELETE_PROJECT'
+  | 'RESTORE_PROJECT'
   | 'RUN_PIPELINE'
   | 'GENERATE_TODAY'
+  | 'UPDATE_STATUS'
+  | 'UPDATE_PROFILE'
+  | 'SAVE_DAILY_STATE'
+  | 'TOGGLE_AI'
+  | 'CHANGE_THEME'
   | 'LOGIN'
   | 'LOGOUT';
+
+export type AuditSeverity = 'info' | 'warning' | 'critical';
 
 export interface AuditLog {
   id: string;
   userId: string;
+  userName?: string;
   action: AuditAction;
   entityType: string;
   entityId?: string;
+  description: string;
   metadata?: Record<string, unknown>;
+  severity: AuditSeverity;
   timestamp: string;
+  sessionId: string;
 }
 
 export interface ApiResponse<T> {

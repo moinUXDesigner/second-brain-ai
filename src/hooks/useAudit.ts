@@ -8,29 +8,26 @@ export function useAudit() {
   const user = useAuthStore((s) => s.user);
 
   const log = useCallback(
-    async (
+    (
       action: AuditAction,
       entityType: string,
       entityId?: string,
       metadata?: Record<string, unknown>,
     ) => {
       if (!isFeatureEnabled('AUDIT_LOGGING')) return;
-      const entry = {
-        userId: user?.id ?? 'anonymous',
-        action,
-        entityType,
-        entityId,
-        metadata,
-        timestamp: new Date().toISOString(),
-      };
 
       try {
-        await auditService.createLog(entry);
+        auditService.createLog({
+          userId: user?.id ?? 'anonymous',
+          userName: user?.name ?? undefined,
+          action,
+          entityType,
+          entityId,
+          metadata,
+          timestamp: new Date().toISOString(),
+        });
       } catch {
-        // Store locally if API is unavailable
-        const local = JSON.parse(localStorage.getItem('pending_audit_logs') || '[]');
-        local.push(entry);
-        localStorage.setItem('pending_audit_logs', JSON.stringify(local));
+        // Silent fail — audit should never break the app
       }
     },
     [user],
