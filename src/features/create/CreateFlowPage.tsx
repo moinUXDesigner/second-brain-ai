@@ -23,7 +23,7 @@ export interface WizardData {
   subtasks?: string[];
 }
 
-const STEP_LABELS = ['Input', 'AI Review', 'Confirm'];
+const STEP_LABELS = ['Input', 'Review', 'Done'];
 
 const slideVariants = {
   enter: (dir: number) => ({ x: dir > 0 ? 80 : -80, opacity: 0 }),
@@ -134,6 +134,7 @@ export function CreateFlowPage() {
     >
       <div className="flex-1 flex flex-col overflow-y-auto w-full max-w-lg mx-auto">
         {/* Back arrow */}
+        {step < 3 && (
         <div className="px-4 pt-4 shrink-0">
           <button
             onClick={step === 1 ? () => navigate(-1) : goBack}
@@ -146,6 +147,7 @@ export function CreateFlowPage() {
             </svg>
           </button>
         </div>
+        )}
 
         {/* Step indicator */}
         <div className="px-6 pt-2 pb-6 shrink-0">
