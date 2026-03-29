@@ -1,16 +1,27 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { TodayTable } from './components/TodayTable';
-import { useTodayTasks, useGenerateTodayView } from '@/hooks/useTasks';
+import { useTodayTasks } from '@/hooks/useTasks';
+import { useAudit } from '@/hooks/useAudit';
 import { Button } from '@/components/ui/Button';
 import { taskService } from '@/services/endpoints/taskService';
+import { todayService } from '@/services/endpoints/todayService';
 import { dailyStateService } from '@/services/endpoints/dailyStateService';
 import { QUERY_KEYS } from '@/constants';
 import { today } from '@/utils/date';
 import type { TaskStatus, Task } from '@/types';
 import toast from 'react-hot-toast';
+
+type LoaderPhase = 'saving' | 'generating' | 'loading' | 'done' | null;
+
+const PHASE_CONFIG: Record<Exclude<LoaderPhase, null>, { progress: number; label: string }> = {
+  saving: { progress: 15, label: 'Saving your daily state…' },
+  generating: { progress: 55, label: 'AI is picking your tasks…' },
+  loading: { progress: 85, label: 'Loading your tasks…' },
+  done: { progress: 100, label: 'Today view refreshed!' },
+};
 
 const TIME_PRESETS = [
   { label: '30m', mins: 30 },
@@ -32,11 +43,11 @@ function formatTime(mins: number) {
 
 export function TodayPage() {
   const { data: tasks, isLoading, isError } = useTodayTasks();
-  const generateView = useGenerateTodayView();
   const queryClient = useQueryClient();
+  const { log } = useAudit();
 
   const [showModal, setShowModal] = useState(false);
-  const [generating, setGenerating] = useState(false);
+  const [loaderPhase, setLoaderPhase] = useState<LoaderPhase>(null);
 
   // Lifted status overrides for TodayTable
   const [localStatus, setLocalStatus] = useState<Record<string, TaskStatus>>({});
@@ -101,23 +112,13 @@ export function TodayPage() {
   const [focus, setFocus] = useState(5);
   const [availableTime, setAvailableTime] = useState(120);
 
-  // Load existing daily state when modal opens
-  useEffect(() => {
-    if (!showModal) return;
-    dailyStateService.get(today()).then((res) => {
-      if (res.data) {
-        setEnergy(res.data.energy || 5);
-        setMood(res.data.mood || 5);
-        setFocus(res.data.focus || 5);
-        setAvailableTime(res.data.availableTime || 120);
-      }
-    }).catch(() => {});
-  }, [showModal]);
+  const handleSmartGenerate = useCallback(async () => {
+    // Close modal immediately
+    setShowModal(false);
 
-  const handleSmartGenerate = async () => {
-    setGenerating(true);
     try {
-      // 1. Save daily state
+      // Phase 1: Save daily state
+      setLoaderPhase('saving');
       await dailyStateService.save({
         date: today(),
         energy,
@@ -125,19 +126,32 @@ export function TodayPage() {
         focus,
         availableTime,
       });
-      setShowModal(false);
 
-      // 2. Generate today view
-      await generateView.mutateAsync(undefined);
-      toast.success('Today view refreshed!');
+      // Phase 2: Generate today view
+      setLoaderPhase('generating');
+      const result = await todayService.generateTodayView();
+      log('RUN_PIPELINE', 'system');
+
+      // Phase 3: Load tasks into cache
+      setLoaderPhase('loading');
+      queryClient.setQueryData(QUERY_KEYS.todayTasks, result.data);
+      // Small delay to let React render the data
+      await new Promise((r) => setTimeout(r, 400));
+
+      // Phase 4: Done
+      setLoaderPhase('done');
+      await new Promise((r) => setTimeout(r, 1400));
+
+      // Close loader
+      setLoaderPhase(null);
+
+      // Background refetch for consistency
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
     } catch {
+      setLoaderPhase(null);
       toast.error('Failed to generate today view.');
-    } finally {
-      setGenerating(false);
     }
-  };
-
-  const isGenerating = generating || generateView.isPending;
+  }, [energy, mood, focus, availableTime, queryClient, log]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -155,7 +169,7 @@ export function TodayPage() {
               Update ({dirtyCount})
             </Button>
           )}
-          <Button onClick={() => setShowModal(true)} isLoading={isGenerating} variant="primary">
+          <Button onClick={() => setShowModal(true)} disabled={!!loaderPhase} variant="primary">
             <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
@@ -165,24 +179,16 @@ export function TodayPage() {
       </div>
 
       {/* Content / Loading */}
-      {isLoading || isGenerating ? (
+      {isLoading ? (
         <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="card p-4 space-y-2 animate-pulse"
-            >
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="card p-4 space-y-2 animate-pulse">
               <div className="flex items-center justify-between gap-2">
                 <div className="space-y-1.5 flex-1">
                   <div className="h-4 rounded-md w-3/4" style={{ backgroundColor: 'var(--color-muted)' }} />
                   <div className="h-3 rounded-md w-1/3" style={{ backgroundColor: 'var(--color-muted)' }} />
                 </div>
                 <div className="h-7 w-20 rounded-md" style={{ backgroundColor: 'var(--color-muted)' }} />
-              </div>
-              <div className="flex gap-2">
-                <div className="h-5 w-16 rounded-full" style={{ backgroundColor: 'var(--color-muted)' }} />
-                <div className="h-5 w-10 rounded-full" style={{ backgroundColor: 'var(--color-muted)' }} />
-                <div className="h-5 w-14 rounded-full" style={{ backgroundColor: 'var(--color-muted)' }} />
               </div>
             </div>
           ))}
@@ -196,6 +202,67 @@ export function TodayPage() {
         <TodayTable tasks={tasks ?? []} localStatus={localStatus} onStatusChange={handleStatusChange} />
       )}
 
+      {/* Full-screen loader overlay */}
+      {loaderPhase && createPortal(
+        <AnimatePresence>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] flex items-center justify-center"
+            style={{ backgroundColor: 'var(--color-surface)' }}
+          >
+            <div className="w-full max-w-sm px-6 space-y-6 text-center">
+              {/* Lightbulb icon */}
+              <motion.div
+                animate={{ scale: [1, 1.1, 1] }}
+                transition={{ repeat: Infinity, duration: 2, ease: 'easeInOut' }}
+                className="mx-auto flex h-16 w-16 items-center justify-center rounded-full"
+                style={{ backgroundColor: 'var(--primary-50)' }}
+              >
+                {loaderPhase === 'done' ? (
+                  <svg className="h-8 w-8" style={{ color: 'var(--primary-600)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : (
+                  <svg className="h-8 w-8" style={{ color: 'var(--primary-600)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                )}
+              </motion.div>
+
+              {/* Phase label */}
+              <motion.p
+                key={loaderPhase}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-body font-semibold"
+                style={{ color: loaderPhase === 'done' ? 'var(--primary-600)' : 'var(--color-text)' }}
+              >
+                {PHASE_CONFIG[loaderPhase].label}
+              </motion.p>
+
+              {/* Progress bar */}
+              <div className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: 'var(--color-muted)' }}>
+                <motion.div
+                  className="h-full rounded-full"
+                  style={{ backgroundColor: 'var(--primary-600)' }}
+                  initial={{ width: '0%' }}
+                  animate={{ width: `${PHASE_CONFIG[loaderPhase].progress}%` }}
+                  transition={{ duration: 0.6, ease: 'easeOut' }}
+                />
+              </div>
+
+              {/* Percentage */}
+              <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                {PHASE_CONFIG[loaderPhase].progress}%
+              </p>
+            </div>
+          </motion.div>
+        </AnimatePresence>,
+        document.body,
+      )}
+
       {/* Daily State Modal */}
       {showModal && createPortal(
         <AnimatePresence>
@@ -205,7 +272,7 @@ export function TodayPage() {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
             style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
-            onClick={() => !generating && setShowModal(false)}
+            onClick={() => setShowModal(false)}
           >
             <motion.div
               initial={{ y: 100, opacity: 0 }}
@@ -307,7 +374,6 @@ export function TodayPage() {
                 <div className="flex gap-3 pt-1">
                   <button
                     onClick={() => setShowModal(false)}
-                    disabled={generating}
                     className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors"
                     style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                   >
@@ -315,23 +381,13 @@ export function TodayPage() {
                   </button>
                   <button
                     onClick={handleSmartGenerate}
-                    disabled={generating}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
-                    style={{ backgroundColor: 'var(--primary-600)', color: '#fff', opacity: generating ? 0.7 : 1 }}
+                    style={{ backgroundColor: 'var(--primary-600)', color: '#fff' }}
                   >
-                    {generating ? (
-                      <>
-                        <div className="h-4 w-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                        Generating…
-                      </>
-                    ) : (
-                      <>
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                         </svg>
                         Generate
-                      </>
-                    )}
                   </button>
                 </div>
               </div>
