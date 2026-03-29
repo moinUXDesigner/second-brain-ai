@@ -1,10 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import type { Task, TaskStatus } from '@/types';
-import { useUpdateTaskStatus } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/Badge';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
 import { cn } from '@/utils/cn';
-import toast from 'react-hot-toast';
 
 function getPriorityVariant(priority?: number) {
   if (!priority) return PRIORITY_COLORS.normal;
@@ -17,49 +15,17 @@ function getCategoryStyle(category?: string) {
   return TASK_CATEGORIES.find((c) => c.value === category)?.color ?? 'bg-neutral-100 text-neutral-600';
 }
 
-export function TodayTable({ tasks }: { tasks: Task[] }) {
-  const updateStatus = useUpdateTaskStatus();
+interface TodayTableProps {
+  tasks: Task[];
+  localStatus: Record<string, TaskStatus>;
+  onStatusChange: (id: string, status: TaskStatus) => void;
+}
 
-  // Optimistic local overrides: taskId → newStatus
-  const [localStatus, setLocalStatus] = useState<Record<string, TaskStatus>>({});
-  const [syncing, setSyncing] = useState<Record<string, boolean>>({});
-
+export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTableProps) {
   const getStatus = useCallback(
     (task: Task): TaskStatus => localStatus[task.id] ?? task.status,
     [localStatus],
   );
-
-  const isDirty = useCallback(
-    (task: Task) => task.id in localStatus && localStatus[task.id] !== task.status,
-    [localStatus],
-  );
-
-  const handleLocalChange = (id: string, status: TaskStatus) => {
-    setLocalStatus((prev) => ({ ...prev, [id]: status }));
-  };
-
-  const handleSync = async (task: Task) => {
-    const newStatus = localStatus[task.id];
-    if (!newStatus || newStatus === task.status) return;
-    setSyncing((prev) => ({ ...prev, [task.id]: true }));
-    try {
-      await updateStatus.mutateAsync({ id: task.id, status: newStatus });
-      setLocalStatus((prev) => {
-        const next = { ...prev };
-        delete next[task.id];
-        return next;
-      });
-      toast.success('Status updated');
-    } catch {
-      toast.error('Failed to update');
-    } finally {
-      setSyncing((prev) => {
-        const next = { ...prev };
-        delete next[task.id];
-        return next;
-      });
-    }
-  };
 
   if (tasks.length === 0) {
     return (
@@ -75,38 +41,20 @@ export function TodayTable({ tasks }: { tasks: Task[] }) {
 
   const StatusSelect = ({ task }: { task: Task }) => {
     const status = getStatus(task);
-    const dirty = isDirty(task);
-    const isSyncing = syncing[task.id];
     return (
-      <div className="flex items-center gap-1.5">
-        <select
-          value={status}
-          onChange={(e) => handleLocalChange(task.id, e.target.value as TaskStatus)}
-          className={cn(
-            'rounded-md border px-2 py-1 text-caption font-medium transition-colors cursor-pointer',
-            status === 'Done'
-              ? 'bg-success-50 text-success-700 border-success-200'
-              : 'bg-warning-50 text-warning-700 border-warning-200',
-          )}
-        >
-          <option value="Pending">Pending</option>
-          <option value="Done">Done</option>
-        </select>
-        {dirty && (
-          <button
-            onClick={() => handleSync(task)}
-            disabled={isSyncing}
-            className="px-2 py-1 rounded-md text-[11px] font-semibold transition-all"
-            style={{
-              backgroundColor: 'var(--primary-600)',
-              color: '#fff',
-              opacity: isSyncing ? 0.6 : 1,
-            }}
-          >
-            {isSyncing ? '…' : 'Update'}
-          </button>
+      <select
+        value={status}
+        onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
+        className={cn(
+          'rounded-md border px-2 py-1 text-caption font-medium transition-colors cursor-pointer',
+          status === 'Done'
+            ? 'bg-success-50 text-success-700 border-success-200'
+            : 'bg-warning-50 text-warning-700 border-warning-200',
         )}
-      </div>
+      >
+        <option value="Pending">Pending</option>
+        <option value="Done">Done</option>
+      </select>
     );
   };
 

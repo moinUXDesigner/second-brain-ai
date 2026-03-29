@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQueryClient } from '@tanstack/react-query';
 import { TodayTable } from './components/TodayTable';
 import { useTodayTasks, useGenerateTodayView } from '@/hooks/useTasks';
-import { TableSkeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
+import { taskService } from '@/services/endpoints/taskService';
 import { dailyStateService } from '@/services/endpoints/dailyStateService';
+import { QUERY_KEYS } from '@/constants';
 import { today } from '@/utils/date';
+import type { TaskStatus, Task } from '@/types';
 import toast from 'react-hot-toast';
 
 const TIME_PRESETS = [
@@ -30,9 +33,67 @@ function formatTime(mins: number) {
 export function TodayPage() {
   const { data: tasks, isLoading, isError } = useTodayTasks();
   const generateView = useGenerateTodayView();
+  const queryClient = useQueryClient();
 
   const [showModal, setShowModal] = useState(false);
   const [generating, setGenerating] = useState(false);
+
+  // Lifted status overrides for TodayTable
+  const [localStatus, setLocalStatus] = useState<Record<string, TaskStatus>>({});
+  const [syncing, setSyncing] = useState(false);
+
+  // Reset local overrides when tasks data changes from a fresh generate
+  useEffect(() => {
+    setLocalStatus({});
+  }, [tasks]);
+
+  const handleStatusChange = (id: string, status: TaskStatus) => {
+    setLocalStatus((prev) => ({ ...prev, [id]: status }));
+  };
+
+  // Count how many tasks actually changed
+  const dirtyCount = useMemo(() => {
+    if (!tasks) return 0;
+    return Object.entries(localStatus).filter(([id, status]) => {
+      const task = tasks.find((t) => t.id === id);
+      return task && task.status !== status;
+    }).length;
+  }, [localStatus, tasks]);
+
+  const handleBatchUpdate = async () => {
+    if (!tasks || dirtyCount === 0) return;
+    setSyncing(true);
+    try {
+      const dirtyEntries = Object.entries(localStatus).filter(([id, status]) => {
+        const task = tasks.find((t) => t.id === id);
+        return task && task.status !== status;
+      });
+      // Update all in parallel
+      await Promise.all(
+        dirtyEntries.map(([id, status]) => taskService.updateTaskStatus(id, status)),
+      );
+      // Patch the query cache so refetch doesn't revert the UI
+      queryClient.setQueryData<Task[]>(QUERY_KEYS.todayTasks, (old) => {
+        if (!old) return old;
+        return old.map((t) => {
+          const newStatus = localStatus[t.id];
+          if (newStatus && newStatus !== t.status) {
+            return { ...t, status: newStatus, completedAt: newStatus === 'Done' ? new Date().toISOString() : undefined };
+          }
+          return t;
+        });
+      });
+      setLocalStatus({});
+      toast.success(`${dirtyEntries.length} task${dirtyEntries.length > 1 ? 's' : ''} updated`);
+      // Background refetch for consistency
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+    } catch {
+      toast.error('Failed to update tasks');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // Daily state form
   const [energy, setEnergy] = useState(5);
@@ -85,12 +146,22 @@ export function TodayPage() {
           <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Today</h1>
           <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>{today()}</p>
         </div>
-        <Button onClick={() => setShowModal(true)} isLoading={isGenerating} variant="primary">
-          <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-          Smart View
-        </Button>
+        <div className="flex items-center gap-2">
+          {dirtyCount > 0 && (
+            <Button onClick={handleBatchUpdate} isLoading={syncing} variant="secondary">
+              <svg className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              Update ({dirtyCount})
+            </Button>
+          )}
+          <Button onClick={() => setShowModal(true)} isLoading={isGenerating} variant="primary">
+            <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+            Smart View
+          </Button>
+        </div>
       </div>
 
       {/* Content / Loading */}
@@ -122,7 +193,7 @@ export function TodayPage() {
           <p className="text-caption mt-2" style={{ color: 'var(--color-muted-fg)' }}>Make sure your Google Apps Script is deployed and VITE_GAS_WEB_APP_URL is set in .env</p>
         </div>
       ) : (
-        <TodayTable tasks={tasks ?? []} />
+        <TodayTable tasks={tasks ?? []} localStatus={localStatus} onStatusChange={handleStatusChange} />
       )}
 
       {/* Daily State Modal */}
