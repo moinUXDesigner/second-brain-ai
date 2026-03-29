@@ -2,6 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/app/store/authStore';
 import { useUiStore } from '@/app/store/uiStore';
+import { useAuth } from '@/hooks/useAuth';
 import { APP_NAME } from '@/constants';
 import { hasPermission } from '@/utils/permissions';
 
@@ -15,6 +16,7 @@ const navItems = [
   { to: '/analytics', label: 'Analytics', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
   { to: '/daily-state', label: 'Daily State', icon: 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
   { to: '/profile', label: 'Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+  { to: '/activity', label: 'Activity', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
 ];
 
 const adminItem = {
@@ -27,6 +29,7 @@ export function Sidebar() {
   const role = useAuthStore((s) => s.role);
   const { isSidebarOpen, toggleSidebar } = useUiStore();
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const allItems = role && hasPermission(role, 'admin:access')
     ? [...navItems, adminItem]
@@ -110,7 +113,22 @@ export function Sidebar() {
             </NavLink>
           ))}
         </nav>
-      </aside>
+        {/* Logout */}
+        <div className="p-3 border-t" style={{ borderColor: 'var(--sidebar-border)' }}>
+          <button
+            onClick={() => {
+              if (window.innerWidth < 1024) toggleSidebar();
+              logout();
+            }}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-body transition-colors hover:opacity-80"
+            style={{ color: 'var(--color-text-secondary)' }}
+          >
+            <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            <span className="truncate">Logout</span>
+          </button>
+        </div>      </aside>
     </>
   );
 }

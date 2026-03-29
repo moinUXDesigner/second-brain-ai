@@ -13,6 +13,7 @@ import { AdminPage } from '@/features/admin/AdminPage';
 import { CreateFlowPage } from '@/features/create/CreateFlowPage';
 import { CompletedTasksPage } from '@/features/tasks/CompletedTasksPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
+import { ActivityPage } from '@/features/activity/ActivityPage';
 import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
 import { DeletedProjectsPage } from '@/features/projects/DeletedProjectsPage';
 
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
       { path: 'analytics', element: <AnalyticsPage /> },
       { path: 'daily-state', element: <DailyStatePage /> },
       { path: 'profile', element: <ProfilePage /> },
+      { path: 'activity', element: <ActivityPage /> },
       {
         path: 'admin',
         element: (
