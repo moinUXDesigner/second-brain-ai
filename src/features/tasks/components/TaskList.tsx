@@ -150,9 +150,14 @@ function MobileTaskRow({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>
-            {task.title}
-          </p>
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>
+              {task.title}
+            </p>
+            {(task.source === 'BULK' || task.tags?.includes('Batch Uploaded')) && (
+              <Badge variant="primary" className="shrink-0 !text-[9px] !px-1.5 !py-0">Batch</Badge>
+            )}
+          </div>
           <div className="flex items-center gap-1 mt-0.5">
             {task.area && (
               <span className="text-xs truncate" style={{ color: 'var(--color-text-secondary)' }}>
@@ -278,9 +283,14 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                     </td>
                   )}
                   <td className="px-4 py-3">
-                    <p className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
-                      {task.title}
-                    </p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
+                        {task.title}
+                      </p>
+                      {(task.source === 'BULK' || task.tags?.includes('Batch Uploaded')) && (
+                        <Badge variant="primary" className="shrink-0 !text-[9px] !px-1.5 !py-0">Batch Uploaded</Badge>
+                      )}
+                    </div>
                     {task.area && (
                       <p className="text-caption md:hidden" style={{ color: 'var(--color-text-secondary)' }}>{task.area}</p>
                     )}

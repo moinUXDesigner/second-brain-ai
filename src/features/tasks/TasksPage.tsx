@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
 import { useTasks, useDeleteTask, useUpdateTaskStatus } from '@/hooks/useTasks';
@@ -9,6 +10,7 @@ type SortField = 'newest' | 'oldest' | 'priority' | 'impact';
 const PAGE_SIZE = 10;
 
 export function TasksPage() {
+  const navigate = useNavigate();
   const { data: tasks, isLoading } = useTasks();
   const deleteTask = useDeleteTask();
   const completeTask = useUpdateTaskStatus();
@@ -84,11 +86,23 @@ export function TasksPage() {
       className="flex flex-col h-[calc(100vh-3.5rem-6.5rem)] lg:h-[calc(100vh-4rem-3rem)]"
     >
       {/* Header */}
-      <div className="shrink-0 flex items-baseline gap-2">
-        <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Tasks</h1>
-        <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-          {filtered.length} of {pendingCount} pending
-        </span>
+      <div className="shrink-0 flex items-center justify-between">
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Tasks</h1>
+          <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+            {filtered.length} of {pendingCount} pending
+          </span>
+        </div>
+        <button
+          onClick={() => navigate('/bulk-upload')}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+          style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-700)' }}
+        >
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+          </svg>
+          Bulk Upload
+        </button>
       </div>
 
       {/* Search + Filters */}

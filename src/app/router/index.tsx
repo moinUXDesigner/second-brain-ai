@@ -16,6 +16,7 @@ import { ProfilePage } from '@/features/profile/ProfilePage';
 import { ActivityPage } from '@/features/activity/ActivityPage';
 import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
 import { DeletedProjectsPage } from '@/features/projects/DeletedProjectsPage';
+import { BulkUploadPage } from '@/features/bulk-upload/BulkUploadPage';
 
 const basename = import.meta.env.BASE_URL.replace(/\/+$/, '');
 
@@ -50,6 +51,7 @@ export const router = createBrowserRouter([
       { path: 'daily-state', element: <DailyStatePage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'activity', element: <ActivityPage /> },
+      { path: 'bulk-upload', element: <BulkUploadPage /> },
       {
         path: 'admin',
         element: (
