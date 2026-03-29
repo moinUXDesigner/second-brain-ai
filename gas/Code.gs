@@ -70,6 +70,9 @@ function doPost(e) {
       case "deleteTask":
         result = { success: true, data: handleDeleteTask(body.taskId) };
         break;
+      case "linkTaskToProject":
+        result = { success: true, data: handleLinkTaskToProject(body.taskId, body.projectId) };
+        break;
       case "createProject":
         result = { success: true, data: handleCreateProject(body) };
         break;
@@ -509,6 +512,20 @@ function handleCreateTask(body) {
   }
 
   return { id: taskId, title: body.title, status: "Pending" };
+}
+
+function handleLinkTaskToProject(taskId, projectId) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TASK_SHEET_NAME);
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(taskId)) {
+      sheet.getRange(i + 1, 7).setValue(projectId || "");
+      return { taskId: taskId, projectId: projectId, linked: true };
+    }
+  }
+
+  return { taskId: taskId, projectId: projectId, linked: false };
 }
 
 function handleUpdateTaskStatus(taskId, newStatus) {

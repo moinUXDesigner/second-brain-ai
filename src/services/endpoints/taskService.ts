@@ -36,6 +36,11 @@ export const taskService = {
     return { data: { id, status } as Task, success: true };
   },
 
+  async linkTaskToProject(taskId: string, projectId: string): Promise<ApiResponse<{ taskId: string; projectId: string; linked: boolean }>> {
+    const data = await gasClient.post<{ taskId: string; projectId: string; linked: boolean }>('linkTaskToProject', { taskId, projectId });
+    return { data, success: true };
+  },
+
   async deleteTask(id: string): Promise<void> {
     await gasClient.post<unknown>('deleteTask', { taskId: id });
   },
