@@ -1,8 +1,10 @@
+import { useState, useCallback } from 'react';
 import type { Task, TaskStatus } from '@/types';
 import { useUpdateTaskStatus } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/Badge';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
 import { cn } from '@/utils/cn';
+import toast from 'react-hot-toast';
 
 function getPriorityVariant(priority?: number) {
   if (!priority) return PRIORITY_COLORS.normal;
@@ -18,8 +20,45 @@ function getCategoryStyle(category?: string) {
 export function TodayTable({ tasks }: { tasks: Task[] }) {
   const updateStatus = useUpdateTaskStatus();
 
-  const handleStatusChange = (id: string, status: TaskStatus) => {
-    updateStatus.mutate({ id, status });
+  // Optimistic local overrides: taskId → newStatus
+  const [localStatus, setLocalStatus] = useState<Record<string, TaskStatus>>({});
+  const [syncing, setSyncing] = useState<Record<string, boolean>>({});
+
+  const getStatus = useCallback(
+    (task: Task): TaskStatus => localStatus[task.id] ?? task.status,
+    [localStatus],
+  );
+
+  const isDirty = useCallback(
+    (task: Task) => task.id in localStatus && localStatus[task.id] !== task.status,
+    [localStatus],
+  );
+
+  const handleLocalChange = (id: string, status: TaskStatus) => {
+    setLocalStatus((prev) => ({ ...prev, [id]: status }));
+  };
+
+  const handleSync = async (task: Task) => {
+    const newStatus = localStatus[task.id];
+    if (!newStatus || newStatus === task.status) return;
+    setSyncing((prev) => ({ ...prev, [task.id]: true }));
+    try {
+      await updateStatus.mutateAsync({ id: task.id, status: newStatus });
+      setLocalStatus((prev) => {
+        const next = { ...prev };
+        delete next[task.id];
+        return next;
+      });
+      toast.success('Status updated');
+    } catch {
+      toast.error('Failed to update');
+    } finally {
+      setSyncing((prev) => {
+        const next = { ...prev };
+        delete next[task.id];
+        return next;
+      });
+    }
   };
 
   if (tasks.length === 0) {
@@ -34,34 +73,60 @@ export function TodayTable({ tasks }: { tasks: Task[] }) {
     );
   }
 
+  const StatusSelect = ({ task }: { task: Task }) => {
+    const status = getStatus(task);
+    const dirty = isDirty(task);
+    const isSyncing = syncing[task.id];
+    return (
+      <div className="flex items-center gap-1.5">
+        <select
+          value={status}
+          onChange={(e) => handleLocalChange(task.id, e.target.value as TaskStatus)}
+          className={cn(
+            'rounded-md border px-2 py-1 text-caption font-medium transition-colors cursor-pointer',
+            status === 'Done'
+              ? 'bg-success-50 text-success-700 border-success-200'
+              : 'bg-warning-50 text-warning-700 border-warning-200',
+          )}
+        >
+          <option value="Pending">Pending</option>
+          <option value="Done">Done</option>
+        </select>
+        {dirty && (
+          <button
+            onClick={() => handleSync(task)}
+            disabled={isSyncing}
+            className="px-2 py-1 rounded-md text-[11px] font-semibold transition-all"
+            style={{
+              backgroundColor: 'var(--primary-600)',
+              color: '#fff',
+              opacity: isSyncing ? 0.6 : 1,
+            }}
+          >
+            {isSyncing ? '…' : 'Update'}
+          </button>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       {/* Mobile card layout */}
       <div className="space-y-3 md:hidden">
         {tasks.map((task) => {
+          const status = getStatus(task);
           const priorityStyle = getPriorityVariant(task.priority);
           return (
-            <div key={task.id} className={cn('card p-4 space-y-2', task.status === 'Done' && 'opacity-60')}>
+            <div key={task.id} className={cn('card p-4 space-y-2', status === 'Done' && 'opacity-60')}>
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
-                  <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50 truncate', task.status === 'Done' && 'line-through')}>
+                  <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50 truncate', status === 'Done' && 'line-through')}>
                     {task.title}
                   </p>
                   {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
                 </div>
-                <select
-                  value={task.status}
-                  onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
-                  className={cn(
-                    'rounded-md border px-2 py-1 text-caption font-medium transition-colors cursor-pointer shrink-0',
-                    task.status === 'Done'
-                      ? 'bg-success-50 text-success-700 border-success-200'
-                      : 'bg-warning-50 text-warning-700 border-warning-200',
-                  )}
-                >
-                  <option value="Pending">Pending</option>
-                  <option value="Done">Done</option>
-                </select>
+                <StatusSelect task={task} />
               </div>
               <div className="flex items-center gap-3 flex-wrap text-caption">
                 {task.category && (
@@ -98,11 +163,12 @@ export function TodayTable({ tasks }: { tasks: Task[] }) {
             </thead>
             <tbody className="divide-y divide-semantic-border">
               {tasks.map((task) => {
+                const status = getStatus(task);
                 const priorityStyle = getPriorityVariant(task.priority);
                 return (
-                  <tr key={task.id} className={cn('transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30', task.status === 'Done' && 'opacity-60')}>
+                  <tr key={task.id} className={cn('transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30', status === 'Done' && 'opacity-60')}>
                     <td className="px-4 py-3">
-                      <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50', task.status === 'Done' && 'line-through')}>{task.title}</p>
+                      <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50', status === 'Done' && 'line-through')}>{task.title}</p>
                       {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
                     </td>
                     <td className="px-4 py-3">
@@ -126,19 +192,7 @@ export function TodayTable({ tasks }: { tasks: Task[] }) {
                       <span className="text-caption text-neutral-500">{task.timeEstimate ?? '—'}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <select
-                        value={task.status}
-                        onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
-                        className={cn(
-                          'rounded-md border px-2 py-1 text-caption font-medium transition-colors cursor-pointer',
-                          task.status === 'Done'
-                            ? 'bg-success-50 text-success-700 border-success-200'
-                            : 'bg-warning-50 text-warning-700 border-warning-200',
-                        )}
-                      >
-                        <option value="Pending">Pending</option>
-                        <option value="Done">Done</option>
-                      </select>
+                      <StatusSelect task={task} />
                     </td>
                   </tr>
                 );
