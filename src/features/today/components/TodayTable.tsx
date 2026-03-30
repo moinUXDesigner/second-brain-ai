@@ -96,11 +96,17 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
           'rounded-md border px-1.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer',
           status === 'Done'
             ? 'bg-success-50 text-success-700 border-success-200'
+            : status === 'Idea'
+            ? 'bg-primary-50 text-primary-700 border-primary-200'
+            : status === 'Note'
+            ? 'bg-neutral-100 text-neutral-700 border-neutral-200'
             : 'bg-warning-50 text-warning-700 border-warning-200',
         )}
       >
         <option value="Pending">Pending</option>
         <option value="Done">Done</option>
+        <option value="Idea">Idea</option>
+        <option value="Note">Note</option>
       </select>
     );
   };
@@ -127,8 +133,24 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
                 <div className="flex flex-col gap-1 items-end">
                   <StatusSelect task={task} />
                   <div className="flex gap-1 mt-1">
-                    <button className="btn btn-xs btn-outline" onClick={() => setEditTask(task)}>Edit</button>
-                    <button className="btn btn-xs btn-outline" onClick={() => setConvertTask(task)}>Convert</button>
+                    <button
+                      className="btn btn-xs btn-outline p-1"
+                      onClick={() => setEditTask(task)}
+                      title="Edit task"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                    <button
+                      className="btn btn-xs btn-outline p-1"
+                      onClick={() => setConvertTask(task)}
+                      title="Convert to project"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-7-7l7 7-7 7" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -206,8 +228,24 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-1">
-                        <button className="btn btn-xs btn-outline" onClick={() => setEditTask(task)}>Edit</button>
-                        <button className="btn btn-xs btn-outline" onClick={() => setConvertTask(task)}>Convert</button>
+                        <button
+                          className="btn btn-xs btn-outline p-1"
+                          onClick={() => setEditTask(task)}
+                          title="Edit task"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          className="btn btn-xs btn-outline p-1"
+                          onClick={() => setConvertTask(task)}
+                          title="Convert to project"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-7-7l7 7-7 7" />
+                          </svg>
+                        </button>
                       </div>
                     </td>
                   </tr>

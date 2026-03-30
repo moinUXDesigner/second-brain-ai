@@ -7,6 +7,7 @@ interface UiState {
   isDarkMode: boolean;
   colorScheme: ColorScheme;
   aiEnabled: boolean;
+  auditVersion: number;
   isLoading: boolean;
   activeModal: string | null;
   toggleSidebar: () => void;
@@ -16,6 +17,7 @@ interface UiState {
   setLoading: (loading: boolean) => void;
   openModal: (modal: string) => void;
   closeModal: () => void;
+  incrementAuditVersion: () => void;
 }
 
 function applyColorScheme(scheme: ColorScheme) {
@@ -27,9 +29,11 @@ export const useUiStore = create<UiState>()((set) => ({
   isDarkMode: localStorage.getItem('theme') === 'dark',
   colorScheme: (localStorage.getItem('colorScheme') as ColorScheme) || 'blue',
   aiEnabled: localStorage.getItem('aiEnabled') !== 'false',
+  auditVersion: 0,
   isLoading: false,
   activeModal: null,
   toggleSidebar: () => set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
+  incrementAuditVersion: () => set((s) => ({ auditVersion: s.auditVersion + 1 })),
   toggleDarkMode: () =>
     set((s) => {
       const next = !s.isDarkMode;

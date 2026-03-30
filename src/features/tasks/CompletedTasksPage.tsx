@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTasks, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
@@ -49,7 +49,10 @@ export function CompletedTasksPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  if (safePage !== page) setPage(safePage);
+
+  useEffect(() => {
+    if (safePage !== page) setPage(safePage);
+  }, [safePage, page]);
 
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const doneCount = tasks?.filter((t) => t.status === 'Done' || t.status === 'Deleted').length ?? 0;
@@ -144,11 +147,11 @@ export function CompletedTasksPage() {
                         <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>{task.area}</p>
                       )}
                     </div>
-                    <Badge variant={task.status === 'Deleted' ? 'danger' : 'success'}>{task.status === 'Deleted' ? 'Deleted' : 'Done'}</Badge>
+                    <Badge variant={task.status === 'Deleted' ? 'danger' : 'success'} className="!text-[10px] !px-1.5 !py-0.5">{task.status === 'Deleted' ? 'Deleted' : 'Done'}</Badge>
                   </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 flex-wrap text-caption">
-                      <Badge>{task.type || '—'}</Badge>
+                      <Badge className="!text-[10px] !px-1.5 !py-0.5">{task.type || '—'}</Badge>
                       {task.completedAt && (
                         <span style={{ color: 'var(--color-text-secondary)' }}>
                           {new Date(task.completedAt).toLocaleDateString()}
@@ -200,13 +203,13 @@ export function CompletedTasksPage() {
                           </p>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge>{task.type || '—'}</Badge>
+                          <Badge className="!text-[10px] !px-1.5 !py-0.5">{task.type || '—'}</Badge>
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell">
                           <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>{task.area || '—'}</span>
                         </td>
                         <td className="px-4 py-3">
-                          <Badge variant={task.status === 'Deleted' ? 'danger' : 'success'}>{task.status === 'Deleted' ? 'Deleted' : 'Done'}</Badge>
+                          <Badge variant={task.status === 'Deleted' ? 'danger' : 'success'} className="!text-[10px] !px-1.5 !py-0.5">{task.status === 'Deleted' ? 'Deleted' : 'Done'}</Badge>
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useUiStore } from '@/app/store/uiStore';
 import { AuditLogViewer } from '@/features/admin/components/AuditLogViewer';
 import { auditService } from '@/services/endpoints/auditService';
 import { motion } from 'framer-motion';
@@ -10,9 +11,8 @@ const STAT_CARDS: { key: 'total' | 'today' | 'thisWeek'; label: string; icon: st
 ];
 
 export function ActivityPage() {
-  const [version] = useState(0);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const stats = useMemo(() => auditService.getStats(), [version]);
+  const auditVersion = useUiStore((s) => s.auditVersion);
+  const stats = useMemo(() => auditService.getStats(), [auditVersion]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
