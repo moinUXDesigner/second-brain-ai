@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import type { Task, TaskStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
@@ -22,6 +23,7 @@ interface TodayTableProps {
 }
 
 export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTableProps) {
+  const navigate = useNavigate();
   const getStatus = useCallback(
     (task: Task): TaskStatus => localStatus[task.id] ?? task.status,
     [localStatus],
@@ -48,8 +50,25 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-lg w-full max-w-md">
         <h2 className="text-lg font-bold mb-4">Convert Task to Project</h2>
-        <p className="mb-4">(AI sub-task generation will be implemented here)</p>
-        <button className="btn btn-primary mr-2" onClick={() => setConvertTask(null)}>Convert</button>
+        <p className="mb-4">Do you want to convert this task to a project with AI-generated subtasks?</p>
+        <button
+          className="btn btn-primary mr-2"
+          onClick={() => {
+            if (convertTask) {
+              navigate('/create', {
+                state: {
+                  skipStep1: true,
+                  text: convertTask.title,
+                  area: convertTask.area,
+                  type: 'project',
+                },
+              });
+            }
+            setConvertTask(null);
+          }}
+        >
+          Convert
+        </button>
         <button className="btn btn-secondary" onClick={() => setConvertTask(null)}>Cancel</button>
       </div>
     </div>
@@ -74,7 +93,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
         value={status}
         onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
         className={cn(
-          'rounded-md border px-2 py-1 text-caption font-medium transition-colors cursor-pointer',
+          'rounded-md border px-1.5 py-0.5 text-xs font-semibold transition-colors cursor-pointer',
           status === 'Done'
             ? 'bg-success-50 text-success-700 border-success-200'
             : 'bg-warning-50 text-warning-700 border-warning-200',
@@ -115,11 +134,11 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
               </div>
               <div className="flex items-center gap-3 flex-wrap text-caption">
                 {task.category && (
-                  <Badge className={getCategoryStyle(task.category)}>{task.category}</Badge>
+                  <Badge className={cn(getCategoryStyle(task.category), '!text-[10px] !px-1.5 !py-0.5')}>{task.category}</Badge>
                 )}
                 {task.priority != null && (
-                  <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 font-medium', priorityStyle.bg, priorityStyle.text)}>
-                    P: {task.priority}
+                  <span className={cn('inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold', priorityStyle.bg, priorityStyle.text)}>
+                    P{task.priority}
                   </span>
                 )}
                 {task.fitScore != null && (
@@ -162,12 +181,14 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
                     </td>
                     <td className="px-4 py-3">
                       {task.category && (
-                        <Badge className={getCategoryStyle(task.category)}>{task.category}</Badge>
+                        <Badge className={cn(getCategoryStyle(task.category), '!text-[10px] !px-1.5 !py-0.5')}>
+                          {task.category}
+                        </Badge>
                       )}
                     </td>
                     <td className="px-4 py-3">
                       {task.priority != null && (
-                        <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium', priorityStyle.bg, priorityStyle.text)}>
+                      <span className={cn('inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold', priorityStyle.bg, priorityStyle.text)}>
                           {task.priority}
                         </span>
                       )}

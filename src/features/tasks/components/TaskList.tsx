@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import type { Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
@@ -238,12 +239,30 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
       </div>
     </div>
   ) : null;
+  const navigate = useNavigate();
   const ConvertTaskModal = convertTask ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-lg w-full max-w-md">
         <h2 className="text-lg font-bold mb-4">Convert Task to Project</h2>
-        <p className="mb-4">(AI sub-task generation will be implemented here)</p>
-        <button className="btn btn-primary mr-2" onClick={() => setConvertTask(null)}>Convert</button>
+        <p className="mb-4">Do you want to convert this task to a project with AI-generated subtasks?</p>
+        <button
+          className="btn btn-primary mr-2"
+          onClick={() => {
+            if (convertTask) {
+              navigate('/create', {
+                state: {
+                  skipStep1: true,
+                  text: convertTask.title,
+                  area: convertTask.area,
+                  type: 'project',
+                },
+              });
+            }
+            setConvertTask(null);
+          }}
+        >
+          Convert
+        </button>
         <button className="btn btn-secondary" onClick={() => setConvertTask(null)}>Cancel</button>
       </div>
     </div>
@@ -332,7 +351,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                     )}
                   </td>
                   <td className="px-4 py-3">
-                    <Badge>{task.type || '—'}</Badge>
+                    <Badge className="!text-[10px] !px-1.5 !py-0.5">{task.type || '—'}</Badge>
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>{task.area || '—'}</span>
@@ -344,13 +363,22 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                     <span className="text-body" style={{ color: 'var(--color-text)' }}>{task.effort ?? '—'}</span>
                   </td>
                   <td className="px-4 py-3">
-                    <span className="text-body" style={{ color: 'var(--color-text)' }}>{task.priority ?? '—'}</span>
+                    {task.priority != null ? (
+                      <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-xs font-semibold bg-primary-100 text-primary-700">
+                        {task.priority}
+                      </span>
+                    ) : (
+                      <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     {task.urgency ? (
-                      <Badge variant={task.urgency === 'High' ? 'danger' : task.urgency === 'Medium' ? 'warning' : 'default'}>
-                        {task.urgency}
-                      </Badge>
+                      <Badge
+                      variant={task.urgency === 'High' ? 'danger' : task.urgency === 'Medium' ? 'warning' : 'default'}
+                      className="!text-[10px] !px-1.5 !py-0.5"
+                    >
+                      {task.urgency}
+                    </Badge>
                     ) : (
                       <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>—</span>
                     )}

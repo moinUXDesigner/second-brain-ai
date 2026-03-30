@@ -38,10 +38,12 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
   const [source, setSource] = useState<'AI' | 'RULE' | ''>('');
   const [confidence, setConfidence] = useState(0);
   const [subtasks, setSubtasks] = useState<string[]>([]);
+  const [aiError, setAiError] = useState(false);
   const [editing, setEditing] = useState(false);
 
   const runAnalysis = useCallback(async () => {
     setAnalyzing(true);
+    setAiError(false);
     try {
       const res = await inputService.analyzeInput({
         text: data.text,
@@ -68,9 +70,11 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
       setSubtasks(normalizedSubs);
       setConfidence(r.confidence);
       setSource(r.source);
+      setAiError(false);
     } catch {
       setSource('RULE');
       setConfidence(0.3);
+      setAiError(true);
     } finally {
       setAnalyzing(false);
       setAnalyzed(true);
@@ -87,6 +91,12 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
   // ─── PREVIEW MODE ───
   const renderPreview = () => (
     <div className="flex-1 space-y-5 overflow-y-auto">
+      {/* AI error info */}
+      {aiError && (
+        <div className="rounded-md bg-yellow-50 border border-yellow-200 px-3 py-2 text-caption text-yellow-800 mb-2">
+          AI sub-task generation failed, using rule-based suggestions instead.
+        </div>
+      )}
       {/* AI badge */}
       <div className="flex items-center gap-2">
         <span

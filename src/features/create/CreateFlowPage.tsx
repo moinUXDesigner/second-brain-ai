@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
@@ -32,21 +33,25 @@ const slideVariants = {
 };
 
 export function CreateFlowPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { log } = useAudit();
 
-  const [step, setStep] = useState(1);
+  // Support skipping Step 1 and pre-filling data from navigation state
+  const navState = location.state as Partial<WizardData> & { skipStep1?: boolean } | null;
+  const [step, setStep] = useState(navState?.skipStep1 ? 2 : 1);
   const [direction, setDirection] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
   const [wizardData, setWizardData] = useState<WizardData>({
-    text: '',
-    type: 'task',
-    area: '',
-    category: 'Deep Work',
-    priority: 'Medium',
-    estimatedTime: '1 hour',
+    text: navState?.text || '',
+    type: navState?.type || 'task',
+    area: navState?.area || '',
+    category: navState?.category || 'Deep Work',
+    priority: navState?.priority || 'Medium',
+    estimatedTime: navState?.estimatedTime || '1 hour',
+    subtasks: navState?.subtasks,
   });
 
   // Result after creation
