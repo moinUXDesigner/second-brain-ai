@@ -21,6 +21,8 @@ function MobileTaskRow({
   isCompleting,
   isRevealed,
   onReveal,
+  onEdit,
+  onConvert,
 }: {
   task: Task;
   onSwipeDelete: () => void;
@@ -29,6 +31,8 @@ function MobileTaskRow({
   isCompleting: boolean;
   isRevealed: boolean;
   onReveal: (id: string | null) => void;
+  onEdit: (task: Task) => void;
+  onConvert: (task: Task) => void;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const touchRef = useRef<{ startX: number; startY: number; locked: boolean | null } | null>(null);
@@ -94,6 +98,8 @@ function MobileTaskRow({
     touchRef.current = null;
   }, [task.id, onReveal]);
 
+  // Modal state for editing and converting (lifted up in TaskList)
+  // ...existing code...
   return (
     <div className="relative overflow-hidden" style={{ borderBottom: '1px solid var(--color-border)' }}>
       {/* Delete action behind */}
@@ -173,6 +179,10 @@ function MobileTaskRow({
               </span>
             )}
           </div>
+          <div className="flex gap-1 mt-1">
+            <button className="btn btn-xs btn-outline" onClick={() => onEdit(task)}>Edit</button>
+            <button className="btn btn-xs btn-outline" onClick={() => onConvert(task)}>Convert</button>
+          </div>
         </div>
 
         {/* Urgency badge */}
@@ -190,6 +200,8 @@ function MobileTaskRow({
 }
 
 export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId }: TaskListProps) {
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  const [convertTask, setConvertTask] = useState<Task | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [swipedId, setSwipedId] = useState<string | null>(null);
 
@@ -215,6 +227,27 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
     );
   }
 
+  // Modal stubs (reuse pattern from TodayTable)
+  const EditTaskModal = editTask ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h2 className="text-lg font-bold mb-4">Edit Task</h2>
+        <p className="mb-4">(Task editing form goes here)</p>
+        <button className="btn btn-primary mr-2" onClick={() => setEditTask(null)}>Save</button>
+        <button className="btn btn-secondary" onClick={() => setEditTask(null)}>Cancel</button>
+      </div>
+    </div>
+  ) : null;
+  const ConvertTaskModal = convertTask ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h2 className="text-lg font-bold mb-4">Convert Task to Project</h2>
+        <p className="mb-4">(AI sub-task generation will be implemented here)</p>
+        <button className="btn btn-primary mr-2" onClick={() => setConvertTask(null)}>Convert</button>
+        <button className="btn btn-secondary" onClick={() => setConvertTask(null)}>Cancel</button>
+      </div>
+    </div>
+  ) : null;
   return (
     <>
       {/* Mobile Gmail-like list */}
@@ -229,6 +262,8 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
             isCompleting={completingId === task.id}
             isRevealed={swipedId === task.id}
             onReveal={setSwipedId}
+            onEdit={setEditTask}
+            onConvert={setConvertTask}
           />
         ))}
       </div>
@@ -249,6 +284,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Urgency</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Project</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Updated</th>
+                <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider">Actions</th>
                 {onDelete && (
                   <th className="px-4 py-3 text-right text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}></th>
                 )}
@@ -329,6 +365,12 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                       {task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : '—'}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-1">
+                      <button className="btn btn-xs btn-outline" onClick={() => setEditTask(task)}>Edit</button>
+                      <button className="btn btn-xs btn-outline" onClick={() => setConvertTask(task)}>Convert</button>
+                    </div>
+                  </td>
                   {onDelete && (
                     <td className="px-4 py-3 text-right">
                       <button
@@ -359,6 +401,8 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
       </div>
 
       {/* Delete confirmation modal */}
+      {EditTaskModal}
+      {ConvertTaskModal}
       {confirmId && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="card p-6 max-w-sm w-full space-y-4">

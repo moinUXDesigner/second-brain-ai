@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import type { Task, TaskStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
@@ -26,6 +26,34 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
     (task: Task): TaskStatus => localStatus[task.id] ?? task.status,
     [localStatus],
   );
+
+  // Modal state for editing
+  const [editTask, setEditTask] = useState<Task | null>(null);
+  // Modal state for convert
+  const [convertTask, setConvertTask] = useState<Task | null>(null);
+
+  // Stub: Replace with actual modal/component
+  const EditTaskModal = editTask ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h2 className="text-lg font-bold mb-4">Edit Task</h2>
+        <p className="mb-4">(Task editing form goes here)</p>
+        <button className="btn btn-primary mr-2" onClick={() => setEditTask(null)}>Save</button>
+        <button className="btn btn-secondary" onClick={() => setEditTask(null)}>Cancel</button>
+      </div>
+    </div>
+  ) : null;
+
+  const ConvertTaskModal = convertTask ? (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-lg w-full max-w-md">
+        <h2 className="text-lg font-bold mb-4">Convert Task to Project</h2>
+        <p className="mb-4">(AI sub-task generation will be implemented here)</p>
+        <button className="btn btn-primary mr-2" onClick={() => setConvertTask(null)}>Convert</button>
+        <button className="btn btn-secondary" onClick={() => setConvertTask(null)}>Cancel</button>
+      </div>
+    </div>
+  ) : null;
 
   if (tasks.length === 0) {
     return (
@@ -72,9 +100,18 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
                   <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50 truncate', status === 'Done' && 'line-through')}>
                     {task.title}
                   </p>
+                  {task.projectName && (
+                    <p className="text-caption text-primary-600">Project: {task.projectName}</p>
+                  )}
                   {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
                 </div>
-                <StatusSelect task={task} />
+                <div className="flex flex-col gap-1 items-end">
+                  <StatusSelect task={task} />
+                  <div className="flex gap-1 mt-1">
+                    <button className="btn btn-xs btn-outline" onClick={() => setEditTask(task)}>Edit</button>
+                    <button className="btn btn-xs btn-outline" onClick={() => setConvertTask(task)}>Convert</button>
+                  </div>
+                </div>
               </div>
               <div className="flex items-center gap-3 flex-wrap text-caption">
                 {task.category && (
@@ -88,7 +125,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
                 {task.fitScore != null && (
                   <span className="text-neutral-500">Fit: {task.fitScore}%</span>
                 )}
-                <span className="text-neutral-400">{task.timeEstimate ?? '—'}</span>
+                <span className="text-neutral-400">{task.timeEstimate ?? '\u2014'}</span>
               </div>
             </div>
           );
@@ -107,6 +144,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Fit Score</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Time</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-semantic-border">
@@ -117,6 +155,9 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
                   <tr key={task.id} className={cn('transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30', status === 'Done' && 'opacity-60')}>
                     <td className="px-4 py-3">
                       <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50', status === 'Done' && 'line-through')}>{task.title}</p>
+                      {task.projectName && (
+                        <p className="text-caption text-primary-600">Project: {task.projectName}</p>
+                      )}
                       {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
                     </td>
                     <td className="px-4 py-3">
@@ -142,6 +183,12 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
                     <td className="px-4 py-3">
                       <StatusSelect task={task} />
                     </td>
+                    <td className="px-4 py-3">
+                      <div className="flex gap-1">
+                        <button className="btn btn-xs btn-outline" onClick={() => setEditTask(task)}>Edit</button>
+                        <button className="btn btn-xs btn-outline" onClick={() => setConvertTask(task)}>Convert</button>
+                      </div>
+                    </td>
                   </tr>
                 );
               })}
@@ -149,6 +196,8 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
           </table>
         </div>
       </div>
+      {EditTaskModal}
+      {ConvertTaskModal}
     </>
   );
 }
