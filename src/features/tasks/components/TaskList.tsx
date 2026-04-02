@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import type { Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
+import { EditTaskModal } from './EditTaskModal';
 
 interface TaskListProps {
   tasks: Task[];
@@ -244,16 +245,11 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
     );
   }
 
-  // Modal stubs (reuse pattern from TodayTable)
-  const EditTaskModal = editTask ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-lg font-bold mb-4">Edit Task</h2>
-        <p className="mb-4">(Task editing form goes here)</p>
-        <button className="btn btn-primary mr-2" onClick={() => setEditTask(null)}>Save</button>
-        <button className="btn btn-secondary" onClick={() => setEditTask(null)}>Cancel</button>
-      </div>
-    </div>
+  const editTaskModal = editTask ? (
+    <EditTaskModal
+      task={editTask}
+      onClose={() => setEditTask(null)}
+    />
   ) : null;
   const navigate = useNavigate();
   const ConvertTaskModal = convertTask ? (
@@ -461,7 +457,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
       </div>
 
       {/* Delete confirmation modal */}
-      {EditTaskModal}
+      {editTaskModal}
       {ConvertTaskModal}
       {confirmId && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>

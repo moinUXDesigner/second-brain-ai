@@ -1,7 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Task, TaskStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
+import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
 import { cn } from '@/utils/cn';
 
@@ -22,11 +23,122 @@ interface TodayTableProps {
   onStatusChange: (id: string, status: TaskStatus) => void;
 }
 
+type TodayTableSortKey = 'title' | 'category' | 'priority' | 'fitScore' | 'timeEstimate' | 'status' | 'projectName' | 'area';
+type SortDirection = 'asc' | 'desc';
+
+const PRIORITY_FILTER_OPTIONS = [
+  { label: 'All', value: 'All' },
+  { label: '1-3', value: '1-3' },
+  { label: '4-6', value: '4-6' },
+  { label: '7-9', value: '7-9' },
+  { label: '10', value: '10' },
+];
+
 export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTableProps) {
   const navigate = useNavigate();
+  const [filterText, setFilterText] = useState('');
+  const [filterCategory, setFilterCategory] = useState('All');
+  const [filterStatus, setFilterStatus] = useState<'All' | TaskStatus>('All');
+  const [filterPriority, setFilterPriority] = useState<'All' | '1-3' | '4-6' | '7-9' | '10'>('All');
+  const [filterArea, setFilterArea] = useState('All');
+
+  const [sortBy, setSortBy] = useState<TodayTableSortKey>('priority');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+
   const getStatus = useCallback(
     (task: Task): TaskStatus => localStatus[task.id] ?? task.status,
     [localStatus],
+  );
+
+  const getSortValue = (task: Task, key: TodayTableSortKey) => {
+    switch (key) {
+      case 'title':
+        return task.title?.toLowerCase() ?? '';
+      case 'category':
+        return task.category?.toLowerCase() ?? '';
+      case 'projectName':
+        return task.projectName?.toLowerCase() ?? '';
+      case 'area':
+        return task.area?.toLowerCase() ?? '';
+      case 'priority':
+        return task.priority ?? 0;
+      case 'fitScore':
+        return task.fitScore ?? 0;
+      case 'timeEstimate':
+        return task.timeEstimate ?? '';
+      case 'status':
+        return getStatus(task).toLowerCase();
+      default:
+        return '';
+    }
+  };
+
+  const filteredTasks = useMemo(() => {
+    const t = tasks.filter((task) => {
+      const status = getStatus(task);
+      if (filterStatus !== 'All' && status !== filterStatus) return false;
+      if (filterCategory !== 'All' && task.category !== filterCategory) return false;
+      if (filterArea !== 'All' && task.area !== filterArea) return false;
+      if (filterPriority !== 'All') {
+        if (task.priority == null) return false;
+        const p = task.priority;
+        if (filterPriority === '1-3' && (p < 1 || p > 3)) return false;
+        if (filterPriority === '4-6' && (p < 4 || p > 6)) return false;
+        if (filterPriority === '7-9' && (p < 7 || p > 9)) return false;
+        if (filterPriority === '10' && p !== 10) return false;
+      }
+      if (filterText.trim()) {
+        const text = filterText.toLowerCase();
+        const haystack = [task.title, task.category, task.projectName, task.area, status]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(text)) return false;
+      }
+      return true;
+    });
+
+    const sorted = [...t].sort((a, b) => {
+      const av = getSortValue(a, sortBy);
+      const bv = getSortValue(b, sortBy);
+
+      if (typeof av === 'number' && typeof bv === 'number') {
+        return sortDirection === 'asc' ? av - bv : bv - av;
+      }
+
+      const sa = String(av);
+      const sb = String(bv);
+      if (sa < sb) return sortDirection === 'asc' ? -1 : 1;
+      if (sa > sb) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return sorted;
+  }, [tasks, getStatus, filterText, filterCategory, filterStatus, filterPriority, filterArea, sortBy, sortDirection]);
+
+  const handleSort = (column: TodayTableSortKey) => {
+    if (sortBy === column) {
+      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortIndicator = (column: TodayTableSortKey) => {
+    if (sortBy !== column) return '↕';
+    return sortDirection === 'asc' ? '↑' : '↓';
+  };
+
+  const renderSortableHeader = (column: TodayTableSortKey, label: string) => (
+    <button
+      type="button"
+      onClick={() => handleSort(column)}
+      className="inline-flex items-center gap-1 text-left font-medium text-neutral-500 hover:text-neutral-700"
+    >
+      {label}
+      <span className="text-xs">{getSortIndicator(column)}</span>
+    </button>
   );
 
   // Modal state for editing
@@ -34,17 +146,72 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
   // Modal state for convert
   const [convertTask, setConvertTask] = useState<Task | null>(null);
 
-  // Stub: Replace with actual modal/component
-  const EditTaskModal = editTask ? (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-      <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-lg font-bold mb-4">Edit Task</h2>
-        <p className="mb-4">(Task editing form goes here)</p>
-        <button className="btn btn-primary mr-2" onClick={() => setEditTask(null)}>Save</button>
-        <button className="btn btn-secondary" onClick={() => setEditTask(null)}>Cancel</button>
-      </div>
-    </div>
+  const editTaskModal = editTask ? (
+    <EditTaskModal
+      task={editTask}
+      onClose={() => setEditTask(null)}
+    />
   ) : null;
+
+  const categories = Array.from(new Set(tasks.map((task) => task.category ?? '').filter(Boolean))).sort();
+  const areas = Array.from(new Set(tasks.map((task) => task.area ?? '').filter(Boolean))).sort();
+
+  const filterControls = (
+    <div className="card p-3 mb-4">
+      <div className="grid gap-2 md:grid-cols-3 lg:grid-cols-5">
+        <input
+          type="text"
+          value={filterText}
+          onChange={(e) => setFilterText(e.target.value)}
+          placeholder="Search all columns..."
+          className="input w-full"
+        />
+        <select
+          value={filterCategory}
+          onChange={(e) => setFilterCategory(e.target.value)}
+          className="select w-full"
+        >
+          <option value="All">All categories</option>
+          {categories.map((category) => (
+            <option key={category} value={category}>{category}</option>
+          ))}
+        </select>
+        <select
+          value={filterStatus}
+          onChange={(e) => setFilterStatus(e.target.value as 'All' | TaskStatus)}
+          className="select w-full"
+        >
+          <option value="All">All statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Idea">Idea</option>
+          <option value="Note">Note</option>
+          <option value="Done">Done</option>
+        </select>
+        <select
+          value={filterPriority}
+          onChange={(e) => setFilterPriority(e.target.value as 'All' | '1-3' | '4-6' | '7-9' | '10')}
+          className="select w-full"
+        >
+          {PRIORITY_FILTER_OPTIONS.map((item) => (
+            <option key={item.value} value={item.value}>{item.label}</option>
+          ))}
+        </select>
+        <select
+          value={filterArea}
+          onChange={(e) => setFilterArea(e.target.value)}
+          className="select w-full"
+        >
+          <option value="All">All areas</option>
+          {areas.map((area) => (
+            <option key={area} value={area}>{area}</option>
+          ))}
+        </select>
+      </div>
+      <p className="mt-2 text-caption text-neutral-500">
+        Showing {filteredTasks.length} of {tasks.length}
+      </p>
+    </div>
+  );
 
   const ConvertTaskModal = convertTask ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
@@ -55,6 +222,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
           className="btn btn-primary mr-2"
           onClick={() => {
             if (convertTask) {
+              onStatusChange(convertTask.id, 'Done');
               navigate('/create', {
                 state: {
                   skipStep1: true,
@@ -76,13 +244,26 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
 
   if (tasks.length === 0) {
     return (
-      <div className="card p-12 text-center">
-        <svg className="mx-auto h-12 w-12 text-neutral-300 dark:text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-        </svg>
-        <p className="text-body text-neutral-500 mt-4">No tasks for today</p>
-        <p className="text-caption text-neutral-400">Use the input module to create tasks</p>
-      </div>
+      <>
+        {filterControls}
+        <div className="card p-12 text-center">
+          <svg
+            className="mx-auto h-12 w-12 text-neutral-300 dark:text-neutral-600"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={1}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+            />
+          </svg>
+          <p className="text-body text-neutral-500 mt-4">No tasks for today</p>
+          <p className="text-caption text-neutral-400">Use the input module to create tasks</p>
+        </div>
+      </>
     );
   }
 
@@ -113,9 +294,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
 
   return (
     <>
+      {filterControls}
       {/* Mobile card layout */}
       <div className="space-y-3 md:hidden">
-        {tasks.map((task) => {
+        {filteredTasks.map((task) => {
           const status = getStatus(task);
           const priorityStyle = getPriorityVariant(task.priority);
           return (
@@ -125,10 +307,14 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
                   <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50 truncate', status === 'Done' && 'line-through')}>
                     {task.title}
                   </p>
-                  {task.projectName && (
-                    <p className="text-caption text-primary-600">Project: {task.projectName}</p>
-                  )}
-                  {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    {task.projectName && (
+                      <Badge className="!text-[10px] !px-1.5 !py-0.5">{task.projectName}</Badge>
+                    )}
+                    {task.area && (
+                      <span className="text-caption text-neutral-400">{task.area}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex flex-col gap-1 items-end">
                   <StatusSelect task={task} />
@@ -179,27 +365,29 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
           <table className="w-full">
             <thead>
               <tr className="border-b border-semantic-border bg-neutral-50 dark:bg-neutral-800/50">
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Task</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Category</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Priority</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Fit Score</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Time</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Status</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">{renderSortableHeader('title', 'Task')}</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">{renderSortableHeader('category', 'Category')}</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">{renderSortableHeader('priority', 'Priority')}</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">{renderSortableHeader('fitScore', 'Fit Score')}</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">{renderSortableHeader('timeEstimate', 'Time')}</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">{renderSortableHeader('status', 'Status')}</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-semantic-border">
-              {tasks.map((task) => {
+              {filteredTasks.map((task) => {
                 const status = getStatus(task);
                 const priorityStyle = getPriorityVariant(task.priority);
                 return (
                   <tr key={task.id} className={cn('transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30', status === 'Done' && 'opacity-60')}>
                     <td className="px-4 py-3">
                       <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50', status === 'Done' && 'line-through')}>{task.title}</p>
-                      {task.projectName && (
-                        <p className="text-caption text-primary-600">Project: {task.projectName}</p>
-                      )}
-                      {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
+                      <div className="flex flex-wrap items-center gap-2 mt-1">
+                        {task.projectName && (
+                          <Badge className="!text-[10px] !px-1.5 !py-0.5">{task.projectName}</Badge>
+                        )}
+                        {task.area && <span className="text-caption text-neutral-400">{task.area}</span>}
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       {task.category && (
@@ -255,7 +443,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange }: TodayTablePro
           </table>
         </div>
       </div>
-      {EditTaskModal}
+      {editTaskModal}
       {ConvertTaskModal}
     </>
   );

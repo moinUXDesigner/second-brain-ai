@@ -25,10 +25,8 @@ export const taskService = {
   },
 
   async updateTask(id: string, payload: Partial<Task>): Promise<ApiResponse<Task>> {
-    if (payload.status) {
-      await gasClient.post<unknown>('updateTaskStatus', { taskId: id, status: payload.status });
-    }
-    return { data: { id, ...payload } as Task, success: true };
+    const data = await gasClient.post<Task>('updateTask', { taskId: id, ...payload });
+    return { data, success: true };
   },
 
   async updateTaskStatus(id: string, status: Task['status']): Promise<ApiResponse<Task>> {

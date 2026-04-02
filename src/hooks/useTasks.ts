@@ -69,6 +69,31 @@ export function useCreateTask() {
   });
 }
 
+export function useUpdateTask() {
+  const queryClient = useQueryClient();
+  const { updateTaskInStore } = useTaskStore();
+  const { log } = useAudit();
+
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: Partial<Task> }) =>
+      taskService.updateTask(id, payload),
+    onMutate: async ({ id, payload }) => {
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.tasks });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.todayTasks });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.projects });
+      updateTaskInStore(id, payload);
+    },
+    onSuccess: (_, { id, payload }) => {
+      log('UPDATE_TASK', 'task', id, payload);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+    },
+  });
+}
+
 export function useDeleteTask() {
   const queryClient = useQueryClient();
   const { updateTaskInStore } = useTaskStore();
