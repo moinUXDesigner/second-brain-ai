@@ -60,6 +60,7 @@ export interface Task {
   confidence?: number;
   source?: string;
   status: TaskStatus;
+  recurrence?: 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
   completedAt?: string;
   category?: TaskCategory | string;
   dueDate?: string;
@@ -150,6 +151,7 @@ export interface CreateInput {
   category?: string;
   priority?: string;
   estimatedTime?: string;
+  recurrence?: 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
   subtasks?: string[];
 }
 
@@ -160,6 +162,7 @@ export interface AnalyzeResult {
   category: string;
   priority: 'Low' | 'Medium' | 'High';
   estimatedTime: string;
+  recurrence?: 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
   subtasks: string[];
   confidence: number;
   source: 'AI' | 'RULE';
