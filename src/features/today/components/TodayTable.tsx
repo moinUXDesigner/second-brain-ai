@@ -106,6 +106,12 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                     {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
                     {task.area && task.projectName && <span className="text-caption text-neutral-300">·</span>}
                     {task.projectName && <p className="text-caption" style={{ color: 'var(--primary-600)' }}>{task.projectName}</p>}
+                    {(task.area || task.projectName) && task.dueDate && <span className="text-caption text-neutral-300">·</span>}
+                    {task.dueDate && (
+                      <p className={cn('text-caption', new Date(task.dueDate) < new Date() && status !== 'Done' ? 'text-danger-500' : 'text-neutral-400')}>
+                        Due {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <StatusSelect task={task} />
@@ -179,6 +185,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Priority</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Fit Score</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Time</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Due Date</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Project</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-right text-caption font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
@@ -209,6 +216,11 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                     <td className="px-4 py-3">
                       <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50', status === 'Done' && 'line-through')}>{task.title}</p>
                       {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
+                      {task.dueDate && (
+                        <p className={cn('text-caption lg:hidden', new Date(task.dueDate) < new Date() && status !== 'Done' ? 'text-danger-500' : 'text-neutral-400')}>
+                          Due {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {task.category && (
@@ -229,6 +241,15 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-caption text-neutral-500">{task.timeEstimate ?? '—'}</span>
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {task.dueDate ? (
+                        <span className={cn('text-caption', new Date(task.dueDate) < new Date() && getStatus(task) !== 'Done' ? 'text-danger-500 font-medium' : 'text-neutral-500')}>
+                          {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                      ) : (
+                        <span className="text-caption text-neutral-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       <span className="text-caption" style={{ color: task.projectName ? 'var(--primary-600)' : 'var(--color-text-secondary)' }}>

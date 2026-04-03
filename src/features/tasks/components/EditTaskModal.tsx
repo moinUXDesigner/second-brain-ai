@@ -39,6 +39,7 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
   const [urgency, setUrgency] = useState(task.urgency || '');
   const [recurrence, setRecurrence] = useState(task.recurrence || '');
   const [estimatedTime, setEstimatedTime] = useState(task.timeEstimate || '');
+  const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : '');
 
   const mutation = useUpdateTask();
 
@@ -52,6 +53,7 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
     setUrgency(task.urgency || '');
     setRecurrence(task.recurrence || '');
     setEstimatedTime(task.timeEstimate || '');
+    setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '');
   }, [task]);
 
   useEffect(() => {
@@ -81,6 +83,7 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
           urgency: urgency.trim(),
           recurrence: (recurrence || undefined) as Task['recurrence'],
           timeEstimate: estimatedTime.trim(),
+          dueDate: dueDate || undefined,
         },
       },
       {
@@ -187,6 +190,13 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
               value={estimatedTime}
               onChange={(e) => setEstimatedTime(e.target.value)}
               placeholder="e.g. 30m, 2h"
+            />
+
+            <Input
+              label="Due Date"
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
             />
           </div>
 

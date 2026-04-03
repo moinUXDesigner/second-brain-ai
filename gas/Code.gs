@@ -605,6 +605,8 @@ function handleUpdateTask(taskId, body) {
       if (body.type !== undefined) sheet.getRange(rowNum, 3).setValue(body.type);
       // D: Area (col 4)
       if (body.area !== undefined) sheet.getRange(rowNum, 4).setValue(body.area);
+      // E: Due Date (col 5)
+      if (body.dueDate !== undefined) sheet.getRange(rowNum, 5).setValue(body.dueDate || "");
       // F: Notes (col 6)
       if (body.notes !== undefined) sheet.getRange(rowNum, 6).setValue(body.notes);
       // K: Time Estimate (col 11)
