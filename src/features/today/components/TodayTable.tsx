@@ -84,6 +84,20 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
           return (
             <div key={task.id} className={cn('card p-4 space-y-2', status === 'Done' && 'opacity-60')}>
               <div className="flex items-start justify-between gap-2">
+                <button
+                  onClick={() => onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done')}
+                  className="shrink-0 mt-1 flex items-center justify-center h-[22px] w-[22px] rounded-full border-[1.5px] transition-all duration-200"
+                  style={{
+                    borderColor: status === 'Done' ? 'var(--primary-500)' : 'var(--color-border)',
+                    backgroundColor: status === 'Done' ? 'var(--primary-500)' : 'transparent',
+                  }}
+                >
+                  {status === 'Done' && (
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </button>
                 <div className="min-w-0 flex-1">
                   <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50 truncate', status === 'Done' && 'line-through')}>
                     {task.title}
@@ -159,6 +173,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
           <table className="w-full">
             <thead>
               <tr className="border-b border-semantic-border bg-neutral-50 dark:bg-neutral-800/50">
+                <th className="w-10 px-3 py-3"></th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Task</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Category</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Priority</th>
@@ -175,6 +190,22 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                 const priorityStyle = getPriorityVariant(task.priority);
                 return (
                   <tr key={task.id} className={cn('transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30', status === 'Done' && 'opacity-60')}>
+                    <td className="px-3 py-3">
+                      <button
+                        onClick={() => onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done')}
+                        className="flex items-center justify-center h-5 w-5 rounded-full border-[1.5px] transition-all duration-200"
+                        style={{
+                          borderColor: status === 'Done' ? 'var(--primary-500)' : 'var(--color-border)',
+                          backgroundColor: status === 'Done' ? 'var(--primary-500)' : 'transparent',
+                        }}
+                      >
+                        {status === 'Done' && (
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    </td>
                     <td className="px-4 py-3">
                       <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50', status === 'Done' && 'line-through')}>{task.title}</p>
                       {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
