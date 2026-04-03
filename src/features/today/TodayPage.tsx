@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useUiStore } from '@/app/store/uiStore';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { TodayTable } from './components/TodayTable';
+import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 import { useTodayTasks } from '@/hooks/useTasks';
 import { useAudit } from '@/hooks/useAudit';
 import { Button } from '@/components/ui/Button';
@@ -46,10 +46,10 @@ export function TodayPage() {
   const { data: tasks, isLoading, isError } = useTodayTasks();
   const queryClient = useQueryClient();
   const { log } = useAudit();
-  const incrementAuditVersion = useUiStore((s) => s.incrementAuditVersion);
 
   const [showModal, setShowModal] = useState(false);
   const [loaderPhase, setLoaderPhase] = useState<LoaderPhase>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   // Lifted status overrides for TodayTable
   const [localStatus, setLocalStatus] = useState<Record<string, TaskStatus>>({});
@@ -61,59 +61,10 @@ export function TodayPage() {
   }, [tasks]);
 
   const handleStatusChange = (id: string, status: TaskStatus) => {
-    const currentTask = tasks?.find((t) => t.id === id);
-    const previousStatus = currentTask?.status || 'Pending';
-
     setLocalStatus((prev) => ({ ...prev, [id]: status }));
-
-    log('UPDATE_STATUS', 'task', id, { from: previousStatus, to: status });
-    incrementAuditVersion();
-
-    if (status === 'Done') {
-      const toastId = toast(
-        (t) => (
-          <div className="flex items-center justify-between gap-4">
-            <span>Task marked done</span>
-            <button
-              className="px-2 py-1 rounded bg-gray-200 text-xs font-semibold"
-              onClick={() => {
-                setLocalStatus((prev) => {
-                  const next = { ...prev };
-                  if (previousStatus === 'Pending') {
-                    delete next[id];
-                  } else {
-                    next[id] = previousStatus;
-                  }
-                  return next;
-                });
-                toast.dismiss(t.id);
-              }}
-            >
-              Undo
-            </button>
-          </div>
-        ),
-        {
-          duration: 10000,
-          position: 'bottom-center',
-        },
-      );
-
-      // dismiss automatically after timeout in case of no action
-      setTimeout(() => toast.dismiss(toastId), 10000);
-    }
   };
 
   // Count how many tasks actually changed
-  const visibleTasks = useMemo(() => {
-    if (!tasks) return [];
-    return tasks.filter((task) => {
-      const overrideStatus = localStatus[task.id];
-      const statusToCheck = overrideStatus || task.status;
-      return statusToCheck !== 'Done' && statusToCheck !== 'Deleted';
-    });
-  }, [tasks, localStatus]);
-
   const dirtyCount = useMemo(() => {
     if (!tasks) return 0;
     return Object.entries(localStatus).filter(([id, status]) => {
@@ -250,7 +201,7 @@ export function TodayPage() {
           <p className="text-caption mt-2" style={{ color: 'var(--color-muted-fg)' }}>Make sure your Google Apps Script is deployed and VITE_GAS_WEB_APP_URL is set in .env</p>
         </div>
       ) : (
-        <TodayTable tasks={visibleTasks} localStatus={localStatus} onStatusChange={handleStatusChange} />
+        <TodayTable tasks={tasks ?? []} localStatus={localStatus} onStatusChange={handleStatusChange} onEditTask={setEditingTask} />
       )}
 
       {/* Full-screen loader overlay */}
@@ -447,6 +398,9 @@ export function TodayPage() {
         </AnimatePresence>,
         document.body,
       )}
+
+      {/* Edit Task Modal */}
+      {editingTask && <EditTaskModal task={editingTask} onClose={() => setEditingTask(null)} />}
     </motion.div>
   );
 }

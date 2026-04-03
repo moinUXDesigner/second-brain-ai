@@ -67,6 +67,9 @@ function doPost(e) {
       case "updateTaskStatus":
         result = { success: true, data: handleUpdateTaskStatus(body.taskId, body.status) };
         break;
+      case "updateTask":
+        result = { success: true, data: handleUpdateTask(body.taskId, body) };
+        break;
       case "deleteTask":
         result = { success: true, data: handleDeleteTask(body.taskId) };
         break;
@@ -576,6 +579,46 @@ function handleDeleteTask(taskId) {
   }
 
   return { deleted: false, taskId: taskId };
+}
+
+function handleUpdateTask(taskId, body) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TASK_SHEET_NAME);
+  var data = sheet.getDataRange().getValues();
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(taskId)) {
+      var rowNum = i + 1;
+      // B: Title (col 2)
+      if (body.title !== undefined) sheet.getRange(rowNum, 2).setValue(body.title);
+      // C: Type (col 3)
+      if (body.type !== undefined) sheet.getRange(rowNum, 3).setValue(body.type);
+      // D: Area (col 4)
+      if (body.area !== undefined) sheet.getRange(rowNum, 4).setValue(body.area);
+      // F: Notes (col 6)
+      if (body.notes !== undefined) sheet.getRange(rowNum, 6).setValue(body.notes);
+      // K: Time Estimate (col 11)
+      if (body.timeEstimate !== undefined) sheet.getRange(rowNum, 11).setValue(body.timeEstimate);
+      // L: Urgency (col 12)
+      if (body.urgency !== undefined) sheet.getRange(rowNum, 12).setValue(body.urgency);
+      // O: Priority (col 15)
+      if (body.priority !== undefined) sheet.getRange(rowNum, 15).setValue(body.priority);
+      // Q: Status (col 17)
+      if (body.status !== undefined) {
+        sheet.getRange(rowNum, 17).setValue(body.status);
+        if (body.status === "Done") {
+          sheet.getRange(rowNum, 21).setValue(new Date());
+        } else if (body.status === "Pending") {
+          sheet.getRange(rowNum, 21).setValue("");
+        }
+      }
+
+      // Re-read the updated row
+      var updatedRow = sheet.getRange(rowNum, 1, 1, sheet.getLastColumn()).getValues()[0];
+      return mapRowToTask(updatedRow);
+    }
+  }
+
+  throw new Error("Task not found: " + taskId);
 }
 
 function handleCreateProject(body) {

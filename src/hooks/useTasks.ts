@@ -75,16 +75,14 @@ export function useUpdateTask() {
   const { log } = useAudit();
 
   return useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: Partial<Task> }) =>
-      taskService.updateTask(id, payload),
-    onMutate: async ({ id, payload }) => {
-      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.tasks });
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<Task> }) =>
+      taskService.updateTask(id, updates),
+    onMutate: async ({ id, updates }) => {
       await queryClient.cancelQueries({ queryKey: QUERY_KEYS.todayTasks });
-      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.projects });
-      updateTaskInStore(id, payload);
+      updateTaskInStore(id, updates);
     },
-    onSuccess: (_, { id, payload }) => {
-      log('UPDATE_TASK', 'task', id, payload);
+    onSuccess: (_, { id }) => {
+      log('UPDATE_TASK', 'task', id);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });

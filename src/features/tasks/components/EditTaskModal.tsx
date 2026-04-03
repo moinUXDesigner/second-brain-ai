@@ -44,7 +44,7 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
     mutation.mutate(
       {
         id: task.id,
-        payload: {
+        updates: {
           title: title.trim(),
           type,
           area: area.trim(),
