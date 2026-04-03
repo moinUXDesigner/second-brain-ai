@@ -105,7 +105,15 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                   <div className="flex items-center gap-1 mt-0.5">
                     {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
                     {task.area && task.projectName && <span className="text-caption text-neutral-300">·</span>}
-                    {task.projectName && <p className="text-caption" style={{ color: 'var(--primary-600)' }}>{task.projectName}</p>}
+                    {task.projectName && (
+                      <p
+                        className="text-caption cursor-pointer hover:underline"
+                        style={{ color: 'var(--primary-600)' }}
+                        onClick={() => task.projectId && navigate(`/projects/${task.projectId}`)}
+                      >
+                        {task.projectName}
+                      </p>
+                    )}
                     {(task.area || task.projectName) && task.dueDate && <span className="text-caption text-neutral-300">·</span>}
                     {task.dueDate && (
                       <p className={cn('text-caption', new Date(task.dueDate) < new Date() && status !== 'Done' ? 'text-danger-500' : 'text-neutral-400')}>
@@ -252,9 +260,17 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                       )}
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      <span className="text-caption" style={{ color: task.projectName ? 'var(--primary-600)' : 'var(--color-text-secondary)' }}>
-                        {task.projectName || '—'}
-                      </span>
+                      {task.projectName ? (
+                        <span
+                          className="text-caption cursor-pointer hover:underline"
+                          style={{ color: 'var(--primary-600)' }}
+                          onClick={() => task.projectId && navigate(`/projects/${task.projectId}`)}
+                        >
+                          {task.projectName}
+                        </span>
+                      ) : (
+                        <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <StatusSelect task={task} />
