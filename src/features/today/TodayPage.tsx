@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
 import { TodayTable } from './components/TodayTable';
 import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
-import { useTodayTasks } from '@/hooks/useTasks';
+import { useTodayTasks, useDeleteTask } from '@/hooks/useTasks';
 import { useAudit } from '@/hooks/useAudit';
 import { Button } from '@/components/ui/Button';
 import { taskService } from '@/services/endpoints/taskService';
@@ -50,6 +50,7 @@ export function TodayPage() {
   const [showModal, setShowModal] = useState(false);
   const [loaderPhase, setLoaderPhase] = useState<LoaderPhase>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const deleteTask = useDeleteTask();
 
   // Lifted status overrides for TodayTable
   const [localStatus, setLocalStatus] = useState<Record<string, TaskStatus>>({});
@@ -201,7 +202,14 @@ export function TodayPage() {
           <p className="text-caption mt-2" style={{ color: 'var(--color-muted-fg)' }}>Make sure your Google Apps Script is deployed and VITE_GAS_WEB_APP_URL is set in .env</p>
         </div>
       ) : (
-        <TodayTable tasks={tasks ?? []} localStatus={localStatus} onStatusChange={handleStatusChange} onEditTask={setEditingTask} />
+        <TodayTable
+          tasks={tasks ?? []}
+          localStatus={localStatus}
+          onStatusChange={handleStatusChange}
+          onEditTask={setEditingTask}
+          onDeleteTask={(id) => deleteTask.mutate(id)}
+          deletingId={deleteTask.isPending ? (deleteTask.variables as string) : null}
+        />
       )}
 
       {/* Full-screen loader overlay */}

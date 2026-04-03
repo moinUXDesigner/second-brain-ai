@@ -1,4 +1,6 @@
-import { useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { createPortal } from 'react-dom';
 import type { Task, TaskStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
@@ -20,13 +22,26 @@ interface TodayTableProps {
   localStatus: Record<string, TaskStatus>;
   onStatusChange: (id: string, status: TaskStatus) => void;
   onEditTask?: (task: Task) => void;
+  onDeleteTask?: (id: string) => void;
+  deletingId?: string | null;
 }
 
-export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask }: TodayTableProps) {
+export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onDeleteTask, deletingId }: TodayTableProps) {
+  const navigate = useNavigate();
+  const [confirmId, setConfirmId] = useState<string | null>(null);
+
   const getStatus = useCallback(
     (task: Task): TaskStatus => localStatus[task.id] ?? task.status,
     [localStatus],
   );
+
+  const handleDeleteClick = (id: string) => setConfirmId(id);
+  const handleConfirm = () => {
+    if (confirmId && onDeleteTask) {
+      onDeleteTask(confirmId);
+      setConfirmId(null);
+    }
+  };
 
   if (tasks.length === 0) {
     return (
@@ -73,25 +88,16 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask }: T
                   <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50 truncate', status === 'Done' && 'line-through')}>
                     {task.title}
                   </p>
-                  {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
+                  <div className="flex items-center gap-1 mt-0.5">
+                    {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
+                    {task.area && task.projectName && <span className="text-caption text-neutral-300">·</span>}
+                    {task.projectName && <p className="text-caption" style={{ color: 'var(--primary-600)' }}>{task.projectName}</p>}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <StatusSelect task={task} />
-                  {onEditTask && (
-                    <button
-                      onClick={() => onEditTask(task)}
-                      className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
-                      style={{ color: 'var(--color-text-secondary)' }}
-                      title="Edit task"
-                    >
-                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
+                <StatusSelect task={task} />
               </div>
-              <div className="flex items-center gap-3 flex-wrap text-caption">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-wrap text-caption">
                 {task.category && (
                   <Badge className={getCategoryStyle(task.category)}>{task.category}</Badge>
                 )}
@@ -104,6 +110,43 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask }: T
                   <span className="text-neutral-500">Fit: {task.fitScore}%</span>
                 )}
                 <span className="text-neutral-400">{task.timeEstimate ?? '—'}</span>
+                </div>
+                <div className="flex gap-1">
+                  {onEditTask && (
+                    <button
+                      onClick={() => onEditTask(task)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                      title="Edit task"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => navigate('/create', { state: { skipStep1: true, text: task.title, area: task.area, type: 'project' } })}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    title="Convert to project"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-7-7l7 7-7 7" />
+                    </svg>
+                  </button>
+                  {onDeleteTask && (
+                    <button
+                      onClick={() => handleDeleteClick(task.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                      style={{ color: 'var(--color-danger, #ef4444)' }}
+                      title="Delete task"
+                    >
+                      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           );
@@ -121,6 +164,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask }: T
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Priority</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Fit Score</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Time</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Project</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-right text-caption font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
               </tr>
@@ -155,22 +199,59 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask }: T
                     <td className="px-4 py-3">
                       <span className="text-caption text-neutral-500">{task.timeEstimate ?? '—'}</span>
                     </td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      <span className="text-caption" style={{ color: task.projectName ? 'var(--primary-600)' : 'var(--color-text-secondary)' }}>
+                        {task.projectName || '—'}
+                      </span>
+                    </td>
                     <td className="px-4 py-3">
                       <StatusSelect task={task} />
                     </td>
                     <td className="px-4 py-3 text-right">
-                      {onEditTask && (
+                      <div className="inline-flex gap-1">
+                        {onEditTask && (
+                          <button
+                            onClick={() => onEditTask(task)}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                            style={{ color: 'var(--color-text-secondary)' }}
+                            title="Edit task"
+                          >
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                        )}
                         <button
-                          onClick={() => onEditTask(task)}
+                          onClick={() => navigate('/create', { state: { skipStep1: true, text: task.title, area: task.area, type: 'project' } })}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                           style={{ color: 'var(--color-text-secondary)' }}
-                          title="Edit task"
+                          title="Convert to project"
                         >
                           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-7-7l7 7-7 7" />
                           </svg>
                         </button>
-                      )}
+                        {onDeleteTask && (
+                          <button
+                            onClick={() => handleDeleteClick(task.id)}
+                            disabled={deletingId === task.id}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
+                            style={{ color: 'var(--color-danger, #ef4444)' }}
+                            title="Delete task"
+                          >
+                            {deletingId === task.id ? (
+                              <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                            ) : (
+                              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            )}
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -179,6 +260,35 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask }: T
           </table>
         </div>
       </div>
+
+      {/* Delete confirmation modal */}
+      {confirmId && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="card p-6 max-w-sm w-full space-y-4">
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Delete Task?</h3>
+            <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+              This task will be moved to the deleted list.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmId(null)}
+                className="px-4 py-2 rounded-md text-caption font-medium transition-colors"
+                style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirm}
+                className="px-4 py-2 rounded-md text-caption font-medium transition-colors !text-white"
+                style={{ backgroundColor: 'var(--color-danger, #ef4444)' }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </>
   );
 }
