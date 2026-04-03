@@ -1,9 +1,28 @@
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import type { Task, TaskStatus } from '@/types';
 import { useUpdateTask } from '@/hooks/useTasks';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Textarea } from '@/components/ui/Textarea';
+import { Button } from '@/components/ui/Button';
 
-const STATUS_OPTIONS: TaskStatus[] = ['Pending', 'Done', 'Idea', 'Note', 'Deleted'];
+const STATUS_OPTIONS = [
+  { value: 'Pending', label: 'Pending' },
+  { value: 'Done', label: 'Done' },
+  { value: 'Idea', label: 'Idea' },
+  { value: 'Note', label: 'Note' },
+  { value: 'Deleted', label: 'Deleted' },
+];
+
+const RECURRENCE_OPTIONS = [
+  { value: '', label: 'None' },
+  { value: 'Daily', label: 'Daily' },
+  { value: 'Weekly', label: 'Weekly' },
+  { value: 'Monthly', label: 'Monthly' },
+  { value: 'Yearly', label: 'Yearly' },
+];
 
 interface EditTaskModalProps {
   task: Task;
@@ -35,7 +54,15 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
     setEstimatedTime(task.timeEstimate || '');
   }, [task]);
 
-  const handleSave = async () => {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onClose]);
+
+  const handleSave = () => {
     if (!title.trim()) {
       toast.error('Task title is required');
       return;
@@ -52,7 +79,7 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
           status,
           priority: priority || 0,
           urgency: urgency.trim(),
-          recurrence: recurrence as Task['recurrence'],
+          recurrence: (recurrence || undefined) as Task['recurrence'],
           timeEstimate: estimatedTime.trim(),
         },
       },
@@ -69,112 +96,108 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
-      <div className="w-full max-w-lg rounded-xl bg-white p-5 shadow-lg dark:bg-neutral-900">
-        <h2 className="text-xl font-bold mb-4">Edit Task</h2>
-        <div className="grid grid-cols-1 gap-3">
-          <label className="flex flex-col gap-1 text-sm">
-            Title
-            <input
-              type="text"
+    <AnimatePresence>
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 bg-black/50"
+          onClick={onClose}
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          className="relative z-10 w-full max-w-lg rounded-lg bg-white dark:bg-neutral-800 p-6 shadow-lg max-h-[90vh] overflow-y-auto"
+        >
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-h3 text-neutral-900 dark:text-neutral-50">Edit Task</h2>
+            <button
+              onClick={onClose}
+              className="text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors"
+              aria-label="Close"
+            >
+              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4">
+            <Input
+              label="Title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="input w-full"
             />
-          </label>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Type
-            <input
-              type="text"
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="input w-full"
-            />
-          </label>
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Type"
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+              />
+              <Input
+                label="Area"
+                value={area}
+                onChange={(e) => setArea(e.target.value)}
+              />
+            </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Area
-            <input
-              type="text"
-              value={area}
-              onChange={(e) => setArea(e.target.value)}
-              className="input w-full"
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-sm">
-            Notes
-            <textarea
+            <Textarea
+              label="Notes"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              className="textarea h-24 w-full"
+              className="min-h-[80px]"
             />
-          </label>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              Status
-              <select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)} className="select w-full">
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              Priority
-              <input
+            <div className="grid grid-cols-2 gap-4">
+              <Select
+                label="Status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as TaskStatus)}
+                options={STATUS_OPTIONS}
+              />
+              <Input
+                label="Priority"
                 type="number"
                 value={priority}
                 min={0}
                 max={10}
                 onChange={(e) => setPriority(Number(e.target.value))}
-                className="input w-full"
               />
-            </label>
-          </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1 text-sm">
-              Urgency
-              <input
-                type="text"
+            <div className="grid grid-cols-2 gap-4">
+              <Input
+                label="Urgency"
                 value={urgency}
                 onChange={(e) => setUrgency(e.target.value)}
-                className="input w-full"
               />
-            </label>
-
-            <label className="flex flex-col gap-1 text-sm">
-              Recurrence
-              <input
-                type="text"
+              <Select
+                label="Recurrence"
                 value={recurrence}
                 onChange={(e) => setRecurrence(e.target.value)}
-                className="input w-full"
+                options={RECURRENCE_OPTIONS}
               />
-            </label>
-          </div>
+            </div>
 
-          <label className="flex flex-col gap-1 text-sm">
-            Time Estimate
-            <input
-              type="text"
+            <Input
+              label="Time Estimate"
               value={estimatedTime}
               onChange={(e) => setEstimatedTime(e.target.value)}
-              className="input w-full"
+              placeholder="e.g. 30m, 2h"
             />
-          </label>
-        </div>
+          </div>
 
-        <div className="mt-4 flex justify-end gap-2">
-          <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-          <button type="button" className="btn btn-primary" onClick={handleSave} disabled={mutation.isPending}>
-            {mutation.isPending ? 'Saving…' : 'Save'}
-          </button>
-        </div>
+          <div className="mt-6 flex justify-end gap-3">
+            <Button variant="secondary" onClick={onClose}>Cancel</Button>
+            <Button variant="primary" onClick={handleSave} isLoading={mutation.isPending}>
+              Save
+            </Button>
+          </div>
+        </motion.div>
       </div>
-    </div>
+    </AnimatePresence>
   );
 }
