@@ -162,6 +162,16 @@ function handleGetTodayTasks() {
   var taskSheet = ss.getSheetByName(TASK_SHEET_NAME);
   var taskData = taskSheet.getDataRange().getValues();
 
+  // Build project name map
+  var projectNameMap = {};
+  var projectSheet = ss.getSheetByName("Projects");
+  if (projectSheet) {
+    var pData = projectSheet.getDataRange().getValues();
+    for (var p = 1; p < pData.length; p++) {
+      if (pData[p][0]) projectNameMap[String(pData[p][0])] = String(pData[p][1] || "");
+    }
+  }
+
   // Build a lookup of full task data by Task_ID
   var taskMap = {};
   for (var j = 1; j < taskData.length; j++) {
@@ -183,6 +193,7 @@ function handleGetTodayTasks() {
       task.fitScore = Number(data[i][3]) || task.fitScore;
       task.category = data[i][4] || task.category;
       task.status = data[i][5] || task.status;
+      task.projectName = task.projectId ? (projectNameMap[task.projectId] || "") : "";
       tasks.push(task);
     } else {
       tasks.push({
