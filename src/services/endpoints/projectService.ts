@@ -1,35 +1,38 @@
-import gasClient from '../gasClient';
+import apiClient from '../apiClient';
 import type { Project, ApiResponse } from '@/types';
 
 export const projectService = {
   async getProjects(): Promise<ApiResponse<Project[]>> {
-    const data = await gasClient.get<Project[]>('getProjects');
-    return { data, success: true };
+    const { data } = await apiClient.get('/projects');
+    return data;
   },
 
   async getProject(id: string): Promise<ApiResponse<Project>> {
-    const projects = await gasClient.get<Project[]>('getProjects');
-    const project = projects.find((p) => p.id === id);
-    if (!project) throw new Error('Project not found');
-    return { data: project, success: true };
+    const { data } = await apiClient.get(`/projects/${id}`);
+    return data;
   },
 
   async createProject(payload: { title: string; description?: string }): Promise<ApiResponse<Project>> {
-    const data = await gasClient.post<Project>('createProject', payload as Record<string, unknown>);
-    return { data, success: true };
+    const { data } = await apiClient.post('/projects', payload);
+    return data;
   },
 
   async updateProject(id: string, payload: Partial<Project>): Promise<ApiResponse<Project>> {
-    await gasClient.post<unknown>('updateProject', { projectId: id, ...payload } as Record<string, unknown>);
-    return { data: { id, ...payload } as Project, success: true };
+    const { data } = await apiClient.put(`/projects/${id}`, payload);
+    return data;
   },
 
   async getDeletedProjects(): Promise<ApiResponse<Project[]>> {
-    const data = await gasClient.get<Project[]>('getDeletedProjects');
-    return { data, success: true };
+    const { data } = await apiClient.get('/projects/deleted');
+    return data;
   },
 
   async deleteProject(id: string): Promise<void> {
-    await gasClient.post<unknown>('deleteProject', { projectId: id });
+    await apiClient.delete(`/projects/${id}`);
+  },
+
+  async restoreProject(id: string): Promise<ApiResponse<Project>> {
+    const { data } = await apiClient.patch(`/projects/${id}/restore`);
+    return data;
   },
 };

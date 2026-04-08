@@ -25,3 +25,12 @@ npm-debug.log*
 
 # PWA dev artifacts
 dev-dist/
+
+# Laravel backend
+backend/vendor/
+backend/.env
+backend/storage/logs/*.log
+backend/storage/framework/cache/data/*
+backend/storage/framework/sessions/*
+backend/storage/framework/views/*
+backend/bootstrap/cache/*.php

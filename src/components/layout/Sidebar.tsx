@@ -12,6 +12,7 @@ const navItems = [
   { to: '/tasks', label: 'Tasks', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
   { to: '/completed', label: 'Completed', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
   { to: '/notes-ideas', label: 'Notes & Ideas', icon: 'M12 6.5c-2.5 0-4.5 2-4.5 4.5S9.5 15.5 12 15.5 16.5 13.5 16.5 11 14.5 6.5 12 6.5z M21 18v2H3v-2c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2z' },
+  { to: '/recurring', label: 'Recurring Tasks', icon: 'M10 18a8 8 0 100-16 8 8 0 000 16zm1-8h-2v5h2V10zm0-4h-2v2h2V6z' },
   { to: '/projects', label: 'Projects', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z' },
   { to: '/projects/deleted', label: 'Deleted Projects', icon: 'M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16' },
   { to: '/analytics', label: 'Analytics', icon: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },

@@ -20,6 +20,7 @@ export interface WizardData {
   category: string;
   priority: 'Low' | 'Medium' | 'High';
   estimatedTime: string;
+  recurrence?: 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
   linkedProjectId?: string;
   subtasks?: string[];
 }
@@ -50,7 +51,8 @@ export function CreateFlowPage() {
     area: navState?.area || '',
     category: navState?.category || 'Deep Work',
     priority: navState?.priority || 'Medium',
-    estimatedTime: navState?.estimatedTime || '1 hour',
+    estimatedTime: navState?.estimatedTime || '30 minutes',
+    recurrence: navState?.recurrence,
     subtasks: navState?.subtasks,
   });
 
@@ -87,6 +89,7 @@ export function CreateFlowPage() {
         category: wizardData.category,
         priority: wizardData.priority,
         estimatedTime: wizardData.estimatedTime,
+        recurrence: wizardData.recurrence,
         subtasks: wizardData.subtasks,
       });
 

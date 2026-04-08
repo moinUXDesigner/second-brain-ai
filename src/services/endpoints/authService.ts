@@ -2,7 +2,12 @@ import apiClient from '../apiClient';
 import type { User, ApiResponse } from '@/types';
 
 export const authService = {
-  async login(payload: { idToken: string }): Promise<ApiResponse<{ user: User; token: string }>> {
+  async register(payload: { name: string; email: string; password: string }): Promise<ApiResponse<{ user: User; token: string }>> {
+    const { data } = await apiClient.post('/auth/register', payload);
+    return data;
+  },
+
+  async login(payload: { email: string; password: string }): Promise<ApiResponse<{ user: User; token: string }>> {
     const { data } = await apiClient.post('/auth/login', payload);
     return data;
   },

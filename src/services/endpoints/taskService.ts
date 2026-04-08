@@ -1,45 +1,43 @@
-import gasClient from '../gasClient';
+import apiClient from '../apiClient';
 import type { Task, ApiResponse, PaginatedResponse } from '@/types';
 
 export const taskService = {
   async getTasks(_params?: Record<string, string>): Promise<PaginatedResponse<Task>> {
-    const data = await gasClient.get<Task[]>('getTasks');
-    return { data, total: data.length, page: 1, perPage: data.length };
+    const { data } = await apiClient.get('/tasks');
+    return data;
   },
 
   async getTodayTasks(): Promise<ApiResponse<Task[]>> {
-    const data = await gasClient.get<Task[]>('getTodayTasks');
-    return { data, success: true };
+    const { data } = await apiClient.get('/tasks/today');
+    return data;
   },
 
   async getTask(id: string): Promise<ApiResponse<Task>> {
-    const tasks = await gasClient.get<Task[]>('getTasks');
-    const task = tasks.find((t) => t.id === id);
-    if (!task) throw new Error('Task not found');
-    return { data: task, success: true };
+    const { data } = await apiClient.get(`/tasks/${id}`);
+    return data;
   },
 
   async createTask(payload: Partial<Task>): Promise<ApiResponse<Task>> {
-    const data = await gasClient.post<Task>('createTask', payload as Record<string, unknown>);
-    return { data, success: true };
+    const { data } = await apiClient.post('/tasks', payload);
+    return data;
   },
 
   async updateTask(id: string, payload: Partial<Task>): Promise<ApiResponse<Task>> {
-    const data = await gasClient.post<Task>('updateTask', { taskId: id, ...payload } as Record<string, unknown>);
-    return { data, success: true };
+    const { data } = await apiClient.put(`/tasks/${id}`, payload);
+    return data;
   },
 
   async updateTaskStatus(id: string, status: Task['status']): Promise<ApiResponse<Task>> {
-    await gasClient.post<unknown>('updateTaskStatus', { taskId: id, status });
-    return { data: { id, status } as Task, success: true };
+    const { data } = await apiClient.patch(`/tasks/${id}/status`, { status });
+    return data;
   },
 
   async linkTaskToProject(taskId: string, projectId: string): Promise<ApiResponse<{ taskId: string; projectId: string; linked: boolean }>> {
-    const data = await gasClient.post<{ taskId: string; projectId: string; linked: boolean }>('linkTaskToProject', { taskId, projectId });
-    return { data, success: true };
+    const { data } = await apiClient.patch(`/tasks/${taskId}/link`, { project_id: projectId });
+    return data;
   },
 
   async deleteTask(id: string): Promise<void> {
-    await gasClient.post<unknown>('deleteTask', { taskId: id });
+    await apiClient.delete(`/tasks/${id}`);
   },
 };

@@ -15,6 +15,7 @@ import { CompletedTasksPage } from '@/features/tasks/CompletedTasksPage';
 import { NotesIdeasPage } from '@/features/tasks/NotesIdeasPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
 import { ActivityPage } from '@/features/activity/ActivityPage';
+import { RecurringTasksPage } from '@/features/recurring/RecurringTasksPage';
 import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
 import { DeletedProjectsPage } from '@/features/projects/DeletedProjectsPage';
 import { BulkUploadPage } from '@/features/bulk-upload/BulkUploadPage';
@@ -54,6 +55,7 @@ export const router = createBrowserRouter([
       { path: 'activity', element: <ActivityPage /> },
       { path: 'bulk-upload', element: <BulkUploadPage /> },
       { path: 'notes-ideas', element: <NotesIdeasPage /> },
+      { path: 'recurring', element: <RecurringTasksPage /> },
       {
         path: 'admin',
         element: (
@@ -64,4 +66,4 @@ export const router = createBrowserRouter([
       },
     ],
   },
-], { basename });
+], { basename, future: { v7_startTransition: true, v7_relativeSplatPath: true } });

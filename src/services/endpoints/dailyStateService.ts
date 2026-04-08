@@ -1,14 +1,14 @@
-import gasClient from '../gasClient';
+import apiClient from '../apiClient';
 import type { DailyState, ApiResponse } from '@/types';
 
 export const dailyStateService = {
   async get(date: string): Promise<ApiResponse<DailyState>> {
-    const data = await gasClient.get<DailyState>('getDailyState', { date });
-    return { data, success: true };
+    const { data } = await apiClient.get('/daily-state', { params: { date } });
+    return data;
   },
 
   async save(payload: Omit<DailyState, 'id'>): Promise<ApiResponse<DailyState>> {
-    const data = await gasClient.post<DailyState>('saveDailyState', payload as unknown as Record<string, unknown>);
-    return { data, success: true };
+    const { data } = await apiClient.post('/daily-state', payload);
+    return data;
   },
 };

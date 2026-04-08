@@ -482,30 +482,35 @@ function handleCreateTask(body) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TASK_SHEET_NAME);
   var taskId = "T" + new Date().getTime();
 
+  var recurrenceValue = String(body.recurrence || "").trim();
+  if (recurrenceValue === "None") recurrenceValue = "";
+
   var row = [
     taskId,                        // A: Task_ID
     title,                         // B: Task
-    body.type || "Task",           // C: Type
-    body.area || "",               // D: Area
-    body.dueDate || "",            // E: Due Date
-    body.notes || "",              // F: Notes
-    body.projectId || "",          // G: Project_ID
-    "",                            // H: Maslow (auto-filled by classification)
-    "",                            // I: Impact
-    "",                            // J: Effort
-    "",                            // K: Time Estimate
-    "",                            // L: Urgency
-    "",                            // M: Type Derived
-    "",                            // N: Confidence
-    "",                            // O: Priority
-    "",                            // P: Fit
-    body.status || "Pending",      // Q: Status
-    "",                            // R: Source
-    "",                            // S: (reserved)
-    "",                            // T: (reserved)
-    ""                             // U: Completed At
+    body.type || "Task",         // C: Type
+    body.area || "",             // D: Area
+    body.dueDate || "",          // E: Due Date
+    body.notes || "",            // F: Notes
+    body.projectId || "",        // G: Project_ID
+    "",                          // H: Maslow (auto-filled by classification)
+    "",                          // I: Impact
+    "",                          // J: Effort
+    recurrenceValue,               // K: Recurrence
+    body.estimatedTime || "",    // L: Time Estimate
+    "",                          // M: Urgency
+    "",                          // N: Type Derived (discriminator counts)
+    "",                          // O: Confidence
+    "",                          // P: Priority
+    "",                          // Q: Fit
+    body.status || "Pending",    // R: Status
+    "",                          // S: Source
+    "",                          // T: (reserved)
+    "",                          // U: (reserved)
+    ""                           // V: Completed At
   ];
 
+  Logger.log("handleCreateTask row data (recurrence): %s", String(row[10]));
   sheet.appendRow(row);
 
   // Run classification on the new task
@@ -859,11 +864,16 @@ function handleCreateInput(body) {
     });
     return { project: project };
   } else {
+    Logger.log("handleCreateInput task body recurrence: %s", String(body.recurrence));
     var task = handleCreateTask({
       title: text,
       type: body.taskType || "Task",
       area: body.area || "",
-      notes: body.notes || ""
+      notes: body.notes || "",
+      recurrence: body.recurrence === "None" ? "" : (body.recurrence || ""),
+      estimatedTime: body.estimatedTime || "",
+      category: body.category || "",
+      priority: body.priority || ""
     });
     return { task: task };
   }
@@ -1032,15 +1042,20 @@ function mapRowToTask(row) {
     maslow: String(row[7] || ""),
     impact: Number(row[8]) || 0,
     effort: Number(row[9]) || 0,
-    timeEstimate: String(row[10] || ""),
-    urgency: String(row[11] || ""),
-    category: String(row[12] || ""),
-    confidence: Number(row[13]) || 0,
-    priority: Number(row[14]) || 0,
-    fitScore: Number(row[15]) || 0,
-    status: String(row[16] || "Pending"),
-    source: String(row[17] || ""),
-    completedAt: row[20] ? (row[20] instanceof Date ? row[20].toISOString() : String(row[20])) : "",
+    recurrence: (function(r) {
+      var v = String(r || "").trim();
+      if (v === "None") return "";
+      return v;
+    })(row[10]),
+    timeEstimate: String(row[11] || ""),
+    urgency: String(row[12] || ""),
+    category: String(row[13] || ""),
+    confidence: Number(row[14]) || 0,
+    priority: Number(row[15]) || 0,
+    fitScore: Number(row[16]) || 0,
+    status: String(row[17] || "Pending").trim(),
+    source: String(row[18] || ""),
+    completedAt: row[21] ? (row[21] instanceof Date ? row[21].toISOString() : String(row[21])) : "",
     createdAt: createdAt,
     updatedAt: createdAt
   };
@@ -1085,7 +1100,7 @@ function classifyTasks() {
     var area = clean(data[i][3]);
     var notes = clean(data[i][5]);
 
-    var currentStatus = clean(data[i][16]) || "Pending";
+    var currentStatus = clean(data[i][17]) || "Pending";
 
     if (!task) {
       pushEmptyAll(
@@ -1217,15 +1232,15 @@ function classifyTasks() {
 
   // WRITE
   if (maslowUpdates.length > 0) {
-    sheet.getRange(2, 8, maslowUpdates.length, 1).setValues(maslowUpdates);
-    sheet.getRange(2, 9, impactUpdates.length, 1).setValues(impactUpdates);
-    sheet.getRange(2, 10, effortUpdates.length, 1).setValues(effortUpdates);
-    sheet.getRange(2, 11, timeUpdates.length, 1).setValues(timeUpdates);
-    sheet.getRange(2, 12, urgencyUpdates.length, 1).setValues(urgencyUpdates);
-    sheet.getRange(2, 13, typeUpdates.length, 1).setValues(typeUpdates);
-    sheet.getRange(2, 14, confidenceUpdates.length, 1).setValues(confidenceUpdates);
-    sheet.getRange(2, 18, sourceUpdates.length, 1).setValues(sourceUpdates);
-    sheet.getRange(2, 17, statusUpdates.length, 1).setValues(statusUpdates);
+    sheet.getRange(2, 8, maslowUpdates.length, 1).setValues(maslowUpdates);   // H
+    sheet.getRange(2, 9, impactUpdates.length, 1).setValues(impactUpdates);   // I
+    sheet.getRange(2, 10, effortUpdates.length, 1).setValues(effortUpdates);  // J
+    sheet.getRange(2, 12, timeUpdates.length, 1).setValues(timeUpdates);      // L
+    sheet.getRange(2, 13, urgencyUpdates.length, 1).setValues(urgencyUpdates); // M
+    sheet.getRange(2, 14, typeUpdates.length, 1).setValues(typeUpdates);      // N
+    sheet.getRange(2, 15, confidenceUpdates.length, 1).setValues(confidenceUpdates); // O
+    sheet.getRange(2, 18, statusUpdates.length, 1).setValues(statusUpdates);   // R (status)
+    sheet.getRange(2, 19, sourceUpdates.length, 1).setValues(sourceUpdates);   // S (source)
   }
 
   Logger.log("AI calls used (batch): " + aiCount);
@@ -1850,7 +1865,8 @@ function calculatePriorityScores() {
   }
 
   if (updates.length > 0) {
-    sheet.getRange(2, 15, updates.length, 1).setValues(updates);
+    // Write calculated priority into Priority_Score column (column P, index 16)
+    sheet.getRange(2, 16, updates.length, 1).setValues(updates);
   }
 
   Logger.log("Professional Priority Scores Calculated");
@@ -1927,7 +1943,8 @@ function calculateFitScores() {
   }
 
   if (updates.length > 0) {
-    taskSheet.getRange(2, 16, updates.length, 1).setValues(updates);
+    // Write calculated fit score into Fit_Score column (column Q, index 17)
+    taskSheet.getRange(2, 17, updates.length, 1).setValues(updates);
   }
 
   Logger.log("Professional Fit Scores Calculated");

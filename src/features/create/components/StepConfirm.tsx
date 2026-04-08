@@ -170,6 +170,12 @@ export function StepConfirm({ data, task, project, onDone }: StepConfirmProps) {
                 <span style={{ color: 'var(--color-muted-fg)' }}>Estimated Time</span>
                 <span style={{ color: 'var(--color-text)' }}>{data.estimatedTime}</span>
               </div>
+              {data.recurrence && (
+                <div className="flex justify-between text-caption">
+                  <span style={{ color: 'var(--color-muted-fg)' }}>Recurrence</span>
+                  <span style={{ color: 'var(--color-text)' }}>{data.recurrence}</span>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

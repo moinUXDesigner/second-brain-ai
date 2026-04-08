@@ -5,6 +5,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { TodayTable } from './components/TodayTable';
 import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 import { useTodayTasks, useDeleteTask } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
 import { useAudit } from '@/hooks/useAudit';
 import { Button } from '@/components/ui/Button';
 import { taskService } from '@/services/endpoints/taskService';
@@ -64,6 +65,35 @@ export function TodayPage() {
   const handleStatusChange = (id: string, status: TaskStatus) => {
     setLocalStatus((prev) => ({ ...prev, [id]: status }));
   };
+
+  const { data: projects } = useProjects();
+
+  const visibleTasks = useMemo(() => {
+    if (!tasks) return [];
+
+    const projectTitleById = new Map<string, string>(
+      (projects ?? []).map((p) => [p.id, p.title]),
+    );
+
+    return tasks
+      .map((task) => {
+        if (task.projectName) return task;
+        if (task.projectId && projectTitleById.has(task.projectId)) {
+          return { ...task, projectName: projectTitleById.get(task.projectId) };
+        }
+        return task;
+      })
+      .filter((task) => {
+        const overrideStatus = localStatus[task.id];
+        const statusToCheck = overrideStatus || task.status;
+        return (
+          statusToCheck !== 'Done' &&
+          statusToCheck !== 'Deleted' &&
+          statusToCheck !== 'Note' &&
+          statusToCheck !== 'Idea'
+        );
+      });
+  }, [tasks, localStatus, projects]);
 
   // Count how many tasks actually changed
   const dirtyCount = useMemo(() => {

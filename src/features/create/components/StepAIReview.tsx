@@ -22,7 +22,11 @@ const PRIORITY_OPTIONS: { value: WizardData['priority']; label: string; color: s
 ];
 
 const TIME_OPTIONS = [
+  '5 minutes',
+  '10 minutes',
+  '15 minutes',
   '30 minutes',
+  '45 minutes',
   '1 hour',
   '2 hours',
   '4 hours',
@@ -30,6 +34,46 @@ const TIME_OPTIONS = [
   '2 days',
   '1 week',
 ];
+
+const RECURRENCE_OPTIONS: Array<'None' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly'> = ['None', 'Daily', 'Weekly', 'Monthly', 'Yearly'];
+
+const parseEstimatedTime = (value: string) => {
+  const normalized = value.toLowerCase().trim();
+  const minuteMatch = normalized.match(/(\d+)\s*min(?:ute)?/);
+  if (minuteMatch) return Math.max(1, Number(minuteMatch[1]));
+
+  const hourMatch = normalized.match(/(\d+(?:\.\d+)?)\s*hour/);
+  if (hourMatch) return Math.max(1, Math.round(Number(hourMatch[1]) * 60));
+
+  const dayMatch = normalized.match(/(\d+(?:\.\d+)?)\s*day/);
+  if (dayMatch) return Math.max(1, Math.round(Number(dayMatch[1]) * 24 * 60));
+
+  const weekMatch = normalized.match(/(\d+(?:\.\d+)?)\s*week/);
+  if (weekMatch) return Math.max(1, Math.round(Number(weekMatch[1]) * 7 * 24 * 60));
+
+  const numeric = Number(normalized);
+  if (!Number.isNaN(numeric) && numeric > 0) return Math.max(1, Math.round(numeric));
+
+  return 30;
+};
+
+const formatEstimatedTime = (minutes: number) => {
+  if (minutes <= 1) return '1 minute';
+  if (minutes < 60) return `${minutes} minutes`;
+  if (minutes % 60 === 0) return `${minutes / 60} hour${minutes / 60 === 1 ? '' : 's'}`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}h ${m}m`;
+};
+
+const inferRecurrence = (text: string): 'Daily' | 'Weekly' | 'Monthly' | 'Yearly' | undefined => {
+  const lower = text.toLowerCase();
+  if (lower.includes('daily') || lower.includes('every day')) return 'Daily';
+  if (lower.includes('weekly') || lower.includes('every week')) return 'Weekly';
+  if (lower.includes('monthly') || lower.includes('every month')) return 'Monthly';
+  if (lower.includes('yearly') || lower.includes('every year') || lower.includes('annual')) return 'Yearly';
+  return undefined;
+};
 
 export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: StepAIReviewProps) {
   const { aiEnabled, toggleAI } = useUiStore();
@@ -40,6 +84,10 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
   const [subtasks, setSubtasks] = useState<string[]>([]);
   const [aiError, setAiError] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [estimatedMinutes, setEstimatedMinutes] = useState<number>(() => parseEstimatedTime(data.estimatedTime));
+  const [recurrence, setRecurrence] = useState<'None' | 'Daily' | 'Weekly' | 'Monthly' | 'Yearly'>(
+    data.recurrence ?? 'None',
+  );
 
   const runAnalysis = useCallback(async () => {
     setAnalyzing(true);
@@ -60,17 +108,24 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
         }
         return String(st);
       });
+      const inferredRecurrence = r.recurrence ?? inferRecurrence(data.text);
+      const nextEstimated = r.estimatedTime || formatEstimatedTime(estimatedMinutes);
+
       onChange({
         type: r.type,
         category: r.category,
         priority: r.priority,
-        estimatedTime: r.estimatedTime,
+        estimatedTime: nextEstimated,
+        recurrence: inferredRecurrence,
         subtasks: normalizedSubs,
       });
       setSubtasks(normalizedSubs);
       setConfidence(r.confidence);
       setSource(r.source);
       setAiError(false);
+
+      setEstimatedMinutes(parseEstimatedTime(nextEstimated));
+      setRecurrence(inferredRecurrence ?? 'None');
     } catch {
       setSource('RULE');
       setConfidence(0.3);
@@ -85,6 +140,11 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
     runAnalysis();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setEstimatedMinutes(parseEstimatedTime(data.estimatedTime));
+    setRecurrence(data.recurrence ?? 'None');
+  }, [data.estimatedTime, data.recurrence]);
 
   const priorityColor = data.priority === 'High' ? '#ef4444' : data.priority === 'Medium' ? '#f59e0b' : 'var(--primary-500)';
 
@@ -153,6 +213,14 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
               </svg>
               {data.category}
             </span>
+            {data.recurrence && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-caption" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}>
+                <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: 'var(--color-text-secondary)' }}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 3V2h6v1m-3 2v4m0 0h.01M12 16v2m-4.93-1.39A8 8 0 1118 12" />
+                </svg>
+                {data.recurrence}
+              </span>
+            )}
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-caption" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}>
               <span style={{ color: priorityColor, fontSize: '10px' }}>●</span>
               {data.priority}
@@ -275,14 +343,70 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
         </div>
       </div>
 
+      {/* Recurrence */}
+      <div className="space-y-1.5">
+        <label className="text-caption font-medium" style={{ color: 'var(--color-text-secondary)' }}>Recurrence</label>
+        <div className="flex gap-2 flex-wrap">
+          {RECURRENCE_OPTIONS.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => {
+                setRecurrence(opt);
+                onChange({ recurrence: opt === 'None' ? undefined : opt });
+              }}
+              className="px-3 py-1.5 rounded-full text-caption font-medium transition-all"
+              style={{
+                backgroundColor: recurrence === opt ? 'var(--primary-50)' : 'var(--color-muted)',
+                color: recurrence === opt ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+                border: recurrence === opt ? '1px solid var(--primary-300)' : '1px solid transparent',
+              }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Estimated Time */}
       <div className="space-y-1.5">
-        <label className="text-caption font-medium" style={{ color: 'var(--color-text-secondary)' }}>Estimated Time</label>
-        <select value={data.estimatedTime} onChange={(e) => onChange({ estimatedTime: e.target.value })} className="input-base">
-          {TIME_OPTIONS.map((t) => (
-            <option key={t} value={t}>{t}</option>
-          ))}
-        </select>
+        <label className="text-caption font-medium" style={{ color: 'var(--color-text-secondary)' }}>Estimated Time (minutes)</label>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const next = Math.max(1, estimatedMinutes - 5);
+              setEstimatedMinutes(next);
+              onChange({ estimatedTime: formatEstimatedTime(next) });
+            }}
+            className="btn btn-xs"
+          >
+            -5
+          </button>
+          <input
+            type="number"
+            min={1}
+            value={estimatedMinutes}
+            onChange={(e) => {
+              const next = Math.max(1, Number(e.target.value));
+              setEstimatedMinutes(next);
+              onChange({ estimatedTime: formatEstimatedTime(next) });
+            }}
+            className="input-base w-24 text-center"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const next = Math.max(1, estimatedMinutes + 5);
+              setEstimatedMinutes(next);
+              onChange({ estimatedTime: formatEstimatedTime(next) });
+            }}
+            className="btn btn-xs"
+          >
+            +5
+          </button>
+          <span className="text-caption text-neutral-600">({formatEstimatedTime(estimatedMinutes)})</span>
+        </div>
       </div>
 
       {/* Subtasks (projects only) */}
