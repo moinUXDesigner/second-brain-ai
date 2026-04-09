@@ -16,7 +16,11 @@
         var redirect = sessionStorage.redirect;
         delete sessionStorage.redirect;
         if (redirect && redirect !== location.href) {
-          history.replaceState(null, null, redirect);
+          var currentPath = location.pathname + location.search + location.hash;
+          var redirectPath = redirect.replace(location.origin, '');
+          if (redirectPath !== currentPath) {
+            history.replaceState(null, null, redirect);
+          }
         }
       })();
     </script>

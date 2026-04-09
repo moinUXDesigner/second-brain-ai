@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -60,26 +60,28 @@ export function CreateFlowPage() {
   const [createdTask, setCreatedTask] = useState<Task | null>(null);
   const [createdProject, setCreatedProject] = useState<Project | null>(null);
 
-  const completedSteps = new Set<number>();
-  for (let i = 1; i < step; i++) completedSteps.add(i);
-  // Step 3 is "completed" only after submission
-  if (step === 3 && (createdTask || createdProject)) completedSteps.add(3);
+  const completedSteps = useMemo(() => {
+    const s = new Set<number>();
+    for (let i = 1; i < step; i++) s.add(i);
+    if (step === 3 && (createdTask || createdProject)) s.add(3);
+    return s;
+  }, [step, createdTask, createdProject]);
 
-  const goNext = () => {
+  const goNext = useCallback(() => {
     setDirection(1);
     setStep((s) => Math.min(s + 1, 3));
-  };
+  }, []);
 
-  const goBack = () => {
+  const goBack = useCallback(() => {
     setDirection(-1);
     setStep((s) => Math.max(s - 1, 1));
-  };
+  }, []);
 
-  const update = (partial: Partial<WizardData>) => {
+  const update = useCallback((partial: Partial<WizardData>) => {
     setWizardData((prev) => ({ ...prev, ...partial }));
-  };
+  }, []);
 
-  const handleCreate = async () => {
+  const handleCreate = useCallback(async () => {
     setSubmitting(true);
     try {
       const res = await inputService.createTaskOrProject({
@@ -125,15 +127,15 @@ export function CreateFlowPage() {
     } finally {
       setSubmitting(false);
     }
-  };
+  }, [wizardData, queryClient, log]);
 
-  const handleDone = () => {
+  const handleDone = useCallback(() => {
     if (wizardData.type === 'project') {
       navigate('/projects');
     } else {
       navigate('/tasks');
     }
-  };
+  }, [wizardData.type, navigate]);
 
   return (
     <div

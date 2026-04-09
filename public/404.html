@@ -8,7 +8,10 @@
       var pathSegmentsToKeep = 1; // '/second-brain-ai' = 1 segment
       var l = window.location;
       var repo = l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/');
-      sessionStorage.redirect = l.href;
+      var redirectPath = l.pathname.slice(repo.length) + l.search + l.hash;
+      if (redirectPath && redirectPath !== '/') {
+        sessionStorage.redirect = l.origin + repo + redirectPath;
+      }
       l.replace(repo + '/');
     </script>
   </head>
