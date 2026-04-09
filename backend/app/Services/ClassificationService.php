@@ -44,6 +44,13 @@ class ClassificationService
             $isComplex = true; $confidence -= 0.2;
         }
 
+        // Long multi-word tasks are always complex
+        if (str_word_count($text) > 10) {
+            $isComplex = true;
+            $effort    = max($effort, 7);
+            $confidence = min($confidence - 0.1, 0.5);
+        }
+
         return [
             'maslow'     => $maslow,
             'impact'     => $impact,
@@ -55,11 +62,29 @@ class ClassificationService
 
     public function deriveTime(string $task): string
     {
-        $text = strtolower($task);
-        if (preg_match('/call|email|message/', $text)) return '10 mins';
-        if (preg_match('/read|review/', $text)) return '20 mins';
-        if (preg_match('/write|prepare/', $text)) return '45 mins';
-        if (preg_match('/build|develop|create/', $text)) return '2 hours';
+        $text  = strtolower($task);
+        $words = str_word_count($text);
+
+        // Multi-step / deployment / complex project signals → days
+        if (preg_match('/deploy|launch|release|go.live|subdomain|hosting|production/', $text)) return '1 day';
+        if (preg_match('/finalize|complete|finish|deliver|ship/', $text) && $words > 8) return '4 hours';
+
+        // Development / build work
+        if (preg_match('/build|develop|create|implement|migrate|redesign|refactor/', $text)) {
+            return $words > 10 ? '1 day' : '2 hours';
+        }
+
+        // Writing / content
+        if (preg_match('/write|prepare|design|plan|setup/', $text)) return '1 hour';
+
+        // Quick tasks
+        if (preg_match('/call|email|message|reply|send/', $text)) return '10 mins';
+        if (preg_match('/read|review|check|verify/', $text)) return '20 mins';
+
+        // Long text = complex task
+        if ($words > 12) return '2 hours';
+        if ($words > 7)  return '1 hour';
+
         return '30 mins';
     }
 
@@ -140,12 +165,25 @@ class ClassificationService
     public function looksLikeProject(string $text): bool
     {
         $lower = strtolower($text);
-        $keywords = ['build', 'create', 'design', 'develop', 'launch', 'plan', 'setup', 'implement', 'redesign', 'migrate', 'app', 'website', 'system', 'platform', 'project'];
+        $words = str_word_count($lower);
+
+        $keywords = [
+            'build', 'create', 'design', 'develop', 'launch', 'plan', 'setup',
+            'implement', 'redesign', 'migrate', 'app', 'website', 'system',
+            'platform', 'project', 'deploy', 'finalize', 'complete', 'deliver',
+            'release', 'ship', 'integrate', 'configure', 'install', 'subdomain',
+            'hosting', 'domain', 'server', 'api', 'database', 'backend', 'frontend',
+        ];
+
         $count = 0;
         foreach ($keywords as $kw) {
             if (str_contains($lower, $kw)) $count++;
         }
-        return $count >= 2;
+
+        // Long descriptive text with multi-step verbs = project
+        $multiStepVerbs = preg_match('/and|then|also|with|including|plus/', $lower);
+
+        return $count >= 2 || ($count >= 1 && $words > 8) || ($multiStepVerbs && $words > 10);
     }
 
     public function generateSubtasks(string $taskText): array

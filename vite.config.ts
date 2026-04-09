@@ -69,8 +69,11 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const gasUrl = env.VITE_GAS_WEB_APP_URL || '';
 
+  // Use / for local dev, /second-brain-ai/ for production (GitHub Pages)
+  const base = mode === 'production' ? '/second-brain-ai/' : '/';
+
   return {
-    base: '/second-brain-ai/', // ✅ THIS LINE ADDED
+    base,
 
     plugins: [
       react(),
@@ -85,8 +88,8 @@ export default defineConfig(({ mode }) => {
           background_color: '#f8f9fa',
           display: 'standalone',
           orientation: 'portrait',
-          scope: '/second-brain-ai/',
-          start_url: '/second-brain-ai/',
+          scope: base,
+          start_url: base,
           icons: [
             {
               src: 'pwa-icon.svg',

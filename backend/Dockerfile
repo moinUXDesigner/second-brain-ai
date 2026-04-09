@@ -11,7 +11,7 @@ WORKDIR /var/www
 
 COPY . .
 
-# Create .env from example if not present
+# Copy .env.example as default — overridden at runtime by docker-compose env_file
 RUN cp -n .env.example .env || true
 
 # Create required directories
@@ -28,5 +28,8 @@ RUN php artisan key:generate --no-interaction || true
 
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
 EXPOSE 9000
-CMD ["php-fpm"]
+CMD ["/start.sh"]

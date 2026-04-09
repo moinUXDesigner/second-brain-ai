@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
-import { useTaskStore } from '@/app/store/taskStore';
+import { useTasks } from '@/hooks/useTasks';
+import { useTodayTasks } from '@/hooks/useTasks';
 
 const container = {
   hidden: { opacity: 0 },
@@ -9,17 +10,38 @@ const container = {
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 export function SummaryCards() {
-  const { tasks, todayTasks } = useTaskStore();
-  const doneTasks = tasks.filter((t) => t.status === 'Done').length;
+  const { data: tasks = [], isLoading: loadingTasks } = useTasks();
+  const { data: todayTasksRes, isLoading: loadingToday } = useTodayTasks();
+
+  const todayTasks = todayTasksRes ?? [];
+  const doneTasks    = tasks.filter((t) => t.status === 'Done').length;
   const pendingTasks = tasks.filter((t) => t.status === 'Pending').length;
-  const todayDone = todayTasks.filter((t) => t.status === 'Done').length;
+  const todayDone    = todayTasks.filter((t) => t.status === 'Done').length;
 
   const cards = [
-    { label: 'Total Tasks', value: tasks.length, color: 'text-primary-600', bg: 'bg-primary-50 dark:bg-primary-900/20' },
-    { label: 'Completed', value: doneTasks, color: 'text-success-600', bg: 'bg-success-50 dark:bg-success-900/20' },
-    { label: 'Pending', value: pendingTasks, color: 'text-warning-600', bg: 'bg-warning-50 dark:bg-warning-900/20' },
-    { label: "Today's Done", value: todayDone, color: 'text-danger-600', bg: 'bg-danger-50 dark:bg-danger-900/20' },
+    { label: 'Total Tasks',   value: tasks.length, color: 'text-primary-600', bg: 'bg-primary-50 dark:bg-primary-900/20' },
+    { label: 'Completed',     value: doneTasks,     color: 'text-success-600', bg: 'bg-success-50 dark:bg-success-900/20' },
+    { label: 'Pending',       value: pendingTasks,  color: 'text-warning-600', bg: 'bg-warning-50 dark:bg-warning-900/20' },
+    { label: "Today's Done",  value: todayDone,     color: 'text-danger-600',  bg: 'bg-danger-50 dark:bg-danger-900/20' },
   ];
+
+  if (loadingTasks || loadingToday) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="card p-4 animate-pulse">
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-lg" style={{ backgroundColor: 'var(--color-muted)' }} />
+              <div className="space-y-2 flex-1">
+                <div className="h-3 rounded w-2/3" style={{ backgroundColor: 'var(--color-muted)' }} />
+                <div className="h-6 rounded w-1/2" style={{ backgroundColor: 'var(--color-muted)' }} />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,0 +1,1 @@
+{"success":true,"data":{"user":{"id":"1","name":"Admin","email":"admin@secondbrain.ai","role":"super_admin","avatarUrl":null,"createdAt":"2026-04-08T07:09:32.000000Z"},"token":"21|WH6gGAqUWwZJlY9zyUablfY1U2zbr3KOwElufa4g7b3769fb"}}

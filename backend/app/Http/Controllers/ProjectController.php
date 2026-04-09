@@ -16,7 +16,15 @@ class ProjectController extends Controller
         private AIService $ai
     ) {}
 
-    public function index(): JsonResponse
+    public function show(Project $project): JsonResponse
+  {
+      if ($project->status === 'Deleted') {
+          return response()->json(['success' => false, 'message' => 'Project not found'], 404);
+      }
+      return response()->json(['success' => true, 'data' => $this->format($project->load('tasks'))]);
+  }
+
+  public function index(): JsonResponse
     {
         $projects = Project::with('tasks')
             ->whereNotIn('status', ['Deleted'])

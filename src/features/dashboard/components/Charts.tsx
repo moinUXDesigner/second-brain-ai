@@ -1,14 +1,12 @@
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
-import { useTaskStore } from '@/app/store/taskStore';
-import type { TaskCategory } from '@/types';
+import { useTasks } from '@/hooks/useTasks';
 
 const COLORS = ['#6172f3', '#22c55e', '#f59e0b', '#9ca3af'];
 
 export function Charts() {
-  const { tasks } = useTaskStore();
+  const { data: tasks = [], isLoading } = useTasks();
 
-  // Tasks by category
   const categoryMap = tasks.reduce<Record<string, number>>((acc, t) => {
     const cat = t.category || 'Uncategorized';
     acc[cat] = (acc[cat] || 0) + 1;
@@ -17,11 +15,23 @@ export function Charts() {
 
   const categoryData = Object.entries(categoryMap).map(([name, value]) => ({ name, value }));
 
-  // Tasks by status
   const statusData = [
     { name: 'Pending', count: tasks.filter((t) => t.status === 'Pending').length },
-    { name: 'Done', count: tasks.filter((t) => t.status === 'Done').length },
+    { name: 'Done',    count: tasks.filter((t) => t.status === 'Done').length },
   ];
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[0, 1].map((i) => (
+          <div key={i} className="card p-4 animate-pulse">
+            <div className="h-4 w-32 rounded mb-4" style={{ backgroundColor: 'var(--color-muted)' }} />
+            <div className="h-64 rounded" style={{ backgroundColor: 'var(--color-muted)' }} />
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

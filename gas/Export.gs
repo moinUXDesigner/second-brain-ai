@@ -3,8 +3,9 @@
 // Run exportAllToLaravel() to export all data
 // ============================================================
 
-var LARAVEL_URL    = "http://localhost:8000/api/import";
-var LARAVEL_TOKEN  = "PASTE_YOUR_TOKEN_HERE"; // from POST /api/auth/login
+
+// var LARAVEL_URL    = "http://localhost:8000/api/import";
+// var LARAVEL_TOKEN  = "PASTE_YOUR_TOKEN_HERE"; // from POST /api/auth/login
 
 function exportAllToLaravel() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
