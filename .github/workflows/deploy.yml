@@ -1,0 +1,139 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ==================== Frontend Build ====================
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: https://api-secondbrain.khajamynuddin.com/api
+          VITE_GAS_WEB_APP_URL: ${{ secrets.VITE_GAS_WEB_APP_URL }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+
+      - name: Copy .htaccess to dist
+        run: cp public/.htaccess dist/.htaccess
+
+      # ==================== Deploy Frontend ====================
+      - name: Deploy Frontend to Hostinger via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: /public_html/secondbrain/
+          dangerous-clean-slate: true
+
+      # ==================== Backend Preparation ====================
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, ctype, json, bcmath, pdo, mysql
+          tools: composer:v2
+
+      - name: Install backend dependencies
+        working-directory: ./backend
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Create backend .env file
+        working-directory: ./backend
+        run: |
+          echo "APP_NAME=\"Second Brain AI\"" > .env
+          echo "APP_ENV=production" >> .env
+          echo "APP_KEY=${{ secrets.LARAVEL_APP_KEY }}" >> .env
+          echo "APP_DEBUG=false" >> .env
+          echo "APP_URL=https://api-secondbrain.khajamynuddin.com" >> .env
+          echo "" >> .env
+          echo "LOG_CHANNEL=stack" >> .env
+          echo "LOG_LEVEL=error" >> .env
+          echo "" >> .env
+          echo "DB_CONNECTION=mysql" >> .env
+          echo "DB_HOST=${{ secrets.DB_HOST }}" >> .env
+          echo "DB_PORT=${{ secrets.DB_PORT }}" >> .env
+          echo "DB_DATABASE=${{ secrets.DB_DATABASE }}" >> .env
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> .env
+          echo "" >> .env
+          echo "SANCTUM_STATEFUL_DOMAINS=secondbrain.khajamynuddin.com" >> .env
+          echo "SESSION_DOMAIN=.khajamynuddin.com" >> .env
+          echo "" >> .env
+          echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
+          echo "" >> .env
+          echo "CORS_ALLOWED_ORIGINS=https://secondbrain.khajamynuddin.com" >> .env
+
+      - name: Create storage and cache directories
+        working-directory: ./backend
+        run: |
+          mkdir -p storage/framework/cache/data
+          mkdir -p storage/framework/sessions
+          mkdir -p storage/framework/views
+          mkdir -p storage/logs
+          mkdir -p bootstrap/cache
+
+      # ==================== Deploy Backend ====================
+      - name: Deploy Backend to Hostinger via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./backend/
+          server-dir: /public_html/api-secondbrain/
+          exclude: |
+            **/.git*
+            **/.git*/**
+            **/node_modules/**
+            **/tests/**
+            **/.env.example
+            **/.editorconfig
+            **/.styleci.yml
+            **/phpunit.xml
+            **/README.md
+
+      # ==================== Post-Deployment ====================
+      - name: Run database migrations (via SSH)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd /public_html/api-secondbrain
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            chmod -R 755 storage bootstrap/cache
+
+      - name: Deployment Complete
+        run: |
+          echo "✅ Frontend deployed to: https://secondbrain.khajamynuddin.com"
+          echo "✅ Backend deployed to: https://api-secondbrain.khajamynuddin.com"
