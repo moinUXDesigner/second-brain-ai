@@ -14,6 +14,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ==================== Verify Secrets ====================
+      - name: Check required secrets
+        run: |
+          echo "Checking if required secrets are configured..."
+          if [ -z "${{ secrets.FTP_SERVER }}" ]; then
+            echo "❌ ERROR: FTP_SERVER secret is not set!"
+            echo "Please configure GitHub Secrets: Settings → Secrets and variables → Actions"
+            echo "See GITHUB_SECRETS.md for detailed instructions"
+            exit 1
+          fi
+          if [ -z "${{ secrets.FTP_USERNAME }}" ]; then
+            echo "❌ ERROR: FTP_USERNAME secret is not set!"
+            exit 1
+          fi
+          if [ -z "${{ secrets.FTP_PASSWORD }}" ]; then
+            echo "❌ ERROR: FTP_PASSWORD secret is not set!"
+            exit 1
+          fi
+          echo "✅ FTP secrets are configured"
+
       # ==================== Frontend Build ====================
       - name: Setup Node.js
         uses: actions/setup-node@v4
