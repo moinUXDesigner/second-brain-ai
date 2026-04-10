@@ -69,8 +69,8 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const gasUrl = env.VITE_GAS_WEB_APP_URL || '';
 
-  // Use / for local dev, /second-brain-ai/ for production (GitHub Pages)
-  const base = mode === 'production' ? '/second-brain-ai/' : '/';
+  // Use / for both local dev and production (custom domain)
+  const base = '/';
 
   return {
     base,

@@ -4,15 +4,9 @@
     <meta charset="utf-8" />
     <title>Second Brain AI</title>
     <script>
-      // GitHub Pages SPA redirect: stores the intended URL and redirects to index.html
-      var pathSegmentsToKeep = 1; // '/second-brain-ai' = 1 segment
-      var l = window.location;
-      var repo = l.pathname.split('/').slice(0, 1 + pathSegmentsToKeep).join('/');
-      var redirectPath = l.pathname.slice(repo.length) + l.search + l.hash;
-      if (redirectPath && redirectPath !== '/') {
-        sessionStorage.redirect = l.origin + repo + redirectPath;
-      }
-      l.replace(repo + '/');
+      // SPA redirect for custom domain: stores the intended URL and redirects to index.html
+      sessionStorage.redirect = location.href;
+      location.replace('/');
     </script>
   </head>
   <body></body>
