@@ -15,24 +15,33 @@ jobs:
         uses: actions/checkout@v4
 
       # ==================== Verify Secrets ====================
-      - name: Check required secrets
+      - name: Validate Required Secrets
         run: |
-          echo "Checking if required secrets are configured..."
-          if [ -z "${{ secrets.SSH_HOST }}" ]; then
-            echo "❌ ERROR: SSH_HOST secret is not set!"
-            echo "Please configure GitHub Secrets: Settings → Secrets and variables → Actions"
-            echo "See GITHUB_SECRETS.md for detailed instructions"
+          echo "🔍 Validating required secrets..."
+          MISSING_SECRETS=""
+          
+          [ -z "${{ secrets.SSH_HOST }}" ] && MISSING_SECRETS="${MISSING_SECRETS}SSH_HOST "
+          [ -z "${{ secrets.SSH_PORT }}" ] && MISSING_SECRETS="${MISSING_SECRETS}SSH_PORT "
+          [ -z "${{ secrets.SSH_USERNAME }}" ] && MISSING_SECRETS="${MISSING_SECRETS}SSH_USERNAME "
+          [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ] && MISSING_SECRETS="${MISSING_SECRETS}SSH_PRIVATE_KEY "
+          [ -z "${{ secrets.DB_HOST }}" ] && MISSING_SECRETS="${MISSING_SECRETS}DB_HOST "
+          [ -z "${{ secrets.DB_PORT }}" ] && MISSING_SECRETS="${MISSING_SECRETS}DB_PORT "
+          [ -z "${{ secrets.DB_DATABASE }}" ] && MISSING_SECRETS="${MISSING_SECRETS}DB_DATABASE "
+          [ -z "${{ secrets.DB_USERNAME }}" ] && MISSING_SECRETS="${MISSING_SECRETS}DB_USERNAME "
+          [ -z "${{ secrets.DB_PASSWORD }}" ] && MISSING_SECRETS="${MISSING_SECRETS}DB_PASSWORD "
+          [ -z "${{ secrets.LARAVEL_APP_KEY }}" ] && MISSING_SECRETS="${MISSING_SECRETS}LARAVEL_APP_KEY "
+          [ -z "${{ secrets.OPENAI_API_KEY }}" ] && MISSING_SECRETS="${MISSING_SECRETS}OPENAI_API_KEY "
+          
+          if [ -n "$MISSING_SECRETS" ]; then
+            echo "❌ ERROR: Missing required secrets: $MISSING_SECRETS"
+            echo "Please add these secrets in: Settings → Secrets and variables → Actions"
             exit 1
           fi
-          if [ -z "${{ secrets.SSH_USERNAME }}" ]; then
-            echo "❌ ERROR: SSH_USERNAME secret is not set!"
-            exit 1
-          fi
-          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
-            echo "❌ ERROR: SSH_PRIVATE_KEY secret is not set!"
-            exit 1
-          fi
-          echo "✅ SSH secrets are configured"
+          
+          echo "✅ All required secrets are configured"
+          echo "📋 SSH_HOST: ${{ secrets.SSH_HOST }}"
+          echo "📋 SSH_PORT: ${{ secrets.SSH_PORT }}"
+          echo "📋 SSH_USERNAME: ${{ secrets.SSH_USERNAME }}"
 
       # ==================== Frontend Build ====================
       - name: Setup Node.js
@@ -60,18 +69,50 @@ jobs:
         run: cp public/.htaccess dist/.htaccess
 
       # ==================== Setup SSH ====================
-      - name: Setup SSH
+      - name: Setup SSH Key
         run: |
+          echo "🔐 Setting up SSH authentication..."
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          
+          # Save private key
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          
+          # Configure SSH to skip host key verification (safe for CI/CD)
+          cat > ~/.ssh/config << EOF
+          Host hostinger
+            HostName ${{ secrets.SSH_HOST }}
+            User ${{ secrets.SSH_USERNAME }}
+            Port ${{ secrets.SSH_PORT }}
+            IdentityFile ~/.ssh/id_rsa
+            StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            LogLevel ERROR
+          EOF
+          
+          chmod 600 ~/.ssh/config
+          echo "✅ SSH configuration complete"
+
+      - name: Test SSH Connection
+        run: |
+          echo "🧪 Testing SSH connection..."
+          ssh hostinger "echo '✅ SSH connection successful!'; pwd"
 
       # ==================== Deploy Frontend ====================
-      - name: Deploy Frontend to Hostinger via SSH
+      - name: Create Frontend Directory
         run: |
-          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "mkdir -p /public_html/secondbrain"
-          rsync -avz --delete ./dist/ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/public_html/secondbrain/
+          echo "📁 Creating frontend directory..."
+          ssh hostinger "mkdir -p /home/u484303972/domains/khajamynuddin.com/public_html/secondbrain"
+
+      - name: Deploy Frontend via rsync
+        run: |
+          echo "🚀 Deploying frontend to secondbrain.khajamynuddin.com..."
+          rsync -avz --delete \
+            -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no" \
+            ./dist/ \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/u484303972/domains/khajamynuddin.com/public_html/secondbrain/
+          echo "✅ Frontend deployed successfully"
 
       # ==================== Backend Preparation ====================
       - name: Setup PHP
@@ -121,21 +162,54 @@ jobs:
           mkdir -p bootstrap/cache
 
       # ==================== Deploy Backend ====================
-      - name: Deploy Backend to Hostinger via SSH
+      - name: Create Backend Directory
         run: |
-          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "mkdir -p /public_html/api-secondbrain"
-          rsync -avz --exclude='.git' --exclude='node_modules' --exclude='tests' --exclude='.env.example' ./backend/ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/public_html/api-secondbrain/
+          echo "📁 Creating backend directory..."
+          ssh hostinger "mkdir -p /home/u484303972/domains/khajamynuddin.com/public_html/api-secondbrain"
+
+      - name: Deploy Backend via rsync
+        run: |
+          echo "🚀 Deploying backend to api-secondbrain.khajamynuddin.com..."
+          rsync -avz \
+            -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no" \
+            --exclude='.git' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='.env.example' \
+            --exclude='.editorconfig' \
+            --exclude='phpunit.xml' \
+            ./backend/ \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/u484303972/domains/khajamynuddin.com/public_html/api-secondbrain/
+          echo "✅ Backend deployed successfully"
 
       # ==================== Post-Deployment ====================
-      - name: Run database migrations and setup
+      - name: Set Permissions
         run: |
-          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} << 'EOF'
-            cd /public_html/api-secondbrain
+          echo "🔒 Setting correct permissions..."
+          ssh hostinger << 'EOF'
+            cd /home/u484303972/domains/khajamynuddin.com/public_html/api-secondbrain
+            chmod -R 755 storage bootstrap/cache
+            echo "✅ Permissions set"
+          EOF
+
+      - name: Run Database Migrations
+        run: |
+          echo "🗄️ Running database migrations..."
+          ssh hostinger << 'EOF'
+            cd /home/u484303972/domains/khajamynuddin.com/public_html/api-secondbrain
             php artisan migrate --force
+            echo "✅ Migrations completed"
+          EOF
+
+      - name: Optimize Laravel
+        run: |
+          echo "⚡ Optimizing Laravel application..."
+          ssh hostinger << 'EOF'
+            cd /home/u484303972/domains/khajamynuddin.com/public_html/api-secondbrain
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
-            chmod -R 755 storage bootstrap/cache
+            echo "✅ Laravel optimized"
           EOF
 
       - name: Deployment Complete

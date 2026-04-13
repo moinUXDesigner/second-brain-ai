@@ -11,26 +11,51 @@ Click "New repository secret" and add each of these:
 ## SSH Configuration (Required)
 
 ### 1. SSH_HOST
-**Description:** Your Hostinger server hostname or IP address
+**Description:** Your Hostinger server hostname (NOT the domain)
 
 **How to find:**
 1. Login to Hostinger hPanel
 2. Go to **Advanced** → **SSH Access**
-3. Look for "Hostname" or "Server IP"
+3. Look for "Hostname" or "Server"
 
 **Example values:**
 ```
-ssh.khajamynuddin.com
-OR
-123.456.789.012
+srv1641.hostinger.com
+srv123.hostinger.com
+```
+
+**❌ WRONG values:**
+```
+khajamynuddin.com
+secondbrainkhajamynuddin.com
+https://...
+username@host
 ```
 
 **Secret Name:** `SSH_HOST`
-**Secret Value:** Your hostname or IP
+**Secret Value:** The server hostname (e.g., `srv1641.hostinger.com`)
 
 ---
 
-### 2. SSH_USERNAME
+### 2. SSH_PORT
+**Description:** SSH port number (Hostinger uses custom port, NOT 22)
+
+**How to find:**
+1. Hostinger hPanel → **Advanced** → **SSH Access**
+2. Look for "Port" number
+
+**Common Hostinger ports:**
+```
+65002
+21098
+```
+
+**Secret Name:** `SSH_PORT`
+**Secret Value:** The port number (e.g., `65002`)
+
+---
+
+### 3. SSH_USERNAME
 **Description:** Your SSH username (usually same as hosting username)
 
 **How to find:**
