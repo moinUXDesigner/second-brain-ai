@@ -1,4 +1,4 @@
-name: Deploy to Hostinger
+name: Deploy to Hostinger via SSH
 
 on:
   push:
@@ -18,21 +18,21 @@ jobs:
       - name: Check required secrets
         run: |
           echo "Checking if required secrets are configured..."
-          if [ -z "${{ secrets.FTP_SERVER }}" ]; then
-            echo "❌ ERROR: FTP_SERVER secret is not set!"
+          if [ -z "${{ secrets.SSH_HOST }}" ]; then
+            echo "❌ ERROR: SSH_HOST secret is not set!"
             echo "Please configure GitHub Secrets: Settings → Secrets and variables → Actions"
             echo "See GITHUB_SECRETS.md for detailed instructions"
             exit 1
           fi
-          if [ -z "${{ secrets.FTP_USERNAME }}" ]; then
-            echo "❌ ERROR: FTP_USERNAME secret is not set!"
+          if [ -z "${{ secrets.SSH_USERNAME }}" ]; then
+            echo "❌ ERROR: SSH_USERNAME secret is not set!"
             exit 1
           fi
-          if [ -z "${{ secrets.FTP_PASSWORD }}" ]; then
-            echo "❌ ERROR: FTP_PASSWORD secret is not set!"
+          if [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "❌ ERROR: SSH_PRIVATE_KEY secret is not set!"
             exit 1
           fi
-          echo "✅ FTP secrets are configured"
+          echo "✅ SSH secrets are configured"
 
       # ==================== Frontend Build ====================
       - name: Setup Node.js
@@ -59,16 +59,19 @@ jobs:
       - name: Copy .htaccess to dist
         run: cp public/.htaccess dist/.htaccess
 
+      # ==================== Setup SSH ====================
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
       # ==================== Deploy Frontend ====================
-      - name: Deploy Frontend to Hostinger via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist/
-          server-dir: /public_html/secondbrain/
-          dangerous-clean-slate: true
+      - name: Deploy Frontend to Hostinger via SSH
+        run: |
+          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "mkdir -p /public_html/secondbrain"
+          rsync -avz --delete ./dist/ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/public_html/secondbrain/
 
       # ==================== Backend Preparation ====================
       - name: Setup PHP
@@ -118,40 +121,22 @@ jobs:
           mkdir -p bootstrap/cache
 
       # ==================== Deploy Backend ====================
-      - name: Deploy Backend to Hostinger via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./backend/
-          server-dir: /public_html/api-secondbrain/
-          exclude: |
-            **/.git*
-            **/.git*/**
-            **/node_modules/**
-            **/tests/**
-            **/.env.example
-            **/.editorconfig
-            **/.styleci.yml
-            **/phpunit.xml
-            **/README.md
+      - name: Deploy Backend to Hostinger via SSH
+        run: |
+          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} "mkdir -p /public_html/api-secondbrain"
+          rsync -avz --exclude='.git' --exclude='node_modules' --exclude='tests' --exclude='.env.example' ./backend/ ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/public_html/api-secondbrain/
 
       # ==================== Post-Deployment ====================
-      - name: Run database migrations (via SSH)
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: ${{ secrets.SSH_PORT }}
-          script: |
+      - name: Run database migrations and setup
+        run: |
+          ssh ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} << 'EOF'
             cd /public_html/api-secondbrain
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
             chmod -R 755 storage bootstrap/cache
+          EOF
 
       - name: Deployment Complete
         run: |
