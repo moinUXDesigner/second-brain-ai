@@ -24,7 +24,6 @@ jobs:
           [ -z "${{ secrets.SSH_PORT }}" ] && MISSING_SECRETS="${MISSING_SECRETS}SSH_PORT "
           [ -z "${{ secrets.SSH_USERNAME }}" ] && MISSING_SECRETS="${MISSING_SECRETS}SSH_USERNAME "
           [ -z "${{ secrets.SSH_PRIVATE_KEY }}" ] && MISSING_SECRETS="${MISSING_SECRETS}SSH_PRIVATE_KEY "
-          [ -z "${{ secrets.SSH_PASSPHRASE }}" ] && MISSING_SECRETS="${MISSING_SECRETS}SSH_PASSPHRASE "
           [ -z "${{ secrets.DB_HOST }}" ] && MISSING_SECRETS="${MISSING_SECRETS}DB_HOST "
           [ -z "${{ secrets.DB_PORT }}" ] && MISSING_SECRETS="${MISSING_SECRETS}DB_PORT "
           [ -z "${{ secrets.DB_DATABASE }}" ] && MISSING_SECRETS="${MISSING_SECRETS}DB_DATABASE "
@@ -43,7 +42,6 @@ jobs:
           echo "📋 SSH_HOST: ${{ secrets.SSH_HOST }}"
           echo "📋 SSH_PORT: ${{ secrets.SSH_PORT }}"
           echo "📋 SSH_USERNAME: ${{ secrets.SSH_USERNAME }}"
-          echo "📋 SSH_PASSPHRASE: [CONFIGURED]"
 
       # ==================== Frontend Build ====================
       - name: Setup Node.js
@@ -71,21 +69,15 @@ jobs:
         run: cp public/.htaccess dist/.htaccess
 
       # ==================== Setup SSH ====================
-      - name: Setup SSH Key with Passphrase Support
+      - name: Setup SSH Key (No Passphrase)
         run: |
-          echo "🔐 Setting up SSH authentication with passphrase..."
+          echo "🔐 Setting up SSH authentication..."
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
           
           # Save private key
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          
-          # Install and setup ssh-agent for passphrase handling
-          eval $(ssh-agent -s)
-          
-          # Add key to ssh-agent with passphrase
-          echo "${{ secrets.SSH_PASSPHRASE }}" | SSH_ASKPASS_REQUIRE=never ssh-add ~/.ssh/id_rsa
           
           # Configure SSH
           cat > ~/.ssh/config << EOF
