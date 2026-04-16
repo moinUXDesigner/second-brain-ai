@@ -6,8 +6,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -81,10 +79,10 @@ class AuthController extends Controller
 
         $token = Str::random(64);
 
-        DB::table('password_reset_tokens')->updateOrInsert(
-            ['email' => $data['email']],
-            ['token' => Hash::make($token), 'created_at' => now()]
-        );
+        // Store token in user record temporarily
+        $user->update([
+            'remember_token' => Hash::make($token),
+        ]);
 
         $resetUrl = config('app.frontend_url') . '/reset-password?token=' . $token . '&email=' . urlencode($data['email']);
 
@@ -104,34 +102,21 @@ class AuthController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $resetRecord = DB::table('password_reset_tokens')
-            ->where('email', $data['email'])
-            ->first();
-
-        if (!$resetRecord) {
-            throw ValidationException::withMessages(['email' => ['Invalid or expired reset token.']]);
-        }
-
-        if (!Hash::check($data['token'], $resetRecord->token)) {
-            throw ValidationException::withMessages(['email' => ['Invalid or expired reset token.']]);
-        }
-
-        // Check if token is older than 1 hour
-        if (now()->diffInMinutes($resetRecord->created_at) > 60) {
-            DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
-            throw ValidationException::withMessages(['email' => ['Reset token has expired.']]);
-        }
-
         $user = User::where('email', $data['email'])->first();
 
-        if (!$user) {
-            throw ValidationException::withMessages(['email' => ['User not found.']]);
+        if (!$user || !$user->remember_token) {
+            throw ValidationException::withMessages(['email' => ['Invalid or expired reset token.']]);
         }
 
-        $user->update(['password' => Hash::make($data['password'])]);
-        $user->tokens()->delete();
+        if (!Hash::check($data['token'], $user->remember_token)) {
+            throw ValidationException::withMessages(['email' => ['Invalid or expired reset token.']]);
+        }
 
-        DB::table('password_reset_tokens')->where('email', $data['email'])->delete();
+        $user->update([
+            'password' => Hash::make($data['password']),
+            'remember_token' => null,
+        ]);
+        $user->tokens()->delete();
 
         return response()->json([
             'success' => true,
