@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
 import { useTasks, useUpdateTaskStatus, useCreateTask } from '@/hooks/useTasks';
@@ -58,12 +58,6 @@ export function NotesIdeasPage() {
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-
-  useEffect(() => {
-    if (safePage !== page) {
-      setPage(safePage);
-    }
-  }, [safePage, page]);
 
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
