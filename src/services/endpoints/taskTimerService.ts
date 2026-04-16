@@ -1,13 +1,19 @@
-import { api } from '../api';
+import apiClient from '../apiClient';
 import type { ApiResponse, Task } from '@/types';
 
 export const taskTimerService = {
-  startTimer: (taskId: string) =>
-    api.post<ApiResponse<Task>>(`/tasks/${taskId}/timer/start`),
+  async startTimer(taskId: string): Promise<ApiResponse<Task>> {
+    const { data } = await apiClient.post(`/tasks/${taskId}/timer/start`);
+    return data;
+  },
 
-  pauseTimer: (taskId: string) =>
-    api.post<ApiResponse<Task>>(`/tasks/${taskId}/timer/pause`),
+  async pauseTimer(taskId: string): Promise<ApiResponse<Task>> {
+    const { data } = await apiClient.post(`/tasks/${taskId}/timer/pause`);
+    return data;
+  },
 
-  stopTimer: (taskId: string) =>
-    api.post<ApiResponse<Task>>(`/tasks/${taskId}/timer/stop`),
+  async stopTimer(taskId: string): Promise<ApiResponse<Task>> {
+    const { data } = await apiClient.post(`/tasks/${taskId}/timer/stop`);
+    return data;
+  },
 };
