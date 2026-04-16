@@ -65,6 +65,7 @@ export function useCreateTask() {
       log('CREATE_TASK', 'task', res.data.id, { title: res.data.title });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
     },
   });
 }
