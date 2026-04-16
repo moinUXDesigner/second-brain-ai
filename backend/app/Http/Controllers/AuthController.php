@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -80,16 +81,22 @@ class AuthController extends Controller
         $token = Str::random(64);
         $hashedToken = Hash::make($token);
 
-        // Store hashed token in user record
         $user->remember_token = $hashedToken;
         $user->save();
 
         $resetUrl = config('app.frontend_url') . '/reset-password?token=' . $token . '&email=' . urlencode($data['email']);
 
+        // Send email notification
+        try {
+            $user->notify(new ResetPasswordNotification($resetUrl));
+        } catch (\Exception $e) {
+            // Log error but don't expose to user
+            \Log::error('Failed to send password reset email: ' . $e->getMessage());
+        }
+
         return response()->json([
             'success' => true,
             'message' => 'If the email exists, a reset link has been sent.',
-            'reset_url' => $resetUrl,
         ]);
     }
 

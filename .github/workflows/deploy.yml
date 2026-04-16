@@ -151,6 +151,15 @@ jobs:
           echo "" >> .env
           echo "OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}" >> .env
           echo "" >> .env
+          echo "MAIL_MAILER=smtp" >> .env
+          echo "MAIL_HOST=${{ secrets.MAIL_HOST }}" >> .env
+          echo "MAIL_PORT=${{ secrets.MAIL_PORT }}" >> .env
+          echo "MAIL_USERNAME=${{ secrets.MAIL_USERNAME }}" >> .env
+          echo "MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }}" >> .env
+          echo "MAIL_ENCRYPTION=tls" >> .env
+          echo "MAIL_FROM_ADDRESS=${{ secrets.MAIL_FROM_ADDRESS }}" >> .env
+          echo "MAIL_FROM_NAME=\"Second Brain AI\"" >> .env
+          echo "" >> .env
           echo "CORS_ALLOWED_ORIGINS=https://secondbrain.khajamynuddin.com" >> .env
 
       - name: Create storage and cache directories
