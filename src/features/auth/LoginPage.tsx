@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/Button';
@@ -70,9 +70,9 @@ export function LoginPage() {
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label htmlFor="password" className="text-body font-medium" style={{ color: 'var(--color-text)' }}>Password</label>
-                <button type="button" className="text-caption text-primary-600 hover:text-primary-700 transition-colors">
+                <Link to="/forgot-password" className="text-caption text-primary-600 hover:text-primary-700 transition-colors">
                   Forgot password?
-                </button>
+                </Link>
               </div>
               <Input
                 id="password"

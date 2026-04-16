@@ -3,6 +3,8 @@ import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { RoleGuard } from './RoleGuard';
 import { LoginPage } from '@/features/auth/LoginPage';
+import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
+import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { TodayPage } from '@/features/today/TodayPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { TasksPage } from '@/features/tasks/TasksPage';
@@ -26,6 +28,14 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
+  },
+  {
+    path: '/reset-password',
+    element: <ResetPasswordPage />,
   },
   {
     path: '/create',
