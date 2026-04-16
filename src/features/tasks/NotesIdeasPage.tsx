@@ -1,18 +1,27 @@
 import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
-import { useTasks, useUpdateTaskStatus } from '@/hooks/useTasks';
+import { useTasks, useUpdateTaskStatus, useCreateTask } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import type { Task } from '@/types';
 
 const PAGE_SIZE = 10;
 
 export function NotesIdeasPage() {
   const { data: tasks, isLoading } = useTasks();
   const updateStatus = useUpdateTaskStatus();
+  const createTask = useCreateTask();
 
   const [filterArea, setFilterArea] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newItemType, setNewItemType] = useState<'Note' | 'Idea'>('Note');
+  const [newItemTitle, setNewItemTitle] = useState('');
+  const [newItemArea, setNewItemArea] = useState('');
+  const [newItemNotes, setNewItemNotes] = useState('');
 
   const areas = useMemo(() => {
     if (!tasks) return [];
@@ -58,6 +67,22 @@ export function NotesIdeasPage() {
 
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
+  const handleAddItem = async () => {
+    if (!newItemTitle.trim()) return;
+
+    await createTask.mutateAsync({
+      title: newItemTitle.trim(),
+      status: newItemType,
+      area: newItemArea.trim() || undefined,
+      notes: newItemNotes.trim() || undefined,
+    });
+
+    setNewItemTitle('');
+    setNewItemArea('');
+    setNewItemNotes('');
+    setShowAddForm(false);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -71,7 +96,95 @@ export function NotesIdeasPage() {
             {filtered.length} items
           </span>
         </div>
+        <Button
+          onClick={() => setShowAddForm(!showAddForm)}
+          size="sm"
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Add {showAddForm ? '' : 'Note/Idea'}
+        </Button>
       </div>
+
+      {showAddForm && (
+        <div className="shrink-0 card p-4 space-y-3 mt-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setNewItemType('Note')}
+              className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: newItemType === 'Note' ? 'var(--primary-100)' : 'var(--color-muted)',
+                color: newItemType === 'Note' ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+              }}
+            >
+              Note
+            </button>
+            <button
+              onClick={() => setNewItemType('Idea')}
+              className="px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+              style={{
+                backgroundColor: newItemType === 'Idea' ? 'var(--primary-100)' : 'var(--color-muted)',
+                color: newItemType === 'Idea' ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+              }}
+            >
+              Idea
+            </button>
+          </div>
+
+          <Input
+            id="title"
+            label="Title"
+            value={newItemTitle}
+            onChange={(e) => setNewItemTitle(e.target.value)}
+            placeholder="Enter title..."
+            required
+          />
+
+          <Input
+            id="area"
+            label="Area (optional)"
+            value={newItemArea}
+            onChange={(e) => setNewItemArea(e.target.value)}
+            placeholder="e.g., Work, Personal, Health"
+          />
+
+          <div>
+            <label htmlFor="notes" className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
+              Notes (optional)
+            </label>
+            <textarea
+              id="notes"
+              value={newItemNotes}
+              onChange={(e) => setNewItemNotes(e.target.value)}
+              placeholder="Add details..."
+              rows={3}
+              className="input-base w-full resize-none"
+            />
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              onClick={handleAddItem}
+              isLoading={createTask.isPending}
+              disabled={!newItemTitle.trim()}
+            >
+              Add {newItemType}
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setShowAddForm(false);
+                setNewItemTitle('');
+                setNewItemArea('');
+                setNewItemNotes('');
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
 
       <div className="shrink-0 space-y-2 pt-3 pb-2">
         <div className="relative">
