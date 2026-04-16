@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import type { Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
+import { TaskTimer } from '@/components/task/TaskTimer';
 import { EditTaskModal } from './EditTaskModal';
 
 interface TaskListProps {
@@ -182,6 +183,7 @@ function MobileTaskRow({
             )}
           </div>
           <div className="flex gap-1 mt-1">
+            <TaskTimer task={task} compact />
             <button
               className="btn btn-xs btn-outline p-1"
               onClick={() => onEdit(task)}
@@ -314,6 +316,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Priority</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Urgency</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Project</th>
+                <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Time</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Updated</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider">Actions</th>
                 {onDelete && (
@@ -399,6 +402,9 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                     <span className="text-caption" style={{ color: task.projectName ? 'var(--primary-600)' : 'var(--color-text-secondary)' }}>
                       {task.projectName || '—'}
                     </span>
+                  </td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    <TaskTimer task={task} compact />
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
                     <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>

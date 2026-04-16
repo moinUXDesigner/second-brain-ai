@@ -122,6 +122,51 @@ class TaskController extends Controller
         return response()->json(['success' => true, 'data' => ['taskId' => $task->id, 'projectId' => $task->project_id, 'linked' => true]]);
     }
 
+    public function startTimer(Task $task): JsonResponse
+    {
+        if ($task->timer_running) {
+            return response()->json(['success' => false, 'message' => 'Timer already running'], 400);
+        }
+
+        $task->update([
+            'timer_running' => true,
+            'timer_started_at' => now(),
+        ]);
+
+        return response()->json(['success' => true, 'data' => $this->format($task)]);
+    }
+
+    public function pauseTimer(Task $task): JsonResponse
+    {
+        if (!$task->timer_running) {
+            return response()->json(['success' => false, 'message' => 'Timer not running'], 400);
+        }
+
+        $elapsed = now()->diffInSeconds($task->timer_started_at);
+        $task->update([
+            'timer_running' => false,
+            'time_spent' => $task->time_spent + $elapsed,
+            'timer_started_at' => null,
+        ]);
+
+        return response()->json(['success' => true, 'data' => $this->format($task)]);
+    }
+
+    public function stopTimer(Task $task): JsonResponse
+    {
+        if ($task->timer_running) {
+            $elapsed = now()->diffInSeconds($task->timer_started_at);
+            $task->time_spent += $elapsed;
+        }
+
+        $task->update([
+            'timer_running' => false,
+            'timer_started_at' => null,
+        ]);
+
+        return response()->json(['success' => true, 'data' => $this->format($task)]);
+    }
+
     public function destroy(Task $task): JsonResponse
     {
         $task->update(['status' => 'Deleted', 'completed_at' => now()]);
@@ -162,6 +207,9 @@ class TaskController extends Controller
             'completedAt'  => $task->completed_at?->toISOString() ?? '',
             'createdAt'    => $task->created_at?->toISOString() ?? '',
             'updatedAt'    => $task->updated_at?->toISOString() ?? '',
+            'timeSpent'    => $task->time_spent ?? 0,
+            'timerRunning' => $task->timer_running ?? false,
+            'timerStartedAt' => $task->timer_started_at?->toISOString() ?? '',
         ];
     }
 }

@@ -69,6 +69,9 @@ export interface Task {
   updatedAt?: string;
   projectName?: string;
   userId?: string;
+  timeSpent?: number;
+  timerRunning?: boolean;
+  timerStartedAt?: string;
 }
 
 export interface Project {
