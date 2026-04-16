@@ -75,6 +75,7 @@ export interface Project {
   id: string;
   title: string;
   description?: string;
+  domain?: string;
   status: 'Active' | 'Completed' | 'Archived' | 'Deleted';
   priority?: number;
   dueDate?: string;

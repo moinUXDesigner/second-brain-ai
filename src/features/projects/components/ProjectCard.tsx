@@ -46,6 +46,11 @@ export function ProjectCard({ project, onDelete, deleting }: { project: Project;
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
+          {project.domain && (
+            <Badge variant="default" className="!text-[10px] !px-1.5 !py-0">
+              {project.domain}
+            </Badge>
+          )}
           <Badge variant={statusVariant} className="!text-[10px] !px-1.5 !py-0">
             {project.status}
           </Badge>

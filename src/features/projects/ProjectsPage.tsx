@@ -11,6 +11,7 @@ export function ProjectsPage() {
   const deleteProject = useDeleteProject();
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'Active' | 'Completed' | 'Archived'>('all');
+  const [domainFilter, setDomainFilter] = useState<string>('');
 
   const handleDelete = (id: string) => {
     setConfirmId(id);
@@ -24,24 +25,32 @@ export function ProjectsPage() {
   };
 
   const stats = useMemo(() => {
-    if (!projects) return { total: 0, active: 0, completed: 0, totalTasks: 0, doneTasks: 0 };
+    if (!projects) return { total: 0, active: 0, completed: 0, totalTasks: 0, doneTasks: 0, domains: [] };
     const active = projects.filter((p) => p.status === 'Active').length;
     const completed = projects.filter((p) => p.status === 'Completed').length;
     let totalTasks = 0;
     let doneTasks = 0;
+    const domainSet = new Set<string>();
     projects.forEach((p) => {
       const subs = p.subtasks ?? [];
       totalTasks += subs.filter((s) => s.status !== 'Deleted').length;
       doneTasks += subs.filter((s) => s.status === 'Done').length;
+      if (p.domain) domainSet.add(p.domain);
     });
-    return { total: projects.length, active, completed, totalTasks, doneTasks };
+    return { total: projects.length, active, completed, totalTasks, doneTasks, domains: Array.from(domainSet).sort() };
   }, [projects]);
 
   const filtered = useMemo(() => {
     if (!projects) return [];
-    if (filter === 'all') return projects;
-    return projects.filter((p) => p.status === filter);
-  }, [projects, filter]);
+    let list = projects;
+    if (filter !== 'all') {
+      list = list.filter((p) => p.status === filter);
+    }
+    if (domainFilter) {
+      list = list.filter((p) => p.domain === domainFilter);
+    }
+    return list;
+  }, [projects, filter, domainFilter]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
@@ -77,20 +86,49 @@ export function ProjectsPage() {
 
       {/* Filter pills */}
       {!isLoading && stats.total > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {(['all', 'Active', 'Completed', 'Archived'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-              style={{
-                backgroundColor: filter === f ? 'var(--primary-600)' : 'var(--color-muted)',
-                color: filter === f ? '#fff' : 'var(--color-text-secondary)',
-              }}
-            >
-              {f === 'all' ? `All (${stats.total})` : f}
-            </button>
-          ))}
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            {(['all', 'Active', 'Completed', 'Archived'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                style={{
+                  backgroundColor: filter === f ? 'var(--primary-600)' : 'var(--color-muted)',
+                  color: filter === f ? '#fff' : 'var(--color-text-secondary)',
+                }}
+              >
+                {f === 'all' ? `All (${stats.total})` : f}
+              </button>
+            ))}
+          </div>
+          {stats.domains.length > 0 && (
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              <button
+                onClick={() => setDomainFilter('')}
+                className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                style={{
+                  backgroundColor: !domainFilter ? 'var(--primary-100)' : 'var(--color-muted)',
+                  color: !domainFilter ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+                }}
+              >
+                All Domains
+              </button>
+              {stats.domains.map((d) => (
+                <button
+                  key={d}
+                  onClick={() => setDomainFilter(d)}
+                  className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                  style={{
+                    backgroundColor: domainFilter === d ? 'var(--primary-100)' : 'var(--color-muted)',
+                    color: domainFilter === d ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  {d}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProject, useDeleteProject } from '@/hooks/useProjects';
-import { useUpdateTaskStatus, useDeleteTask } from '@/hooks/useTasks';
+import { useUpdateTaskStatus, useDeleteTask, useCreateTask } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import type { Task } from '@/types';
 
@@ -88,9 +90,15 @@ export function ProjectDetailPage() {
   const { data: project, isLoading } = useProject(id!);
   const updateStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteTask();
+  const createTask = useCreateTask();
   const deleteProject = useDeleteProject();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newNoteTitle, setNewNoteTitle] = useState('');
+  const [newNoteContent, setNewNoteContent] = useState('');
 
   const { pending, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
     if (!project?.subtasks) return { pending: [], completed: [], overdue: [], highPriority: [], suggestedNext: null };
@@ -121,6 +129,30 @@ export function ProjectDetailPage() {
   const handleDeleteProject = () => {
     deleteProject.mutate(id!, { onSuccess: () => navigate('/projects') });
     setShowDeleteConfirm(false);
+  };
+
+  const handleAddTask = async () => {
+    if (!newTaskTitle.trim()) return;
+    await createTask.mutateAsync({
+      title: newTaskTitle.trim(),
+      status: 'Pending',
+      projectId: id,
+    });
+    setNewTaskTitle('');
+    setShowAddTask(false);
+  };
+
+  const handleAddNote = async () => {
+    if (!newNoteTitle.trim()) return;
+    await createTask.mutateAsync({
+      title: newNoteTitle.trim(),
+      status: 'Note',
+      notes: newNoteContent.trim() || undefined,
+      projectId: id,
+    });
+    setNewNoteTitle('');
+    setNewNoteContent('');
+    setShowAddNote(false);
   };
 
   if (isLoading) {
@@ -168,6 +200,9 @@ export function ProjectDetailPage() {
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {project.domain && (
+              <Badge variant="default">{project.domain}</Badge>
+            )}
             <Badge variant={project.status === 'Active' ? 'primary' : project.status === 'Completed' ? 'success' : 'default'}>
               {project.status}
             </Badge>
@@ -177,6 +212,21 @@ export function ProjectDetailPage() {
               </Badge>
             )}
           </div>
+        </div>
+
+        <div className="flex gap-2">
+          <Button size="sm" onClick={() => setShowAddTask(true)}>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Task
+          </Button>
+          <Button size="sm" variant="secondary" onClick={() => setShowAddNote(true)}>
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+            Add Note
+          </Button>
         </div>
 
         {/* Progress */}
@@ -391,6 +441,71 @@ export function ProjectDetailPage() {
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Add Task modal */}
+      {showAddTask && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="card p-6 max-w-md w-full space-y-4">
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Add Task to {project.title}</h3>
+            <Input
+              id="taskTitle"
+              label="Task Title"
+              value={newTaskTitle}
+              onChange={(e) => setNewTaskTitle(e.target.value)}
+              placeholder="Enter task title..."
+              required
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => { setShowAddTask(false); setNewTaskTitle(''); }}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddTask} isLoading={createTask.isPending} disabled={!newTaskTitle.trim()}>
+                Add Task
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Add Note modal */}
+      {showAddNote && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="card p-6 max-w-md w-full space-y-4">
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Add Note to {project.title}</h3>
+            <Input
+              id="noteTitle"
+              label="Note Title"
+              value={newNoteTitle}
+              onChange={(e) => setNewNoteTitle(e.target.value)}
+              placeholder="Enter note title..."
+              required
+            />
+            <div>
+              <label htmlFor="noteContent" className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
+                Content (optional)
+              </label>
+              <textarea
+                id="noteContent"
+                value={newNoteContent}
+                onChange={(e) => setNewNoteContent(e.target.value)}
+                placeholder="Add note details..."
+                rows={4}
+                className="input-base w-full resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => { setShowAddNote(false); setNewNoteTitle(''); setNewNoteContent(''); }}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddNote} isLoading={createTask.isPending} disabled={!newNoteTitle.trim()}>
+                Add Note
+              </Button>
             </div>
           </div>
         </div>,

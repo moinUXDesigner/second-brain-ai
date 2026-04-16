@@ -10,7 +10,7 @@ class Project extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['title', 'description', 'status', 'priority', 'due_date'];
+    protected $fillable = ['title', 'description', 'domain', 'status', 'priority', 'due_date'];
 
     protected $casts = ['due_date' => 'date'];
 
