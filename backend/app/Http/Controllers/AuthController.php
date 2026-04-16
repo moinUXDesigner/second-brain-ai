@@ -78,19 +78,18 @@ class AuthController extends Controller
         }
 
         $token = Str::random(64);
+        $hashedToken = Hash::make($token);
 
-        // Store token in user record temporarily
-        $user->update([
-            'remember_token' => Hash::make($token),
-        ]);
+        // Store hashed token in user record
+        $user->remember_token = $hashedToken;
+        $user->save();
 
         $resetUrl = config('app.frontend_url') . '/reset-password?token=' . $token . '&email=' . urlencode($data['email']);
 
-        // For now, return the reset URL in response (in production, send via email)
         return response()->json([
             'success' => true,
             'message' => 'If the email exists, a reset link has been sent.',
-            'reset_url' => $resetUrl, // Remove this in production after email is configured
+            'reset_url' => $resetUrl,
         ]);
     }
 
@@ -104,18 +103,22 @@ class AuthController extends Controller
 
         $user = User::where('email', $data['email'])->first();
 
-        if (!$user || !$user->remember_token) {
-            throw ValidationException::withMessages(['email' => ['Invalid or expired reset token.']]);
+        if (!$user) {
+            throw ValidationException::withMessages(['email' => ['User not found.']]);
+        }
+
+        if (!$user->remember_token) {
+            throw ValidationException::withMessages(['email' => ['No reset token found. Please request a new password reset.']]);
         }
 
         if (!Hash::check($data['token'], $user->remember_token)) {
-            throw ValidationException::withMessages(['email' => ['Invalid or expired reset token.']]);
+            throw ValidationException::withMessages(['email' => ['Invalid reset token. Please request a new password reset.']]);
         }
 
-        $user->update([
-            'password' => Hash::make($data['password']),
-            'remember_token' => null,
-        ]);
+        $user->password = Hash::make($data['password']);
+        $user->remember_token = null;
+        $user->save();
+        
         $user->tokens()->delete();
 
         return response()->json([
