@@ -30,7 +30,7 @@ const adminItem = {
 
 export function Sidebar() {
   const role = useAuthStore((s) => s.role);
-  const { isSidebarOpen, toggleSidebar } = useUiStore();
+  const { isSidebarOpen, isSidebarCollapsed, toggleSidebar, toggleSidebarCollapse } = useUiStore();
   const navigate = useNavigate();
   const { logout } = useAuth();
 
@@ -52,7 +52,8 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex flex-col transition-transform duration-200 w-64',
+          'fixed inset-y-0 left-0 z-50 flex flex-col transition-all duration-200',
+          isSidebarCollapsed ? 'w-16' : 'w-64',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
           'lg:relative lg:translate-x-0',
         )}
@@ -63,9 +64,21 @@ export function Sidebar() {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-500 text-white font-bold text-body shrink-0">
             SB
           </div>
-          <span className="text-body font-semibold truncate" style={{ color: 'var(--sidebar-fg)' }}>
-            {APP_NAME}
-          </span>
+          {!isSidebarCollapsed && (
+            <span className="text-body font-semibold truncate" style={{ color: 'var(--sidebar-fg)' }}>
+              {APP_NAME}
+            </span>
+          )}
+          <button
+            onClick={toggleSidebarCollapse}
+            className="ml-auto hidden lg:flex items-center justify-center h-8 w-8 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+            style={{ color: 'var(--sidebar-fg)' }}
+            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d={isSidebarCollapsed ? 'M13 5l7 7-7 7M5 5l7 7-7 7' : 'M11 19l-7-7 7-7m8 14l-7-7 7-7'} />
+            </svg>
+          </button>
         </div>
 
         {/* Create button */}
@@ -75,16 +88,20 @@ export function Sidebar() {
               navigate('/create');
               if (window.innerWidth < 1024) toggleSidebar();
             }}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-body font-medium transition-colors"
+            className={cn(
+              'flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-body font-medium transition-colors',
+              isSidebarCollapsed && 'justify-center'
+            )}
             style={{
               backgroundColor: 'var(--primary-600)',
               color: '#fff',
             }}
+            title={isSidebarCollapsed ? 'Create New' : undefined}
           >
             <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            <span>Create New</span>
+            {!isSidebarCollapsed && <span>Create New</span>}
           </button>
         </div>
 
@@ -99,20 +116,20 @@ export function Sidebar() {
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors',
-                  isActive
-                    ? 'font-medium'
-                    : 'hover:opacity-80',
+                  isActive ? 'font-medium' : 'hover:opacity-80',
+                  isSidebarCollapsed && 'justify-center'
                 )
               }
               style={({ isActive }) => ({
                 backgroundColor: isActive ? 'var(--sidebar-active-bg)' : undefined,
                 color: isActive ? 'var(--sidebar-active-fg)' : 'var(--color-text-secondary)',
               })}
+              title={isSidebarCollapsed ? item.label : undefined}
             >
               <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
               </svg>
-              <span className="truncate">{item.label}</span>
+              {!isSidebarCollapsed && <span className="truncate">{item.label}</span>}
             </NavLink>
           ))}
         </nav>
@@ -123,13 +140,17 @@ export function Sidebar() {
               if (window.innerWidth < 1024) toggleSidebar();
               logout();
             }}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-body transition-colors hover:opacity-80"
+            className={cn(
+              'flex w-full items-center gap-3 rounded-md px-3 py-2 text-body transition-colors hover:opacity-80',
+              isSidebarCollapsed && 'justify-center'
+            )}
             style={{ color: 'var(--color-text-secondary)' }}
+            title={isSidebarCollapsed ? 'Logout' : undefined}
           >
             <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
             </svg>
-            <span className="truncate">Logout</span>
+            {!isSidebarCollapsed && <span className="truncate">Logout</span>}
           </button>
         </div>      </aside>
     </>
