@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui/Badge';
 
 export function Header() {
   const user = useAuthStore((s) => s.user);
-  const { toggleSidebar, aiEnabled, toggleAI } = useUiStore();
+  const { toggleSidebar, toggleSidebarCollapse, isSidebarCollapsed, aiEnabled, toggleAI } = useUiStore();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [showA11y, setShowA11y] = useState(false);
@@ -17,7 +17,7 @@ export function Header() {
   return (
     <>
       <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between border-b px-3 lg:px-6 gap-2" style={{ borderColor: 'var(--color-border)', backgroundColor: 'color-mix(in srgb, var(--color-surface) 80%, transparent)', backdropFilter: 'blur(8px)' }}>
-        {/* Left — hamburger for mobile/tablet */}
+        {/* Left — hamburger for mobile, collapse toggle for desktop */}
         <button
           onClick={toggleSidebar}
           className="rounded-md p-2 lg:hidden shrink-0 transition-colors"
@@ -29,18 +29,26 @@ export function Header() {
           </svg>
         </button>
 
-        {/* Search — desktop only */}
-        <div className="hidden md:flex flex-1 max-w-md">
-          <div className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-caption w-full" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-muted-fg)' }}>
-            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <span>Search</span>
-          </div>
-        </div>
+        <button
+          onClick={toggleSidebarCollapse}
+          className="hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors hover:bg-opacity-80"
+          style={{
+            borderColor: 'var(--color-border)',
+            backgroundColor: 'var(--color-surface)',
+            color: 'var(--color-text-secondary)',
+          }}
+          aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+            <rect width="18" height="18" x="3" y="3" rx="2"></rect>
+            <path d="M9 3v18"></path>
+            <path d={isSidebarCollapsed ? 'm15 9 3 3-3 3' : 'm16 15-3-3 3-3'}></path>
+          </svg>
+        </button>
 
         {/* Spacer for mobile so right-side items push right */}
-        <div className="flex-1 md:hidden" />
+        <div className="flex-1 lg:hidden" />
 
         {/* Right */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
