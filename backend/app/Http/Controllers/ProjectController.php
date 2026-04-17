@@ -61,6 +61,7 @@ class ProjectController extends Controller
             'description' => $data['description'] ?? '',
             'status'      => 'Active',
             'priority'    => $data['priority'] ?? 0,
+            'domain'      => $data['area'] ?? '',
         ]);
 
         $subtaskTitles = $data['subtasks'] ?? [];
