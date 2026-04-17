@@ -86,24 +86,30 @@ export function ProjectsPage() {
 
       {/* Filter pills */}
       {!isLoading && stats.total > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            {(['all', 'Active', 'Completed', 'Archived'] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => setFilter(f)}
-                className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-                style={{
-                  backgroundColor: filter === f ? 'var(--primary-600)' : 'var(--color-muted)',
-                  color: filter === f ? '#fff' : 'var(--color-text-secondary)',
-                }}
-              >
-                {f === 'all' ? `All (${stats.total})` : f}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          {/* Status filters */}
+          {(['all', 'Active', 'Completed', 'Archived'] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+              style={{
+                backgroundColor: filter === f ? 'var(--primary-600)' : 'var(--color-muted)',
+                color: filter === f ? '#fff' : 'var(--color-text-secondary)',
+              }}
+            >
+              {f === 'all' ? `All (${stats.total})` : f}
+            </button>
+          ))}
+          
+          {/* Separator */}
           {stats.domains.length > 0 && (
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <div className="h-6 w-px shrink-0" style={{ backgroundColor: 'var(--color-border)' }} />
+          )}
+          
+          {/* Domain filters */}
+          {stats.domains.length > 0 && (
+            <>
               <button
                 onClick={() => setDomainFilter('')}
                 className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
@@ -127,7 +133,7 @@ export function ProjectsPage() {
                   {d}
                 </button>
               ))}
-            </div>
+            </>
           )}
         </div>
       )}
