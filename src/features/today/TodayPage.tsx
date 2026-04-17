@@ -62,8 +62,31 @@ export function TodayPage() {
     setLocalStatus({});
   }, [tasks]);
 
-  const handleStatusChange = (id: string, status: TaskStatus) => {
+  const handleStatusChange = async (id: string, status: TaskStatus) => {
     setLocalStatus((prev) => ({ ...prev, [id]: status }));
+    
+    // Immediately update backend
+    try {
+      await taskService.updateTaskStatus(id, status);
+      // Update cache
+      queryClient.setQueryData<Task[]>(QUERY_KEYS.todayTasks, (old) => {
+        if (!old) return old;
+        return old.map((t) => 
+          t.id === id ? { ...t, status, completedAt: status === 'Done' ? new Date().toISOString() : undefined } : t
+        );
+      });
+      // Invalidate related queries
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+    } catch {
+      // Revert on error
+      setLocalStatus((prev) => {
+        const newState = { ...prev };
+        delete newState[id];
+        return newState;
+      });
+      toast.error('Failed to update task');
+    }
   };
 
   const { data: projects } = useProjects();
@@ -233,7 +256,7 @@ export function TodayPage() {
         </div>
       ) : (
         <TodayTable
-          tasks={tasks ?? []}
+          tasks={visibleTasks}
           localStatus={localStatus}
           onStatusChange={handleStatusChange}
           onEditTask={setEditingTask}
