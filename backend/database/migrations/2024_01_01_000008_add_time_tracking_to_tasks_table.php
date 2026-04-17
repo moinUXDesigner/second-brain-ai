@@ -8,9 +8,9 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('tasks', function (Blueprint $table) {
-            $table->integer('time_spent')->default(0)->after('time_estimate'); // in seconds
-            $table->timestamp('timer_started_at')->nullable()->after('time_spent');
-            $table->boolean('timer_running')->default(false)->after('timer_started_at');
+            $table->integer('time_spent')->default(0); // in seconds
+            $table->timestamp('timer_started_at')->nullable();
+            $table->boolean('timer_running')->default(false);
         });
     }
 
