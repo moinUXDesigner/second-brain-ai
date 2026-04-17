@@ -64,6 +64,7 @@ export interface Task {
   completedAt?: string;
   category?: TaskCategory | string;
   dueDate?: string;
+  deadlineDate?: string;
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;

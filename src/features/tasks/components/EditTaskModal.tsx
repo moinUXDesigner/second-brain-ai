@@ -40,6 +40,7 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
   const [recurrence, setRecurrence] = useState(task.recurrence || '');
   const [estimatedTime, setEstimatedTime] = useState(task.timeEstimate || '');
   const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : '');
+  const [deadlineDate, setDeadlineDate] = useState(task.deadlineDate ? task.deadlineDate.slice(0, 10) : '');
 
   const mutation = useUpdateTask();
 
@@ -54,6 +55,7 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
     setRecurrence(task.recurrence || '');
     setEstimatedTime(task.timeEstimate || '');
     setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '');
+    setDeadlineDate(task.deadlineDate ? task.deadlineDate.slice(0, 10) : '');
   }, [task]);
 
   useEffect(() => {
@@ -84,6 +86,7 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
           recurrence: (recurrence || undefined) as Task['recurrence'],
           timeEstimate: estimatedTime.trim(),
           dueDate: dueDate || undefined,
+          deadlineDate: deadlineDate || undefined,
         },
       },
       {
@@ -197,6 +200,13 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
+            />
+
+            <Input
+              label="Deadline Date"
+              type="date"
+              value={deadlineDate}
+              onChange={(e) => setDeadlineDate(e.target.value)}
             />
           </div>
 
