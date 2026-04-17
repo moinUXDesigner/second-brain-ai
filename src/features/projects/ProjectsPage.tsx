@@ -12,6 +12,7 @@ export function ProjectsPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'Active' | 'Completed' | 'Archived'>('all');
   const [domainFilter, setDomainFilter] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'progress' | 'created' | 'updated' | 'title'>('progress');
 
   const handleDelete = (id: string) => {
     setConfirmId(id);
@@ -49,8 +50,22 @@ export function ProjectsPage() {
     if (domainFilter) {
       list = list.filter((p) => p.domain === domainFilter);
     }
-    return list.sort((a, b) => b.progress - a.progress);
-  }, [projects, filter, domainFilter]);
+    
+    return list.sort((a, b) => {
+      switch (sortBy) {
+        case 'progress':
+          return b.progress - a.progress;
+        case 'created':
+          return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+        case 'updated':
+          return new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime();
+        case 'title':
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+  }, [projects, filter, domainFilter, sortBy]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
@@ -86,55 +101,83 @@ export function ProjectsPage() {
 
       {/* Filter pills */}
       {!isLoading && stats.total > 0 && (
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {/* Status filters */}
-          {(['all', 'Active', 'Completed', 'Archived'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
-              style={{
-                backgroundColor: filter === f ? 'var(--primary-600)' : 'var(--color-muted)',
-                color: filter === f ? '#fff' : 'var(--color-text-secondary)',
-              }}
-            >
-              {f === 'all' ? `All (${stats.total})` : f}
-            </button>
-          ))}
-          
-          {/* Separator */}
-          {stats.domains.length > 0 && (
-            <div className="h-6 w-px shrink-0" style={{ backgroundColor: 'var(--color-border)' }} />
-          )}
-          
-          {/* Domain filters */}
-          {stats.domains.length > 0 && (
-            <>
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            {/* Status filters */}
+            {(['all', 'Active', 'Completed', 'Archived'] as const).map((f) => (
               <button
-                onClick={() => setDomainFilter('')}
+                key={f}
+                onClick={() => setFilter(f)}
                 className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
                 style={{
-                  backgroundColor: !domainFilter ? 'var(--primary-100)' : 'var(--color-muted)',
-                  color: !domainFilter ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+                  backgroundColor: filter === f ? 'var(--primary-600)' : 'var(--color-muted)',
+                  color: filter === f ? '#fff' : 'var(--color-text-secondary)',
                 }}
               >
-                All Domains
+                {f === 'all' ? `All (${stats.total})` : f}
               </button>
-              {stats.domains.map((d) => (
+            ))}
+            
+            {/* Separator */}
+            {stats.domains.length > 0 && (
+              <div className="h-6 w-px shrink-0" style={{ backgroundColor: 'var(--color-border)' }} />
+            )}
+            
+            {/* Domain filters */}
+            {stats.domains.length > 0 && (
+              <>
                 <button
-                  key={d}
-                  onClick={() => setDomainFilter(d)}
+                  onClick={() => setDomainFilter('')}
                   className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
                   style={{
-                    backgroundColor: domainFilter === d ? 'var(--primary-100)' : 'var(--color-muted)',
-                    color: domainFilter === d ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+                    backgroundColor: !domainFilter ? 'var(--primary-100)' : 'var(--color-muted)',
+                    color: !domainFilter ? 'var(--primary-700)' : 'var(--color-text-secondary)',
                   }}
                 >
-                  {d}
+                  All Domains
+                </button>
+                {stats.domains.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setDomainFilter(d)}
+                    className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors"
+                    style={{
+                      backgroundColor: domainFilter === d ? 'var(--primary-100)' : 'var(--color-muted)',
+                      color: domainFilter === d ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+                    }}
+                  >
+                    {d}
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+          
+          {/* Sort options */}
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Sort by:</span>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {[
+                { value: 'progress', label: 'Completion %', icon: '📊' },
+                { value: 'created', label: 'Newest', icon: '🆕' },
+                { value: 'updated', label: 'Recently Updated', icon: '🔄' },
+                { value: 'title', label: 'Name (A-Z)', icon: '🔤' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSortBy(option.value as typeof sortBy)}
+                  className="shrink-0 text-xs font-medium px-3 py-1.5 rounded-full transition-colors flex items-center gap-1.5"
+                  style={{
+                    backgroundColor: sortBy === option.value ? 'var(--primary-600)' : 'var(--color-muted)',
+                    color: sortBy === option.value ? '#fff' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  <span>{option.icon}</span>
+                  <span>{option.label}</span>
                 </button>
               ))}
-            </>
-          )}
+            </div>
+          </div>
         </div>
       )}
 
