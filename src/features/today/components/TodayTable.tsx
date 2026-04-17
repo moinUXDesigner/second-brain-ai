@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import type { Task, TaskStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { TaskTimer } from '@/components/task/TaskTimer';
+import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
 import { cn } from '@/utils/cn';
 
@@ -30,6 +31,7 @@ interface TodayTableProps {
 export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onDeleteTask, deletingId }: TodayTableProps) {
   const navigate = useNavigate();
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const [linkTask, setLinkTask] = useState<Task | null>(null);
 
   const getStatus = useCallback(
     (task: Task): TaskStatus => localStatus[task.id] ?? task.status,
@@ -154,6 +156,16 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                       </svg>
                     </button>
                   )}
+                  <button
+                    onClick={() => setLinkTask(task)}
+                    className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    title="Link to project"
+                  >
+                    <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                  </button>
                   <button
                     onClick={() => navigate('/create', { state: { skipStep1: true, text: task.title, area: task.area, type: 'project' } })}
                     className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
@@ -296,6 +308,16 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                           </button>
                         )}
                         <button
+                          onClick={() => setLinkTask(task)}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                          style={{ color: 'var(--color-text-secondary)' }}
+                          title="Link to project"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                          </svg>
+                        </button>
+                        <button
                           onClick={() => navigate('/create', { state: { skipStep1: true, text: task.title, area: task.area, type: 'project' } })}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                           style={{ color: 'var(--color-text-secondary)' }}
@@ -336,6 +358,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
       </div>
 
       {/* Delete confirmation modal */}
+      {linkTask && <LinkToProjectModal task={linkTask} onClose={() => setLinkTask(null)} />}
       {confirmId && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="card p-6 max-w-sm w-full space-y-4">

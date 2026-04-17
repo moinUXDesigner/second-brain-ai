@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import type { Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { TaskTimer } from '@/components/task/TaskTimer';
+import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
 import { EditTaskModal } from './EditTaskModal';
 
 interface TaskListProps {
@@ -26,6 +27,7 @@ function MobileTaskRow({
   onReveal,
   onEdit,
   onConvert,
+  onLinkProject,
 }: {
   task: Task;
   onSwipeDelete: () => void;
@@ -36,6 +38,7 @@ function MobileTaskRow({
   onReveal: (id: string | null) => void;
   onEdit: (task: Task) => void;
   onConvert: (task: Task) => void;
+  onLinkProject: (task: Task) => void;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const touchRef = useRef<{ startX: number; startY: number; locked: boolean | null } | null>(null);
@@ -195,6 +198,15 @@ function MobileTaskRow({
             </button>
             <button
               className="btn btn-xs btn-outline p-1"
+              onClick={() => onLinkProject(task)}
+              title="Link to project"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            </button>
+            <button
+              className="btn btn-xs btn-outline p-1"
               onClick={() => onConvert(task)}
               title="Convert to project"
             >
@@ -222,6 +234,7 @@ function MobileTaskRow({
 export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId }: TaskListProps) {
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [convertTask, setConvertTask] = useState<Task | null>(null);
+  const [linkTask, setLinkTask] = useState<Task | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [swipedId, setSwipedId] = useState<string | null>(null);
 
@@ -297,6 +310,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
             onReveal={setSwipedId}
             onEdit={setEditTask}
             onConvert={setConvertTask}
+            onLinkProject={setLinkTask}
           />
         ))}
       </div>
@@ -424,6 +438,15 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                       </button>
                       <button
                         className="btn btn-xs btn-outline p-1"
+                        onClick={() => setLinkTask(task)}
+                        title="Link to project"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                        </svg>
+                      </button>
+                      <button
+                        className="btn btn-xs btn-outline p-1"
                         onClick={() => setConvertTask(task)}
                         title="Convert to project"
                       >
@@ -465,6 +488,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
       {/* Delete confirmation modal */}
       {editTaskModal}
       {ConvertTaskModal}
+      {linkTask && <LinkToProjectModal task={linkTask} onClose={() => setLinkTask(null)} />}
       {confirmId && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="card p-6 max-w-sm w-full space-y-4">
