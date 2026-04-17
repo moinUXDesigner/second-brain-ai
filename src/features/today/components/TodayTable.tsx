@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import type { Task, TaskStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
+import { TaskTimer } from '@/components/task/TaskTimer';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
 import { cn } from '@/utils/cn';
 
@@ -126,6 +127,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 flex-wrap text-caption">
+                <TaskTimer task={task} compact />
                 {task.category && (
                   <Badge className={getCategoryStyle(task.category)}>{task.category}</Badge>
                 )}
@@ -192,7 +194,8 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Category</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Priority</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Fit Score</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Time</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Time Est.</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Timer</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Due Date</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Project</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Status</th>
@@ -249,6 +252,9 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-caption text-neutral-500">{task.timeEstimate ?? '—'}</span>
+                    </td>
+                    <td className="px-4 py-3 hidden xl:table-cell">
+                      <TaskTimer task={task} compact />
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       {task.dueDate ? (

@@ -7,6 +7,7 @@ import { useUpdateTaskStatus, useDeleteTask, useCreateTask } from '@/hooks/useTa
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { TaskTimer } from '@/components/task/TaskTimer';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import type { Task } from '@/types';
 
@@ -47,6 +48,11 @@ function TaskRow({ task, variant, onToggle, onDelete, deletingId }: {
         >
           {task.title}
         </p>
+        {!isDone && (
+          <div className="mt-1">
+            <TaskTimer task={task} compact />
+          </div>
+        )}
       </div>
 
       <div className="shrink-0 flex items-center gap-2">
