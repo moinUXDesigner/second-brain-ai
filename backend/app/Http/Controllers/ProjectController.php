@@ -123,16 +123,21 @@ class ProjectController extends Controller
     private function format(Project $project): array
     {
         $subtasks = $project->tasks->map(fn($t) => [
-            'id'        => (string) $t->id,
-            'title'     => $t->title,
-            'type'      => $t->type ?? 'Task',
-            'area'      => $t->area ?? '',
-            'notes'     => $t->notes ?? '',
-            'projectId' => (string) $project->id,
-            'status'    => $t->status,
-            'priority'  => $t->priority ?? 0,
-            'fitScore'  => $t->fit_score ?? 0,
-            'category'  => $t->category ?? '',
+            'id'             => (string) $t->id,
+            'title'          => $t->title,
+            'type'           => $t->type ?? 'Task',
+            'area'           => $t->area ?? '',
+            'notes'          => $t->notes ?? '',
+            'projectId'      => (string) $project->id,
+            'status'         => $t->status,
+            'priority'       => $t->priority ?? 0,
+            'fitScore'       => $t->fit_score ?? 0,
+            'category'       => $t->category ?? '',
+            'urgency'        => $t->urgency ?? '',
+            'dueDate'        => $t->due_date?->toDateString() ?? '',
+            'timeSpent'      => $t->time_spent ?? 0,
+            'timerRunning'   => $t->timer_running ?? false,
+            'timerStartedAt' => $t->timer_started_at?->toISOString() ?? '',
         ])->values()->toArray();
 
         $total    = count($subtasks);
@@ -148,6 +153,7 @@ class ProjectController extends Controller
             'progress'    => $progress,
             'subtasks'    => $subtasks,
             'dueDate'     => $project->due_date?->toDateString() ?? '',
+            'domain'      => $project->domain ?? '',
             'createdAt'   => $project->created_at?->toISOString() ?? '',
             'updatedAt'   => $project->updated_at?->toISOString() ?? '',
         ];
