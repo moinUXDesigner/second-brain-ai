@@ -49,7 +49,7 @@ export function ProjectsPage() {
     if (domainFilter) {
       list = list.filter((p) => p.domain === domainFilter);
     }
-    return list;
+    return list.sort((a, b) => b.progress - a.progress);
   }, [projects, filter, domainFilter]);
 
   return (
