@@ -86,11 +86,9 @@ class AuthController extends Controller
 
         $resetUrl = config('app.frontend_url') . '/reset-password?token=' . $token . '&email=' . urlencode($data['email']);
 
-        // Send email notification
         try {
             $user->notify(new ResetPasswordNotification($resetUrl));
-        } catch (\Exception $e) {
-            // Log error but don't expose to user
+        } catch (\Throwable $e) {
             \Log::error('Failed to send password reset email: ' . $e->getMessage());
         }
 
