@@ -44,7 +44,7 @@ function formatTime(mins: number) {
 }
 
 export function TodayPage() {
-  const { data: tasks, isLoading, isError } = useTodayTasks();
+  const { data: tasks, isLoading, isError, dataUpdatedAt } = useTodayTasks();
   const queryClient = useQueryClient();
   const { log } = useAudit();
 
@@ -214,7 +214,14 @@ export function TodayPage() {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Today</h1>
-          <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>{today()}</p>
+          <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+            {today()}
+            {dataUpdatedAt > 0 && (
+              <span className="ml-3 text-caption" style={{ color: 'var(--color-muted-fg)' }}>
+                · Updated {new Date(dataUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           {dirtyCount > 0 && (

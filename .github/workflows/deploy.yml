@@ -202,12 +202,17 @@ jobs:
             echo "✅ Permissions set"
           EOF
 
+      - name: Detect PHP Binary
+        run: |
+          echo "🔍 Using PHP 8.5 binary..."
+          ssh hostinger "/opt/alt/php85/usr/bin/php --version"
+
       - name: Run Database Migrations
         run: |
           echo "🗄️ Running database migrations..."
           ssh hostinger << 'EOF'
             cd /home/u484303972/domains/khajamynuddin.com/public_html/api-secondbrain
-            php artisan migrate --force
+            /opt/alt/php85/usr/bin/php artisan migrate --force
             echo "✅ Migrations completed"
           EOF
 
@@ -216,9 +221,9 @@ jobs:
           echo "⚡ Optimizing Laravel application..."
           ssh hostinger << 'EOF'
             cd /home/u484303972/domains/khajamynuddin.com/public_html/api-secondbrain
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
+            /opt/alt/php85/usr/bin/php artisan config:cache
+            /opt/alt/php85/usr/bin/php artisan route:cache
+            /opt/alt/php85/usr/bin/php artisan view:cache
             echo "✅ Laravel optimized"
           EOF
 
