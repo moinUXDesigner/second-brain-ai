@@ -204,6 +204,40 @@ class TaskController extends Controller
         return response()->json(['success' => true, 'data' => ['message' => 'Cleanup complete']]);
     }
 
+    public function assignDueDates(): JsonResponse
+    {
+        $tasks = Task::whereNotIn('status', ['Done', 'Deleted'])
+            ->whereNull('due_date')
+            ->get(['id', 'title', 'urgency', 'area']);
+
+        if ($tasks->isEmpty()) {
+            return response()->json(['success' => true, 'data' => ['updated' => 0, 'message' => 'All tasks already have due dates.']]);
+        }
+
+        $payload = $tasks->map(fn($t) => [
+            'id'      => $t->id,
+            'title'   => $t->title,
+            'urgency' => $t->urgency ?? 'Medium',
+            'area'    => $t->area ?? '',
+        ])->values()->toArray();
+
+        // Process in chunks of 50 to stay within token limits
+        $chunks  = array_chunk($payload, 50);
+        $updated = 0;
+
+        foreach ($chunks as $chunk) {
+            $results = $this->ai->assignDueDates($chunk);
+            foreach ($results as $result) {
+                if (!empty($result['id']) && !empty($result['due_date'])) {
+                    Task::where('id', $result['id'])->update(['due_date' => $result['due_date']]);
+                    $updated++;
+                }
+            }
+        }
+
+        return response()->json(['success' => true, 'data' => ['updated' => $updated, 'total' => $tasks->count()]]);
+    }
+
     private function format(Task $task): array
     {
         return [

@@ -99,4 +99,39 @@ class AIService
             return [];
         }
     }
+
+    /**
+     * Assign due dates to a batch of tasks in one AI call.
+     * $tasks = [['id' => 1, 'title' => '...', 'urgency' => '...', 'area' => '...'], ...]
+     * Returns [['id' => 1, 'due_date' => 'YYYY-MM-DD'], ...]
+     */
+    public function assignDueDates(array $tasks): array
+    {
+        if (!$this->apiKey || empty($tasks)) return [];
+
+        $today = now()->toDateString();
+
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->timeout(120)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model'       => $this->model,
+                    'temperature' => 0.1,
+                    'messages'    => [
+                        [
+                            'role'    => 'system',
+                            'content' => "Today is {$today}. You are a productivity assistant. For each task assign a realistic due date based on its title, urgency, and area. Rules: High urgency = within 3 days, Medium = within 2 weeks, Low = within 1 month. Return ONLY a JSON array: [{\"id\": <id>, \"due_date\": \"YYYY-MM-DD\"}, ...]. No explanation.",
+                        ],
+                        ['role' => 'user', 'content' => json_encode($tasks)],
+                    ],
+                ]);
+
+            $content = $response->json('choices.0.message.content', '');
+            $content = preg_replace('/```json|```/', '', $content);
+            return json_decode(trim($content), true) ?? [];
+        } catch (\Throwable $e) {
+            Log::warning('AIService::assignDueDates failed: ' . $e->getMessage());
+            return [];
+        }
+    }
 }

@@ -45,4 +45,9 @@ export const taskService = {
     const { data } = await apiClient.post(`/tasks/${id}/reset`);
     return data;
   },
+
+  async assignDueDates(): Promise<ApiResponse<{ updated: number; total: number }>> {
+    const { data } = await apiClient.post('/tasks/assign-due-dates');
+    return data;
+  },
 };

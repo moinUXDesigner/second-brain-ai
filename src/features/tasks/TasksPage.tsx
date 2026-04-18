@@ -4,6 +4,10 @@ import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
 import { useTasks, useDeleteTask, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { taskService } from '@/services/endpoints/taskService';
+import { useQueryClient } from '@tanstack/react-query';
+import { QUERY_KEYS } from '@/constants';
+import toast from 'react-hot-toast';
 
 type SortField = 'newest' | 'oldest' | 'priority' | 'impact';
 
@@ -20,6 +24,27 @@ export function TasksPage() {
   const [filterUrgency, setFilterUrgency] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
+  const [assigningDates, setAssigningDates] = useState(false);
+  const queryClient = useQueryClient();
+
+  const missingDueDateCount = useMemo(
+    () => tasks?.filter((t) => t.status === 'Pending' && !t.dueDate).length ?? 0,
+    [tasks],
+  );
+
+  const handleAssignDueDates = async () => {
+    setAssigningDates(true);
+    const toastId = toast.loading('AI is assigning due dates…');
+    try {
+      const res = await taskService.assignDueDates();
+      toast.success(`Done! ${res.data.updated} tasks updated.`, { id: toastId });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+    } catch {
+      toast.error('Failed to assign due dates.', { id: toastId });
+    } finally {
+      setAssigningDates(false);
+    }
+  };
 
   const areas = useMemo(() => {
     if (!tasks) return [];
@@ -93,16 +118,31 @@ export function TasksPage() {
             {filtered.length} of {pendingCount} pending
           </span>
         </div>
-        <button
-          onClick={() => navigate('/bulk-upload')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-          style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-700)' }}
-        >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
-          </svg>
-          Bulk Upload
-        </button>
+        <div className="flex items-center gap-2">
+          {missingDueDateCount > 0 && (
+            <button
+              onClick={handleAssignDueDates}
+              disabled={assigningDates}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-60"
+              style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+              {assigningDates ? 'Assigning…' : `AI Assign Dates (${missingDueDateCount})`}
+            </button>
+          )}
+          <button
+            onClick={() => navigate('/bulk-upload')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+            style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-700)' }}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+            </svg>
+            Bulk Upload
+          </button>
+        </div>
       </div>
 
       {/* Search + Filters */}

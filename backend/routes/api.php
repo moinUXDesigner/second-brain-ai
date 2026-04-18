@@ -38,6 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tasks/{task}/timer/stop',  [TaskController::class, 'stopTimer']);
     Route::delete('/tasks/{task}',          [TaskController::class, 'destroy']);
     Route::post('/tasks/cleanup',           [TaskController::class, 'cleanup']);
+    Route::post('/tasks/assign-due-dates',  [TaskController::class, 'assignDueDates']);
 
     // Projects
     Route::get('/projects',                     [ProjectController::class, 'index']);
