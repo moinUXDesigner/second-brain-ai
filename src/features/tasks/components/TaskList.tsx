@@ -184,6 +184,18 @@ function MobileTaskRow({
                 {task.projectName}
               </span>
             )}
+            {task.dueDate && (() => {
+              const diff = Math.ceil((new Date(task.dueDate).getTime() - Date.now()) / 86400000);
+              const label = diff < 0 ? 'Overdue' : diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : new Date(task.dueDate).toLocaleDateString();
+              return (
+                <>
+                  {(task.area || task.projectName) && <span className="text-xs" style={{ color: 'var(--color-border)' }}>·</span>}
+                  <span className="text-xs font-medium" style={{ color: diff <= 0 ? '#dc2626' : 'var(--color-text-secondary)' }}>
+                    {label}
+                  </span>
+                </>
+              );
+            })()}
           </div>
           <div className="flex gap-1 mt-1">
             <TaskTimer task={task} compact />
@@ -331,6 +343,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Urgency</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Project</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Time</th>
+                <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Due Date</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Updated</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider">Actions</th>
                 {onDelete && (
@@ -419,6 +432,20 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
                     <TaskTimer task={task} compact />
+                  </td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    {task.dueDate ? (() => {
+                      const diff = Math.ceil((new Date(task.dueDate).getTime() - Date.now()) / 86400000);
+                      const label = diff < 0 ? 'Overdue' : diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : new Date(task.dueDate).toLocaleDateString();
+                      const isUrgent = diff <= 0;
+                      return (
+                        <span className="text-caption font-medium" style={{ color: isUrgent ? '#dc2626' : 'var(--color-text-secondary)' }}>
+                          {label}
+                        </span>
+                      );
+                    })() : (
+                      <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
                     <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
