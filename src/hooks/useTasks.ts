@@ -115,6 +115,17 @@ export function useDeleteTask() {
   });
 }
 
+export function useResetRecurringTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => taskService.resetRecurringTask(id),
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+    },
+  });
+}
+
 export function useGenerateTodayView() {
   const queryClient = useQueryClient();
   const { log } = useAudit();

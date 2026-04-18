@@ -11,16 +11,17 @@ class Task extends Model
         'project_id', 'title', 'type', 'area', 'notes', 'maslow',
         'impact', 'effort', 'time_estimate', 'urgency', 'category',
         'confidence', 'priority', 'fit_score', 'status', 'source',
-        'recurrence', 'due_date', 'tags', 'completed_at',
+        'recurrence', 'due_date', 'deadline_date', 'tags', 'completed_at',
         'time_spent', 'timer_started_at', 'timer_running',
     ];
 
     protected $casts = [
-        'tags' => 'array',
-        'due_date' => 'date',
-        'completed_at' => 'datetime',
+        'tags'             => 'array',
+        'due_date'         => 'date',
+        'deadline_date'    => 'date',
+        'completed_at'     => 'datetime',
         'timer_started_at' => 'datetime',
-        'timer_running' => 'boolean',
+        'timer_running'    => 'boolean',
     ];
 
     public function project(): BelongsTo

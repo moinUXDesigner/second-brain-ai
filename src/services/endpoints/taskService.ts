@@ -40,4 +40,9 @@ export const taskService = {
   async deleteTask(id: string): Promise<void> {
     await apiClient.delete(`/tasks/${id}`);
   },
+
+  async resetRecurringTask(id: string): Promise<ApiResponse<Task>> {
+    const { data } = await apiClient.post(`/tasks/${id}/reset`);
+    return data;
+  },
 };

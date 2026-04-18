@@ -117,6 +117,28 @@ class TaskController extends Controller
         return response()->json(['success' => true, 'data' => ['id' => $task->id, 'status' => $task->status]]);
     }
 
+    public function resetRecurring(Task $task): JsonResponse
+    {
+        if (!$task->recurrence) {
+            return response()->json(['success' => false, 'message' => 'Not a recurring task'], 400);
+        }
+
+        $nextDue = match ($task->recurrence) {
+            'Daily'   => now()->addDay()->toDateString(),
+            'Weekly'  => now()->addWeek()->toDateString(),
+            'Monthly' => now()->addMonth()->toDateString(),
+            'Yearly'  => now()->addYear()->toDateString(),
+        };
+
+        $task->update([
+            'status'       => 'Pending',
+            'completed_at' => null,
+            'due_date'     => $nextDue,
+        ]);
+
+        return response()->json(['success' => true, 'data' => $this->format($task)]);
+    }
+
     public function linkToProject(Request $request, Task $task): JsonResponse
     {
         $data = $request->validate(['project_id' => 'nullable|exists:projects,id']);

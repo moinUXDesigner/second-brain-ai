@@ -32,6 +32,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/tasks/{task}',             [TaskController::class, 'update']);
     Route::patch('/tasks/{task}/status',    [TaskController::class, 'updateStatus']);
     Route::patch('/tasks/{task}/link',      [TaskController::class, 'linkToProject']);
+    Route::post('/tasks/{task}/reset',      [TaskController::class, 'resetRecurring']);
     Route::post('/tasks/{task}/timer/start', [TaskController::class, 'startTimer']);
     Route::post('/tasks/{task}/timer/pause', [TaskController::class, 'pauseTimer']);
     Route::post('/tasks/{task}/timer/stop',  [TaskController::class, 'stopTimer']);
