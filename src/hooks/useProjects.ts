@@ -10,6 +10,9 @@ export function useProjects() {
       const res = await projectService.getProjects();
       return res.data;
     },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    retry: 2,
   });
 }
 
@@ -21,6 +24,9 @@ export function useProject(id: string) {
       return res.data;
     },
     enabled: !!id,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    retry: 2,
   });
 }
 
@@ -46,6 +52,9 @@ export function useDeletedProjects() {
       const res = await projectService.getDeletedProjects();
       return res.data;
     },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    retry: 2,
   });
 }
 

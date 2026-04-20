@@ -16,6 +16,9 @@ export function useTasks() {
       setTasks(res.data);
       return res.data;
     },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    retry: 2,
   });
 }
 
@@ -29,6 +32,9 @@ export function useTodayTasks() {
       setTodayTasks(res.data);
       return res.data;
     },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    retry: 2,
   });
 }
 
