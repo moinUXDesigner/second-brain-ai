@@ -97,12 +97,14 @@ export function TasksPage() {
   }, [tasks, sortBy, filterArea, filterUrgency, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
   
   useEffect(() => {
-    if (safePage !== page) setPage(safePage);
-  }, [safePage, page]);
-
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [filtered.length, page, totalPages]);
+  
+  const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const pendingCount = tasks?.filter((t) => t.status === 'Pending').length ?? 0;
 
