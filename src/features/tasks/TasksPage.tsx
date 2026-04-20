@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
@@ -96,10 +96,12 @@ export function TasksPage() {
     return sorted;
   }, [tasks, sortBy, filterArea, filterUrgency, searchQuery]);
 
-  // Reset to page 1 when filters change
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  if (safePage !== page) setPage(safePage);
+  
+  useEffect(() => {
+    if (safePage !== page) setPage(safePage);
+  }, [safePage, page]);
 
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
   const pendingCount = tasks?.filter((t) => t.status === 'Pending').length ?? 0;
