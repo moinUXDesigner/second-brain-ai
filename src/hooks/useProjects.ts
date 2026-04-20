@@ -12,7 +12,9 @@ export function useProjects() {
     },
     staleTime: 30000,
     refetchOnWindowFocus: false,
-    retry: 2,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: 1,
   });
 }
 
@@ -26,7 +28,9 @@ export function useProject(id: string) {
     enabled: !!id,
     staleTime: 30000,
     refetchOnWindowFocus: false,
-    retry: 2,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: 1,
   });
 }
 
@@ -54,7 +58,9 @@ export function useDeletedProjects() {
     },
     staleTime: 30000,
     refetchOnWindowFocus: false,
-    retry: 2,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: 1,
   });
 }
 

@@ -18,7 +18,9 @@ export function useTasks() {
     },
     staleTime: 30000,
     refetchOnWindowFocus: false,
-    retry: 2,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: 1,
   });
 }
 
@@ -34,7 +36,9 @@ export function useTodayTasks() {
     },
     staleTime: 30000,
     refetchOnWindowFocus: false,
-    retry: 2,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: 1,
   });
 }
 
