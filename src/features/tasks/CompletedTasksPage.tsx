@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useTasks, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
@@ -42,19 +42,12 @@ export function CompletedTasksPage() {
     }
 
     // newest completed first
-    list.sort((a, b) => (b.completedAt || b.createdAt || '').localeCompare(a.completedAt || a.createdAt || ''));
-
-    return list;
+    return [...list].sort((a, b) => (b.completedAt || b.createdAt || '').localeCompare(a.completedAt || a.createdAt || ''));
   }, [tasks, searchQuery, filterArea]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-
-  useEffect(() => {
-    if (safePage !== page) setPage(safePage);
-  }, [safePage, page]);
-
-  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const doneCount = tasks?.filter((t) => t.status === 'Done' || t.status === 'Deleted').length ?? 0;
 
   const handleReopen = (id: string) => {
@@ -243,19 +236,19 @@ export function CompletedTasksPage() {
       {totalPages > 1 && (
         <div className="shrink-0 flex items-center justify-between pt-3 pb-1">
           <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            Page {safePage} of {totalPages}
+            Page {currentPage} of {totalPages}
           </span>
           <div className="flex gap-1">
             <button
-              disabled={safePage <= 1}
-              onClick={() => setPage(safePage - 1)}
+              disabled={currentPage <= 1}
+              onClick={() => setPage(currentPage - 1)}
               className="px-3 py-1.5 rounded-sm text-caption font-medium transition-colors disabled:opacity-40"
               style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
             >
               Previous
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
               .reduce<(number | 'dots')[]>((acc, p, idx, arr) => {
                 if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('dots');
                 acc.push(p);
@@ -270,8 +263,8 @@ export function CompletedTasksPage() {
                     onClick={() => setPage(p)}
                     className="h-8 w-8 rounded-sm text-caption font-medium transition-colors"
                     style={{
-                      backgroundColor: p === safePage ? 'var(--primary-600)' : 'var(--color-muted)',
-                      color: p === safePage ? '#fff' : 'var(--color-text)',
+                      backgroundColor: p === currentPage ? 'var(--primary-600)' : 'var(--color-muted)',
+                      color: p === currentPage ? '#fff' : 'var(--color-text)',
                     }}
                   >
                     {p}
@@ -279,8 +272,8 @@ export function CompletedTasksPage() {
                 ),
               )}
             <button
-              disabled={safePage >= totalPages}
-              onClick={() => setPage(safePage + 1)}
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage(currentPage + 1)}
               className="px-3 py-1.5 rounded-sm text-caption font-medium transition-colors disabled:opacity-40"
               style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
             >

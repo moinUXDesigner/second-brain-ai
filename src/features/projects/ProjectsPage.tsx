@@ -51,7 +51,7 @@ export function ProjectsPage() {
       list = list.filter((p) => p.domain === domainFilter);
     }
     
-    return list.sort((a, b) => {
+    return [...list].sort((a, b) => {
       switch (sortBy) {
         case 'progress':
           return b.progress - a.progress;
