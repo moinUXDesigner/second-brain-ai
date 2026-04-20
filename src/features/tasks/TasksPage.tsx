@@ -97,15 +97,8 @@ export function TasksPage() {
   }, [tasks, sortBy, filterArea, filterUrgency, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  
-  useEffect(() => {
-    if (page > totalPages) {
-      setPage(totalPages);
-    }
-  }, [filtered.length, page, totalPages]);
-  
-  const safePage = Math.min(page, totalPages);
-  const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
   const pendingCount = tasks?.filter((t) => t.status === 'Pending').length ?? 0;
 
   return (
@@ -229,12 +222,12 @@ export function TasksPage() {
       {totalPages > 1 && (
         <div className="shrink-0 flex items-center justify-between pt-3 pb-1">
           <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            Page {safePage} of {totalPages}
+            Page {currentPage} of {totalPages}
           </span>
           <div className="flex gap-1">
             <button
-              disabled={safePage <= 1}
-              onClick={() => setPage(safePage - 1)}
+              disabled={currentPage <= 1}
+              onClick={() => setPage(currentPage - 1)}
               className="px-3 py-1.5 rounded-sm text-caption font-medium transition-colors disabled:opacity-40"
               style={{
                 backgroundColor: 'var(--color-muted)',
@@ -244,7 +237,7 @@ export function TasksPage() {
               Previous
             </button>
             {Array.from({ length: totalPages }, (_, i) => i + 1)
-              .filter((p) => p === 1 || p === totalPages || Math.abs(p - safePage) <= 1)
+              .filter((p) => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
               .reduce<(number | 'dots')[]>((acc, p, idx, arr) => {
                 if (idx > 0 && p - (arr[idx - 1] as number) > 1) acc.push('dots');
                 acc.push(p);
@@ -259,8 +252,8 @@ export function TasksPage() {
                     onClick={() => setPage(p)}
                     className="h-8 w-8 rounded-sm text-caption font-medium transition-colors"
                     style={{
-                      backgroundColor: p === safePage ? 'var(--primary-600)' : 'var(--color-muted)',
-                      color: p === safePage ? '#fff' : 'var(--color-text)',
+                      backgroundColor: p === currentPage ? 'var(--primary-600)' : 'var(--color-muted)',
+                      color: p === currentPage ? '#fff' : 'var(--color-text)',
                     }}
                   >
                     {p}
@@ -268,8 +261,8 @@ export function TasksPage() {
                 ),
               )}
             <button
-              disabled={safePage >= totalPages}
-              onClick={() => setPage(safePage + 1)}
+              disabled={currentPage >= totalPages}
+              onClick={() => setPage(currentPage + 1)}
               className="px-3 py-1.5 rounded-sm text-caption font-medium transition-colors disabled:opacity-40"
               style={{
                 backgroundColor: 'var(--color-muted)',
