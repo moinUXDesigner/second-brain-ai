@@ -50,6 +50,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/projects/{project}/restore', [ProjectController::class, 'restore']);
 
     // Daily State
+    Route::get('/daily-state/history', [DailyStateController::class, 'history']);
     Route::get('/daily-state',  [DailyStateController::class, 'show']);
     Route::post('/daily-state', [DailyStateController::class, 'save']);
 

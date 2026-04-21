@@ -8,6 +8,17 @@ use Illuminate\Http\JsonResponse;
 
 class DailyStateController extends Controller
 {
+    public function history(Request $request): JsonResponse
+    {
+        $days   = (int) $request->query('days', 7);
+        $states = DailyState::where('date', '>=', now()->subDays($days - 1)->toDateString())
+            ->orderBy('date')
+            ->get()
+            ->map(fn($s) => $this->format($s));
+
+        return response()->json(['success' => true, 'data' => $states]);
+    }
+
     public function show(Request $request): JsonResponse
     {
         $date  = $request->query('date', today()->toDateString());

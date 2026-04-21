@@ -1,15 +1,31 @@
 import { motion } from 'framer-motion';
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, BarChart, Bar,
+  LineChart, Line, BarChart, Bar, Legend,
 } from 'recharts';
 import { useTaskStore } from '@/app/store/taskStore';
-import type { Task } from '@/types';
+import { dailyStateService } from '@/services/endpoints/dailyStateService';
+import type { Task, DailyState } from '@/types';
 
 export function AnalyticsPage() {
   const { tasks } = useTaskStore();
+  const [wellbeingData, setWellbeingData] = useState<{ day: string; mood: number; energy: number; focus: number }[]>([]);
+
+  useEffect(() => {
+    dailyStateService.history(14).then((res) => {
+      if (res.data) {
+        const mapped = (res.data as DailyState[]).map((s) => ({
+          day: new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          mood: s.mood,
+          energy: s.energy,
+          focus: s.focus,
+        }));
+        setWellbeingData(mapped);
+      }
+    }).catch(() => {});
+  }, []);
 
   const analytics = useMemo(() => {
     const now = new Date();
@@ -113,6 +129,28 @@ export function AnalyticsPage() {
         <StatCard label="Completion Rate" value={`${analytics.stats.completionRate}%`} color="var(--warning-600, #d97706)" />
         <StatCard label="Avg. Time" value={analytics.stats.avgCompletionTime} color="var(--color-text-secondary)" />
       </div>
+
+      {wellbeingData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Mood · Energy · Focus (last 14 days)</CardTitle>
+          </CardHeader>
+          <div className="h-64 px-4 pb-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={wellbeingData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+                <XAxis dataKey="day" fontSize={11} tick={{ fill: 'var(--color-text-secondary)' }} />
+                <YAxis domain={[1, 10]} ticks={[1, 3, 5, 7, 10]} fontSize={11} tick={{ fill: 'var(--color-text-secondary)' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }} />
+                <Legend />
+                <Line type="monotone" dataKey="mood" stroke="#f59e0b" strokeWidth={2} dot={false} name="Mood" />
+                <Line type="monotone" dataKey="energy" stroke="#22c55e" strokeWidth={2} dot={false} name="Energy" />
+                <Line type="monotone" dataKey="focus" stroke="#6172f3" strokeWidth={2} dot={false} name="Focus" />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
