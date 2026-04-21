@@ -7,9 +7,11 @@ import {
 } from 'recharts';
 import { useTaskStore } from '@/app/store/taskStore';
 import { dailyStateService } from '@/services/endpoints/dailyStateService';
+import { useTasks } from '@/hooks/useTasks';
 import type { Task, DailyState } from '@/types';
 
 export function AnalyticsPage() {
+  useTasks();
   const { tasks } = useTaskStore();
   const [wellbeingData, setWellbeingData] = useState<{ day: string; mood: number; energy: number; focus: number }[]>([]);
 
