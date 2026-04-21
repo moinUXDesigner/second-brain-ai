@@ -50,4 +50,9 @@ export const taskService = {
     const { data } = await apiClient.post('/tasks/assign-due-dates');
     return data;
   },
+
+  async scheduleToday(id: string): Promise<ApiResponse<Task>> {
+    const { data } = await apiClient.post(`/tasks/${id}/schedule-today`);
+    return data;
+  },
 };

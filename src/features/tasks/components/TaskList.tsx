@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge';
 import { TaskTimer } from '@/components/task/TaskTimer';
 import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
 import { EditTaskModal } from './EditTaskModal';
+import { useScheduleToday } from '@/hooks/useTasks';
 
 interface TaskListProps {
   tasks: Task[];
@@ -28,6 +29,8 @@ function MobileTaskRow({
   onEdit,
   onConvert,
   onLinkProject,
+  onScheduleToday,
+  isScheduling,
 }: {
   task: Task;
   onSwipeDelete: () => void;
@@ -39,6 +42,8 @@ function MobileTaskRow({
   onEdit: (task: Task) => void;
   onConvert: (task: Task) => void;
   onLinkProject: (task: Task) => void;
+  onScheduleToday: (id: string) => void;
+  isScheduling: boolean;
 }) {
   const rowRef = useRef<HTMLDivElement>(null);
   const touchRef = useRef<{ startX: number; startY: number; locked: boolean | null } | null>(null);
@@ -201,6 +206,16 @@ function MobileTaskRow({
             <TaskTimer task={task} compact />
             <button
               className="btn btn-xs btn-outline p-1"
+              onClick={() => onScheduleToday(task.id)}
+              disabled={isScheduling}
+              title="Schedule for today"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </button>
+            <button
+              className="btn btn-xs btn-outline p-1"
               onClick={() => onEdit(task)}
               title="Edit task"
             >
@@ -249,6 +264,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
   const [linkTask, setLinkTask] = useState<Task | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [swipedId, setSwipedId] = useState<string | null>(null);
+  const scheduleToday = useScheduleToday();
 
   const handleDeleteClick = (id: string) => {
     setSwipedId(null);
@@ -323,6 +339,8 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
             onEdit={setEditTask}
             onConvert={setConvertTask}
             onLinkProject={setLinkTask}
+            onScheduleToday={(id) => scheduleToday.mutate(id)}
+            isScheduling={scheduleToday.isPending && scheduleToday.variables === task.id}
           />
         ))}
       </div>
@@ -454,6 +472,16 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
+                      <button
+                        className="btn btn-xs btn-outline p-1"
+                        onClick={() => scheduleToday.mutate(task.id)}
+                        disabled={scheduleToday.isPending}
+                        title="Schedule for today"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </button>
                       <button
                         className="btn btn-xs btn-outline p-1"
                         onClick={() => setEditTask(task)}

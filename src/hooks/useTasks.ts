@@ -148,3 +148,18 @@ export function useGenerateTodayView() {
     },
   });
 }
+
+export function useScheduleToday() {
+  const queryClient = useQueryClient();
+  const { log } = useAudit();
+
+  return useMutation({
+    mutationFn: (id: string) => taskService.scheduleToday(id),
+    onSuccess: (_, id) => {
+      log('SCHEDULE_TODAY', 'task', id);
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+    },
+  });
+}

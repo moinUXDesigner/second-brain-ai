@@ -106,6 +106,7 @@ export type AuditAction =
   | 'UPDATE_TASK'
   | 'DELETE_TASK'
   | 'COMPLETE_TASK'
+  | 'SCHEDULE_TODAY'
   | 'CREATE_PROJECT'
   | 'UPDATE_PROJECT'
   | 'DELETE_PROJECT'

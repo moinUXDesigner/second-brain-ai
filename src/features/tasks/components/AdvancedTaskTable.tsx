@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge';
 import { TaskTimer } from '@/components/task/TaskTimer';
 import { EditTaskModal } from './EditTaskModal';
 import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
+import { useScheduleToday } from '@/hooks/useTasks';
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortColumn = 'title' | 'type' | 'area' | 'impact' | 'effort' | 'priority' | 'urgency' | 'project' | 'updated';
@@ -36,6 +37,7 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [linkTask, setLinkTask] = useState<Task | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
+  const scheduleToday = useScheduleToday();
 
   // Extract unique values for filters
   const filterOptions = useMemo(() => ({
@@ -405,6 +407,16 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
+                      <button
+                        className="btn btn-xs btn-outline p-1"
+                        onClick={() => scheduleToday.mutate(task.id)}
+                        disabled={scheduleToday.isPending}
+                        title="Schedule for today"
+                      >
+                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </button>
                       <button
                         className="btn btn-xs btn-outline p-1"
                         onClick={() => setEditTask(task)}

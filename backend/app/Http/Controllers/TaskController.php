@@ -202,6 +202,12 @@ class TaskController extends Controller
         return response()->json(['success' => true, 'data' => $this->format($task)]);
     }
 
+    public function scheduleToday(Task $task): JsonResponse
+    {
+        $task->update(['due_date' => now()->toDateString()]);
+        return response()->json(['success' => true, 'data' => $this->format($task)]);
+    }
+
     public function destroy(Task $task): JsonResponse
     {
         $task->update(['status' => 'Deleted', 'completed_at' => now()]);

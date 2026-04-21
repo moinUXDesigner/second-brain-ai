@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProject, useDeleteProject, useUpdateProject } from '@/hooks/useProjects';
-import { useUpdateTaskStatus, useDeleteTask, useCreateTask, useUpdateTask } from '@/hooks/useTasks';
+import { useUpdateTaskStatus, useDeleteTask, useCreateTask, useUpdateTask, useScheduleToday } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -13,13 +13,15 @@ import type { Task } from '@/types';
 
 // ── Task Row ──
 
-function TaskRow({ task, variant, onToggle, onDelete, onEdit, deletingId }: {
+function TaskRow({ task, variant, onToggle, onDelete, onEdit, onScheduleToday, deletingId, schedulingId }: {
   task: Task;
   variant: 'pending' | 'done';
   onToggle: (id: string) => void;
   onDelete?: (id: string) => void;
   onEdit?: (task: Task) => void;
+  onScheduleToday?: (id: string) => void;
   deletingId?: string | null;
+  schedulingId?: string | null;
 }) {
   const isDone = variant === 'done';
   return (
@@ -64,6 +66,26 @@ function TaskRow({ task, variant, onToggle, onDelete, onEdit, deletingId }: {
           <span className="text-[11px] hidden sm:inline" style={{ color: 'var(--color-muted-fg)' }}>
             {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
+        )}
+        {onScheduleToday && !isDone && (
+          <button
+            onClick={() => onScheduleToday(task.id)}
+            disabled={schedulingId === task.id}
+            className="p-1 rounded-md transition-colors opacity-60 hover:opacity-100 disabled:opacity-30"
+            style={{ color: 'var(--primary-600)' }}
+            title="Schedule for today"
+          >
+            {schedulingId === task.id ? (
+              <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            )}
+          </button>
         )}
         {onEdit && !isDone && (
           <button
@@ -113,6 +135,7 @@ export function ProjectDetailPage() {
   const updateTask = useUpdateTask();
   const deleteProject = useDeleteProject();
   const updateProject = useUpdateProject();
+  const scheduleToday = useScheduleToday();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
@@ -369,7 +392,9 @@ export function ProjectDetailPage() {
                       setEditTaskTitle(task.title);
                     }}
                     onDelete={(tid) => deleteTask.mutate(tid)}
+                    onScheduleToday={(tid) => scheduleToday.mutate(tid)}
                     deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
+                    schedulingId={scheduleToday.isPending ? (scheduleToday.variables ?? null) : null}
                   />
                 ))}
               </div>
