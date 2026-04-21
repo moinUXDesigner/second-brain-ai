@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { useTasks, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
+import { formatDate } from '@/utils/dateFormat';
 
 const PAGE_SIZE = 10;
 
@@ -25,7 +26,7 @@ export function CompletedTasksPage() {
   const filtered = useMemo(() => {
     if (!tasks) return [];
 
-    let list = tasks.filter((t) => t.status === 'Done' || t.status === 'Deleted');
+    let list = [...tasks.filter((t) => t.status === 'Done' || t.status === 'Deleted')];
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -42,7 +43,9 @@ export function CompletedTasksPage() {
     }
 
     // newest completed first
-    return [...list].sort((a, b) => (b.completedAt || b.createdAt || '').localeCompare(a.completedAt || a.createdAt || ''));
+    list.sort((a, b) => (b.completedAt || b.createdAt || '').localeCompare(a.completedAt || a.createdAt || ''));
+    
+    return list;
   }, [tasks, searchQuery, filterArea]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -147,7 +150,7 @@ export function CompletedTasksPage() {
                       <Badge className="!text-[10px] !px-1.5 !py-0.5">{task.type || '—'}</Badge>
                       {task.completedAt && (
                         <span style={{ color: 'var(--color-text-secondary)' }}>
-                          {new Date(task.completedAt).toLocaleDateString()}
+                          {formatDate(task.completedAt)}
                         </span>
                       )}
                     </div>
@@ -206,7 +209,7 @@ export function CompletedTasksPage() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-                            {task.completedAt ? new Date(task.completedAt).toLocaleDateString() : '—'}
+                            {task.completedAt ? formatDate(task.completedAt) : '—'}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-right">

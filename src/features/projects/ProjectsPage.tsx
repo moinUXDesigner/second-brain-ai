@@ -44,7 +44,7 @@ export function ProjectsPage() {
 
   const filtered = useMemo(() => {
     if (!projects) return [];
-    let list = projects;
+    let list = [...projects];
     
     if (filter !== 'all') {
       list = list.filter((p) => p.status === filter);
@@ -67,7 +67,7 @@ export function ProjectsPage() {
       });
     }
     
-    return [...list].sort((a, b) => {
+    list.sort((a, b) => {
       switch (sortBy) {
         case 'progress':
           return b.progress - a.progress;
@@ -81,6 +81,8 @@ export function ProjectsPage() {
           return 0;
       }
     });
+    
+    return list;
   }, [projects, filter, domainFilter, sortBy, searchQuery]);
 
   return (

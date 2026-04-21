@@ -61,7 +61,7 @@ export function TasksPage() {
   const filtered = useMemo(() => {
     if (!tasks) return [];
 
-    let list = tasks.filter((t) => t.status === 'Pending');
+    let list = [...tasks.filter((t) => t.status === 'Pending')];
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -103,23 +103,22 @@ export function TasksPage() {
       });
     }
 
-    const sorted = [...list];
-    switch (sortBy) {
-      case 'newest':
-        sorted.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
-        break;
-      case 'oldest':
-        sorted.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
-        break;
-      case 'priority':
-        sorted.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
-        break;
-      case 'impact':
-        sorted.sort((a, b) => (b.impact ?? 0) - (a.impact ?? 0));
-        break;
-    }
+    list.sort((a, b) => {
+      switch (sortBy) {
+        case 'newest':
+          return (b.createdAt || '').localeCompare(a.createdAt || '');
+        case 'oldest':
+          return (a.createdAt || '').localeCompare(b.createdAt || '');
+        case 'priority':
+          return (b.priority ?? 0) - (a.priority ?? 0);
+        case 'impact':
+          return (b.impact ?? 0) - (a.impact ?? 0);
+        default:
+          return 0;
+      }
+    });
 
-    return sorted;
+    return list;
   }, [tasks, sortBy, filterArea, filterUrgency, searchQuery, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
