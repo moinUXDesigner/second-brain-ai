@@ -18,6 +18,10 @@ export function TaskTimer({ task, compact = false }: TaskTimerProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+      if (task.projectId) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.project(task.projectId) });
+      }
     },
   });
 
@@ -26,6 +30,10 @@ export function TaskTimer({ task, compact = false }: TaskTimerProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+      if (task.projectId) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.project(task.projectId) });
+      }
     },
   });
 
@@ -34,6 +42,10 @@ export function TaskTimer({ task, compact = false }: TaskTimerProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+      if (task.projectId) {
+        queryClient.invalidateQueries({ queryKey: QUERY_KEYS.project(task.projectId) });
+      }
     },
   });
 
