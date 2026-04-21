@@ -39,10 +39,10 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
 
   // Extract unique values for filters
   const filterOptions = useMemo(() => ({
-    type: Array.from(new Set(tasks.map(t => t.type).filter(Boolean))).sort(),
-    area: Array.from(new Set(tasks.map(t => t.area).filter(Boolean))).sort(),
+    type: Array.from(new Set(tasks.map(t => t.type).filter((v): v is string => Boolean(v)))).sort(),
+    area: Array.from(new Set(tasks.map(t => t.area).filter((v): v is string => Boolean(v)))).sort(),
     urgency: ['High', 'Medium', 'Low'],
-    project: Array.from(new Set(tasks.map(t => t.projectName).filter(Boolean))).sort(),
+    project: Array.from(new Set(tasks.map(t => t.projectName).filter((v): v is string => Boolean(v)))).sort(),
   }), [tasks]);
 
   const handleSort = (column: SortColumn) => {

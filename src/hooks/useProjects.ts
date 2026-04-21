@@ -84,7 +84,7 @@ export function useUpdateProject() {
   const { log } = useAudit();
 
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: { title?: string; description?: string; status?: string } }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: { title?: string; description?: string; status?: 'Active' | 'Completed' | 'Archived' | 'Deleted' } }) =>
       projectService.updateProject(id, updates),
     onSuccess: (res, { id }) => {
       log('UPDATE_PROJECT', 'project', id, { title: res.data.title });
