@@ -36,6 +36,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tasks/{task}/timer/start', [TaskController::class, 'startTimer']);
     Route::post('/tasks/{task}/timer/pause', [TaskController::class, 'pauseTimer']);
     Route::post('/tasks/{task}/timer/stop',  [TaskController::class, 'stopTimer']);
+    Route::post('/tasks/{task}/timer/reset', [TaskController::class, 'resetTimer']);
     Route::delete('/tasks/{task}',          [TaskController::class, 'destroy']);
     Route::post('/tasks/cleanup',           [TaskController::class, 'cleanup']);
     Route::post('/tasks/assign-due-dates',  [TaskController::class, 'assignDueDates']);

@@ -191,6 +191,17 @@ class TaskController extends Controller
         return response()->json(['success' => true, 'data' => $this->format($task)]);
     }
 
+    public function resetTimer(Task $task): JsonResponse
+    {
+        $task->update([
+            'timer_running' => false,
+            'time_spent' => 0,
+            'timer_started_at' => null,
+        ]);
+
+        return response()->json(['success' => true, 'data' => $this->format($task)]);
+    }
+
     public function destroy(Task $task): JsonResponse
     {
         $task->update(['status' => 'Deleted', 'completed_at' => now()]);

@@ -16,4 +16,9 @@ export const taskTimerService = {
     const { data } = await apiClient.post(`/tasks/${taskId}/timer/stop`);
     return data;
   },
+
+  async resetTimer(taskId: string): Promise<ApiResponse<Task>> {
+    const { data } = await apiClient.post(`/tasks/${taskId}/timer/reset`);
+    return data;
+  },
 };
