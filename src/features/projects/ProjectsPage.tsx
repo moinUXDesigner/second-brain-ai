@@ -13,6 +13,7 @@ export function ProjectsPage() {
   const [filter, setFilter] = useState<'all' | 'Active' | 'Completed' | 'Archived'>('all');
   const [domainFilter, setDomainFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<'progress' | 'created' | 'updated' | 'title'>('progress');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleDelete = (id: string) => {
     setConfirmId(id);
@@ -44,11 +45,26 @@ export function ProjectsPage() {
   const filtered = useMemo(() => {
     if (!projects) return [];
     let list = projects;
+    
     if (filter !== 'all') {
       list = list.filter((p) => p.status === filter);
     }
+    
     if (domainFilter) {
       list = list.filter((p) => p.domain === domainFilter);
+    }
+    
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = list.filter((p) => {
+        const titleMatch = p.title.toLowerCase().includes(q);
+        const descMatch = p.description?.toLowerCase().includes(q);
+        const taskMatch = p.subtasks?.some((t) => 
+          t.title.toLowerCase().includes(q) || 
+          t.notes?.toLowerCase().includes(q)
+        );
+        return titleMatch || descMatch || taskMatch;
+      });
     }
     
     return [...list].sort((a, b) => {
@@ -65,7 +81,7 @@ export function ProjectsPage() {
           return 0;
       }
     });
-  }, [projects, filter, domainFilter, sortBy]);
+  }, [projects, filter, domainFilter, sortBy, searchQuery]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-5">
@@ -96,6 +112,38 @@ export function ProjectsPage() {
           <StatPill label="Completed" value={stats.completed} color="var(--success-600, #16a34a)" />
           <StatPill label="Tasks Done" value={stats.doneTasks} color="var(--warning-600, #d97706)" />
           <StatPill label="Total Tasks" value={stats.totalTasks} color="var(--color-text-secondary)" />
+        </div>
+      )}
+
+      {/* Search bar */}
+      {!isLoading && stats.total > 0 && (
+        <div className="relative">
+          <svg
+            className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+            style={{ color: 'var(--color-muted-fg)' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search projects and tasks..."
+            className="input-base pl-9 text-sm h-10 w-full"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium"
+              style={{ color: 'var(--primary-600)' }}
+            >
+              ✕ Clear
+            </button>
+          )}
         </div>
       )}
 
@@ -207,7 +255,7 @@ export function ProjectsPage() {
       ) : filtered.length === 0 ? (
         <div className="card p-10 text-center">
           <p className="text-body" style={{ color: 'var(--color-text-secondary)' }}>
-            No {filter.toLowerCase()} projects
+            {searchQuery ? `No projects found matching "${searchQuery}"` : `No ${filter.toLowerCase()} projects`}
           </p>
         </div>
       ) : (
