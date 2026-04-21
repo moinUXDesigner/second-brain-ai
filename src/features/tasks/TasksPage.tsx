@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
+import { AdvancedTaskTable } from './components/AdvancedTaskTable';
 import { useTasks, useDeleteTask, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { taskService } from '@/services/endpoints/taskService';
@@ -215,7 +216,32 @@ export function TasksPage() {
 
       {/* Task list — scrollable area */}
       <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar">
-        {isLoading ? <TableSkeleton /> : <TaskList tasks={paginated} onDelete={(id) => deleteTask.mutate(id)} deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null} onComplete={(id) => completeTask.mutate({ id, status: 'Done' })} completingId={completeTask.isPending ? (completeTask.variables?.id ?? null) : null} />}
+        {isLoading ? (
+          <TableSkeleton />
+        ) : (
+          <>
+            {/* Mobile view */}
+            <div className="md:hidden">
+              <TaskList
+                tasks={paginated}
+                onDelete={(id) => deleteTask.mutate(id)}
+                deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
+                onComplete={(id) => completeTask.mutate({ id, status: 'Done' })}
+                completingId={completeTask.isPending ? (completeTask.variables?.id ?? null) : null}
+              />
+            </div>
+            {/* Desktop view with advanced table */}
+            <div className="hidden md:block">
+              <AdvancedTaskTable
+                tasks={filtered}
+                onDelete={(id) => deleteTask.mutate(id)}
+                deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
+                onComplete={(id) => completeTask.mutate({ id, status: 'Done' })}
+                completingId={completeTask.isPending ? (completeTask.variables?.id ?? null) : null}
+              />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Pagination — fixed at bottom */}
