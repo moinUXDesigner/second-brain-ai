@@ -78,3 +78,19 @@ export function useDeleteProject() {
     },
   });
 }
+
+export function useUpdateProject() {
+  const queryClient = useQueryClient();
+  const { log } = useAudit();
+
+  return useMutation({
+    mutationFn: ({ id, updates }: { id: string; updates: { title?: string; description?: string; status?: string } }) =>
+      projectService.updateProject(id, updates),
+    onSuccess: (res, { id }) => {
+      log('UPDATE_PROJECT', 'project', id, { title: res.data.title });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.project(id) });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+    },
+  });
+}

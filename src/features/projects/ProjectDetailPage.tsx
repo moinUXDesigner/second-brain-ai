@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useProject, useDeleteProject } from '@/hooks/useProjects';
-import { useUpdateTaskStatus, useDeleteTask, useCreateTask } from '@/hooks/useTasks';
+import { useProject, useDeleteProject, useUpdateProject } from '@/hooks/useProjects';
+import { useUpdateTaskStatus, useDeleteTask, useCreateTask, useUpdateTask } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -13,11 +13,12 @@ import type { Task } from '@/types';
 
 // ── Task Row ──
 
-function TaskRow({ task, variant, onToggle, onDelete, deletingId }: {
+function TaskRow({ task, variant, onToggle, onDelete, onEdit, deletingId }: {
   task: Task;
   variant: 'pending' | 'done';
   onToggle: (id: string) => void;
   onDelete?: (id: string) => void;
+  onEdit?: (task: Task) => void;
   deletingId?: string | null;
 }) {
   const isDone = variant === 'done';
@@ -64,6 +65,18 @@ function TaskRow({ task, variant, onToggle, onDelete, deletingId }: {
             {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
           </span>
         )}
+        {onEdit && !isDone && (
+          <button
+            onClick={() => onEdit(task)}
+            className="p-1 rounded-md transition-colors opacity-60 hover:opacity-100"
+            style={{ color: 'var(--primary-600)' }}
+            title="Edit task"
+          >
+            <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+        )}
         {onDelete && !isDone && (
           <button
             onClick={() => onDelete(task.id)}
@@ -97,14 +110,21 @@ export function ProjectDetailPage() {
   const updateStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteTask();
   const createTask = useCreateTask();
+  const updateTask = useUpdateTask();
   const deleteProject = useDeleteProject();
+  const updateProject = useUpdateProject();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showCompleted, setShowCompleted] = useState(false);
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddNote, setShowAddNote] = useState(false);
+  const [showEditProject, setShowEditProject] = useState(false);
+  const [showEditTask, setShowEditTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
+  const [editProjectTitle, setEditProjectTitle] = useState('');
+  const [editProjectDescription, setEditProjectDescription] = useState('');
+  const [editTaskTitle, setEditTaskTitle] = useState('');
 
   const { pending, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
     if (!project?.subtasks) return { pending: [], completed: [], overdue: [], highPriority: [], suggestedNext: null };
@@ -161,6 +181,28 @@ export function ProjectDetailPage() {
     setShowAddNote(false);
   };
 
+  const handleEditProject = async () => {
+    if (!editProjectTitle.trim()) return;
+    await updateProject.mutateAsync({
+      id: id!,
+      updates: {
+        title: editProjectTitle.trim(),
+        description: editProjectDescription.trim() || undefined,
+      },
+    });
+    setShowEditProject(false);
+  };
+
+  const handleEditTask = async () => {
+    if (!showEditTask || !editTaskTitle.trim()) return;
+    await updateTask.mutateAsync({
+      id: showEditTask.id,
+      updates: { title: editTaskTitle.trim() },
+    });
+    setShowEditTask(null);
+    setEditTaskTitle('');
+  };
+
   if (isLoading) {
     return <div className="space-y-6 p-4"><TableSkeleton /></div>;
   }
@@ -197,13 +239,29 @@ export function ProjectDetailPage() {
       {/* Header card */}
       <div className="card p-5 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl sm:text-2xl font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
-              {project.title}
-            </h1>
-            {project.description && (
-              <p className="text-caption mt-1" style={{ color: 'var(--color-text-secondary)' }}>{project.description}</p>
-            )}
+          <div className="flex-1 min-w-0 flex items-start gap-2">
+            <div className="flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold leading-tight" style={{ color: 'var(--color-text)' }}>
+                {project.title}
+              </h1>
+              {project.description && (
+                <p className="text-caption mt-1" style={{ color: 'var(--color-text-secondary)' }}>{project.description}</p>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setEditProjectTitle(project.title);
+                setEditProjectDescription(project.description || '');
+                setShowEditProject(true);
+              }}
+              className="p-1.5 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+              style={{ color: 'var(--primary-600)' }}
+              title="Edit project"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
           </div>
           <div className="flex items-center gap-2 shrink-0">
             {project.domain && (
@@ -306,6 +364,10 @@ export function ProjectDetailPage() {
                     task={t}
                     variant="pending"
                     onToggle={(tid) => updateStatus.mutate({ id: tid, status: 'Done' })}
+                    onEdit={(task) => {
+                      setShowEditTask(task);
+                      setEditTaskTitle(task.title);
+                    }}
                     onDelete={(tid) => deleteTask.mutate(tid)}
                     deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
                   />
@@ -511,6 +573,71 @@ export function ProjectDetailPage() {
               </Button>
               <Button onClick={handleAddNote} isLoading={createTask.isPending} disabled={!newNoteTitle.trim()}>
                 Add Note
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Edit Project modal */}
+      {showEditProject && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="card p-6 max-w-md w-full space-y-4">
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Edit Project</h3>
+            <Input
+              id="projectTitle"
+              label="Project Title"
+              value={editProjectTitle}
+              onChange={(e) => setEditProjectTitle(e.target.value)}
+              placeholder="Enter project title..."
+              required
+            />
+            <div>
+              <label htmlFor="projectDescription" className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
+                Description (optional)
+              </label>
+              <textarea
+                id="projectDescription"
+                value={editProjectDescription}
+                onChange={(e) => setEditProjectDescription(e.target.value)}
+                placeholder="Add project description..."
+                rows={3}
+                className="input-base w-full resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => setShowEditProject(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleEditProject} isLoading={updateProject.isPending} disabled={!editProjectTitle.trim()}>
+                Save Changes
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Edit Task modal */}
+      {showEditTask && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="card p-6 max-w-md w-full space-y-4">
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Edit Task</h3>
+            <Input
+              id="editTaskTitle"
+              label="Task Title"
+              value={editTaskTitle}
+              onChange={(e) => setEditTaskTitle(e.target.value)}
+              placeholder="Enter task title..."
+              required
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => { setShowEditTask(null); setEditTaskTitle(''); }}>
+                Cancel
+              </Button>
+              <Button onClick={handleEditTask} isLoading={updateTask.isPending} disabled={!editTaskTitle.trim()}>
+                Save Changes
               </Button>
             </div>
           </div>
