@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TaskTimer } from '@/components/task/TaskTimer';
 import { TableSkeleton } from '@/components/ui/Skeleton';
+import { formatDate, formatDateRelative } from '@/utils/dateFormat';
 import type { Task } from '@/types';
 
 // ── Task Row ──
@@ -64,7 +65,7 @@ function TaskRow({ task, variant, onToggle, onDelete, onEdit, onScheduleToday, d
         )}
         {task.dueDate && (
           <span className="text-[11px] hidden sm:inline" style={{ color: 'var(--color-muted-fg)' }}>
-            {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            {formatDateRelative(task.dueDate)}
           </span>
         )}
         {onScheduleToday && !isDone && (
@@ -347,7 +348,7 @@ export function ProjectDetailPage() {
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              {formatDate(project.createdAt)}
             </span>
           )}
           {project.dueDate && (
@@ -358,7 +359,7 @@ export function ProjectDetailPage() {
               <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
-              Due {new Date(project.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              Due {formatDateRelative(project.dueDate)}
             </span>
           )}
         </div>
@@ -482,7 +483,7 @@ export function ProjectDetailPage() {
             <div className="card p-4 space-y-2.5">
               <h3 className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>Timeline</h3>
               <div className="space-y-2">
-                <TimelineItem color="var(--primary-600)" text={`Started ${new Date(project.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`} />
+                <TimelineItem color="var(--primary-600)" text={`Started ${formatDate(project.createdAt)}`} />
                 {completed.length > 0 && <TimelineItem color="var(--success-500, #22c55e)" text={`${completed.length} task${completed.length !== 1 ? 's' : ''} completed`} />}
                 {overdue.length > 0 && <TimelineItem color="var(--warning-500, #f59e0b)" text={`${overdue.length} task${overdue.length !== 1 ? 's' : ''} overdue`} />}
                 {pending.length > 0 && <TimelineItem color="var(--color-border)" text={`${pending.length} task${pending.length !== 1 ? 's' : ''} remaining`} />}

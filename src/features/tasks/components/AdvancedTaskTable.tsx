@@ -5,6 +5,7 @@ import { TaskTimer } from '@/components/task/TaskTimer';
 import { EditTaskModal } from './EditTaskModal';
 import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
 import { useScheduleToday } from '@/hooks/useTasks';
+import { formatDate } from '@/utils/dateFormat';
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortColumn = 'title' | 'type' | 'area' | 'impact' | 'effort' | 'priority' | 'urgency' | 'project' | 'updated';
@@ -402,7 +403,7 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
                     <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-                      {task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : '—'}
+                      {task.updatedAt ? formatDate(task.updatedAt) : '—'}
                     </span>
                   </td>
                   <td className="px-4 py-3">

@@ -7,6 +7,7 @@ import { TaskTimer } from '@/components/task/TaskTimer';
 import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
 import { EditTaskModal } from './EditTaskModal';
 import { useScheduleToday } from '@/hooks/useTasks';
+import { formatDateRelative, formatDate } from '@/utils/dateFormat';
 
 interface TaskListProps {
   tasks: Task[];
@@ -190,12 +191,12 @@ function MobileTaskRow({
               </span>
             )}
             {task.dueDate && (() => {
-              const diff = Math.ceil((new Date(task.dueDate).getTime() - Date.now()) / 86400000);
-              const label = diff < 0 ? 'Overdue' : diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : new Date(task.dueDate).toLocaleDateString();
+              const label = formatDateRelative(task.dueDate);
+              const isOverdue = label === 'Overdue';
               return (
                 <>
                   {(task.area || task.projectName) && <span className="text-xs" style={{ color: 'var(--color-border)' }}>·</span>}
-                  <span className="text-xs font-medium" style={{ color: diff <= 0 ? '#dc2626' : 'var(--color-text-secondary)' }}>
+                  <span className="text-xs font-medium" style={{ color: isOverdue ? '#dc2626' : 'var(--color-text-secondary)' }}>
                     {label}
                   </span>
                 </>
@@ -453,9 +454,8 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
                     {task.dueDate ? (() => {
-                      const diff = Math.ceil((new Date(task.dueDate).getTime() - Date.now()) / 86400000);
-                      const label = diff < 0 ? 'Overdue' : diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : new Date(task.dueDate).toLocaleDateString();
-                      const isUrgent = diff <= 0;
+                      const label = formatDateRelative(task.dueDate);
+                      const isUrgent = label === 'Overdue';
                       return (
                         <span className="text-caption font-medium" style={{ color: isUrgent ? '#dc2626' : 'var(--color-text-secondary)' }}>
                           {label}
@@ -467,7 +467,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
                     <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-                      {task.updatedAt ? new Date(task.updatedAt).toLocaleDateString() : '—'}
+                      {task.updatedAt ? formatDate(task.updatedAt) : '—'}
                     </span>
                   </td>
                   <td className="px-4 py-3">

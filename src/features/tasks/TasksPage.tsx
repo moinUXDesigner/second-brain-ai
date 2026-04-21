@@ -8,6 +8,7 @@ import { TableSkeleton } from '@/components/ui/Skeleton';
 import { taskService } from '@/services/endpoints/taskService';
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/constants';
+import { toInputDate } from '@/utils/dateFormat';
 import toast from 'react-hot-toast';
 
 type SortField = 'newest' | 'oldest' | 'priority' | 'impact';
@@ -24,6 +25,8 @@ export function TasksPage() {
   const [filterArea, setFilterArea] = useState('');
   const [filterUrgency, setFilterUrgency] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
   const [assigningDates, setAssigningDates] = useState(false);
   const queryClient = useQueryClient();
@@ -78,6 +81,28 @@ export function TasksPage() {
       list = list.filter((t) => t.urgency === filterUrgency);
     }
 
+    // Date range filter
+    if (dateFrom) {
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      list = list.filter((t) => {
+        if (!t.dueDate) return false;
+        const taskDate = new Date(t.dueDate);
+        taskDate.setHours(0, 0, 0, 0);
+        return taskDate >= fromDate;
+      });
+    }
+
+    if (dateTo) {
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      list = list.filter((t) => {
+        if (!t.dueDate) return false;
+        const taskDate = new Date(t.dueDate);
+        return taskDate <= toDate;
+      });
+    }
+
     const sorted = [...list];
     switch (sortBy) {
       case 'newest':
@@ -95,7 +120,7 @@ export function TasksPage() {
     }
 
     return sorted;
-  }, [tasks, sortBy, filterArea, filterUrgency, searchQuery]);
+  }, [tasks, sortBy, filterArea, filterUrgency, searchQuery, dateFrom, dateTo]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
@@ -202,9 +227,32 @@ export function TasksPage() {
             ))}
           </select>
 
-          {(filterArea || filterUrgency || searchQuery) && (
+          <div className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full border" style={{ borderColor: (dateFrom || dateTo) ? 'var(--primary-500)' : 'var(--color-border)', backgroundColor: (dateFrom || dateTo) ? 'var(--primary-50)' : 'var(--color-surface)' }}>
+            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: (dateFrom || dateTo) ? 'var(--primary-700)' : 'var(--color-text-secondary)' }}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => { setDateFrom(e.target.value); setPage(1); }}
+              placeholder="From"
+              className="text-xs bg-transparent border-none outline-none w-[90px]"
+              style={{ color: (dateFrom || dateTo) ? 'var(--primary-700)' : 'var(--color-text)' }}
+            />
+            <span className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>to</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => { setDateTo(e.target.value); setPage(1); }}
+              placeholder="To"
+              className="text-xs bg-transparent border-none outline-none w-[90px]"
+              style={{ color: (dateFrom || dateTo) ? 'var(--primary-700)' : 'var(--color-text)' }}
+            />
+          </div>
+
+          {(filterArea || filterUrgency || searchQuery || dateFrom || dateTo) && (
             <button
-              onClick={() => { setFilterArea(''); setFilterUrgency(''); setSearchQuery(''); setPage(1); }}
+              onClick={() => { setFilterArea(''); setFilterUrgency(''); setSearchQuery(''); setDateFrom(''); setDateTo(''); setPage(1); }}
               className="shrink-0 text-xs font-medium px-2 py-1 rounded-full"
               style={{ color: 'var(--primary-600)' }}
             >
