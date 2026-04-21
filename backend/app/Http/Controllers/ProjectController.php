@@ -56,9 +56,18 @@ class ProjectController extends Controller
             'subtasks'    => 'nullable|array',
         ]);
 
+        // Generate concise project title using AI or rule-based fallback
+        $userInput = $data['title'];
+        $projectTitle = $this->ai->generateProjectTitle($userInput, $data['area'] ?? '');
+        
+        // Fallback to rule-based if AI fails
+        if (!$projectTitle) {
+            $projectTitle = $this->classifier->generateProjectTitle($userInput);
+        }
+
         $project = Project::create([
-            'title'       => $data['title'],
-            'description' => $data['description'] ?? '',
+            'title'       => $projectTitle,
+            'description' => $userInput, // Store original input as description
             'status'      => 'Active',
             'priority'    => $data['priority'] ?? 0,
             'domain'      => $data['area'] ?? '',
@@ -67,9 +76,9 @@ class ProjectController extends Controller
         $subtaskTitles = $data['subtasks'] ?? [];
 
         if (empty($subtaskTitles)) {
-            $subtaskTitles = $this->ai->generateSubtasks($data['title'], $data['area'] ?? '', $data['description'] ?? '');
+            $subtaskTitles = $this->ai->generateSubtasks($userInput, $data['area'] ?? '', $data['description'] ?? '');
             if (empty($subtaskTitles)) {
-                $subtaskTitles = $this->classifier->generateSubtasks($data['title']);
+                $subtaskTitles = $this->classifier->generateSubtasks($userInput);
             }
         }
 

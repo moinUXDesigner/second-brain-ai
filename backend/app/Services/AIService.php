@@ -134,4 +134,36 @@ class AIService
             return [];
         }
     }
+
+    /**
+     * Generate a concise, meaningful project title from user input.
+     * Returns a short title (2-5 words) that captures the essence of the project.
+     */
+    public function generateProjectTitle(string $userInput, string $area = ''): ?string
+    {
+        if (!$this->apiKey) return null;
+
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->timeout(15)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model'       => $this->model,
+                    'temperature' => 0.3,
+                    'messages'    => [
+                        [
+                            'role'    => 'system',
+                            'content' => 'You are a productivity assistant. Generate a concise, meaningful project title (2-5 words) from the user input. The title should be clear, professional, and capture the essence of the project. Return ONLY the title text, no quotes, no explanation.',
+                        ],
+                        ['role' => 'user', 'content' => "User input: {$userInput}" . ($area ? "\nArea: {$area}" : '')],
+                    ],
+                ]);
+
+            $title = trim($response->json('choices.0.message.content', ''));
+            $title = trim($title, '"\'\'');
+            return $title ?: null;
+        } catch (\Throwable $e) {
+            Log::warning('AIService::generateProjectTitle failed: ' . $e->getMessage());
+            return null;
+        }
+    }
 }

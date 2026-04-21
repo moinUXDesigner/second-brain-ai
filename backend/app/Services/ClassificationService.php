@@ -204,6 +204,76 @@ class ClassificationService
         return ['Break down the task', 'Execute step 1', 'Execute step 2', 'Complete and review'];
     }
 
+    /**
+     * Generate a concise project title from user input using rule-based approach.
+     * Extracts key nouns and verbs, limits to 2-5 words.
+     */
+    public function generateProjectTitle(string $userInput): string
+    {
+        $text = trim($userInput);
+        
+        // If already short and concise, return as is
+        $wordCount = str_word_count($text);
+        if ($wordCount <= 5) {
+            return ucwords(strtolower($text));
+        }
+        
+        // Extract key action verbs and nouns
+        $lower = strtolower($text);
+        
+        // Common action verbs for projects
+        $actionVerbs = ['build', 'create', 'develop', 'design', 'launch', 'implement', 'setup', 'deploy', 'migrate', 'integrate', 'configure', 'install', 'complete', 'finalize'];
+        
+        // Find the first action verb
+        $verb = null;
+        foreach ($actionVerbs as $v) {
+            if (str_contains($lower, $v)) {
+                $verb = ucfirst($v);
+                break;
+            }
+        }
+        
+        // Extract important nouns (technical terms, products)
+        $importantWords = [];
+        $words = explode(' ', $text);
+        
+        foreach ($words as $word) {
+            $w = trim($word, '.,!?;:');
+            $wLower = strtolower($w);
+            
+            // Skip common words
+            if (in_array($wLower, ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'from', 'by', 'as', 'is', 'was', 'are', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'can', 'need', 'want'])) {
+                continue;
+            }
+            
+            // Keep capitalized words (likely important)
+            if (ctype_upper($w[0]) && strlen($w) > 2) {
+                $importantWords[] = $w;
+            }
+            // Keep technical/domain words
+            elseif (preg_match('/app|website|system|platform|api|database|server|mvp|product|service|tool|dashboard|portal|interface|module|component/', $wLower)) {
+                $importantWords[] = ucfirst($wLower);
+            }
+        }
+        
+        // Build title
+        if ($verb && !empty($importantWords)) {
+            $title = $verb . ' ' . implode(' ', array_slice($importantWords, 0, 3));
+        } elseif (!empty($importantWords)) {
+            $title = implode(' ', array_slice($importantWords, 0, 4));
+        } else {
+            // Fallback: take first 4 meaningful words
+            $meaningfulWords = array_filter($words, function($w) {
+                $wLower = strtolower(trim($w, '.,!?;:'));
+                return strlen($wLower) > 2 && !in_array($wLower, ['the', 'and', 'for', 'with', 'from']);
+            });
+            $title = implode(' ', array_slice($meaningfulWords, 0, 4));
+        }
+        
+        // Ensure proper capitalization
+        return ucwords(strtolower($title));
+    }
+
     public function parseTimeEstimate(string $str, int $effort = 5): int
     {
         if (!$str) {
