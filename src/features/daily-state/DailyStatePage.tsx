@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { dailyStateService } from '@/services/endpoints/dailyStateService';
 import { today } from '@/utils/date';
+import { getEnergyEmoji, getFocusEmoji, getMoodEmoji } from '@/utils/wellbeing';
 import toast from 'react-hot-toast';
 
 const TIME_PRESETS = [
@@ -34,7 +35,8 @@ export function DailyStatePage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    dailyStateService.get(today())
+    dailyStateService
+      .get(today())
       .then((res) => {
         if (res.data) {
           setEnergy(res.data.energy || 5);
@@ -72,9 +74,9 @@ export function DailyStatePage() {
   };
 
   const sliders = [
-    { label: 'Energy', value: energy, set: setEnergy, emoji: '⚡' },
-    { label: 'Mood', value: mood, set: setMood, emoji: '😊' },
-    { label: 'Focus', value: focus, set: setFocus, emoji: '🎯' },
+    { label: 'Energy', value: energy, set: setEnergy, emoji: getEnergyEmoji(energy) },
+    { label: 'Mood', value: mood, set: setMood, emoji: getMoodEmoji(mood) },
+    { label: 'Focus', value: focus, set: setFocus, emoji: getFocusEmoji(focus) },
   ];
 
   if (!loaded) {
@@ -88,13 +90,14 @@ export function DailyStatePage() {
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 w-full max-w-2xl">
       <div>
-        <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Daily State</h1>
+        <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>
+          Daily State
+        </h1>
         <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
           How are you feeling today?
         </p>
       </div>
 
-      {/* Energy, Mood, Focus sliders */}
       <Card className="space-y-6">
         {sliders.map((s) => (
           <div key={s.label} className="space-y-2">
@@ -103,10 +106,10 @@ export function DailyStatePage() {
                 {s.emoji} {s.label}
               </label>
               <span
-                className="flex h-8 w-8 items-center justify-center rounded-full text-body font-bold"
+                className="flex h-8 min-w-[56px] items-center justify-center rounded-full px-2 text-body font-bold"
                 style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-600)' }}
               >
-                {s.value}
+                {s.value}/10
               </span>
             </div>
             <input
@@ -126,25 +129,23 @@ export function DailyStatePage() {
         ))}
       </Card>
 
-      {/* Available Time */}
       <Card className="space-y-4">
         <div>
           <h2 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>
-            🕐 Available Time Today
+            Time Available Today
           </h2>
           <p className="text-caption mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
             How much time can you dedicate to tasks? The AI will pick tasks that fit your schedule.
           </p>
         </div>
 
-        {/* Big display */}
         <div className="flex items-center justify-center gap-3 py-2">
           <button
             onClick={() => adjustTime(-15)}
             className="flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold transition-colors"
             style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
           >
-            −
+            -
           </button>
           <span
             className="min-w-[120px] text-center text-2xl font-bold tabular-nums"
@@ -161,7 +162,6 @@ export function DailyStatePage() {
           </button>
         </div>
 
-        {/* Preset chips */}
         <div className="flex flex-wrap gap-2 justify-center">
           {TIME_PRESETS.map((p) => (
             <button
@@ -179,7 +179,6 @@ export function DailyStatePage() {
         </div>
       </Card>
 
-      {/* Notes */}
       <Card className="space-y-3">
         <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
           Notes (optional)

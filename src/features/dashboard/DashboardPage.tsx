@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion';
 import { SummaryCards } from './components/SummaryCards';
 import { Charts } from './components/Charts';
+import { WellbeingSnapshot } from './components/WellbeingSnapshot';
 
 export function DashboardPage() {
   return (
@@ -11,6 +12,7 @@ export function DashboardPage() {
       </div>
 
       <SummaryCards />
+      <WellbeingSnapshot />
       <Charts />
     </motion.div>
   );
