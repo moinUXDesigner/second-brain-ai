@@ -266,6 +266,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [swipedId, setSwipedId] = useState<string | null>(null);
   const scheduleToday = useScheduleToday();
+  const navigate = useNavigate();
 
   const handleDeleteClick = (id: string) => {
     setSwipedId(null);
@@ -295,7 +296,6 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
       onClose={() => setEditTask(null)}
     />
   ) : null;
-  const navigate = useNavigate();
   const ConvertTaskModal = convertTask ? (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
       <div className="bg-white dark:bg-neutral-900 p-6 rounded-lg shadow-lg w-full max-w-md">
