@@ -7,6 +7,7 @@ import { TaskTimer } from '@/components/task/TaskTimer';
 import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
 import { cn } from '@/utils/cn';
+import { parseLocalDate } from '@/utils/dateFormat';
 
 function getPriorityVariant(priority?: number) {
   if (!priority) return PRIORITY_COLORS.normal;
@@ -17,6 +18,26 @@ function getPriorityVariant(priority?: number) {
 
 function getCategoryStyle(category?: string) {
   return TASK_CATEGORIES.find((c) => c.value === category)?.color ?? 'bg-neutral-100 text-neutral-600';
+}
+
+function getLocalDueDate(task: Task) {
+  return task.dueDate ? parseLocalDate(task.dueDate) : null;
+}
+
+function isTaskOverdue(task: Task, status: TaskStatus) {
+  const dueDate = getLocalDueDate(task);
+  if (!dueDate || status === 'Done') return false;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  return dueDate < today;
+}
+
+function formatTaskDueDate(task: Task) {
+  const dueDate = getLocalDueDate(task);
+  if (!dueDate) return '—';
+
+  return dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 interface TodayTableProps {
@@ -79,7 +100,6 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
 
   return (
     <>
-      {/* Mobile card layout */}
       <div className="space-y-3 md:hidden">
         {tasks.map((task) => {
           const status = getStatus(task);
@@ -119,8 +139,8 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                     )}
                     {(task.area || task.projectName) && task.dueDate && <span className="text-caption text-neutral-300">·</span>}
                     {task.dueDate && (
-                      <p className={cn('text-caption', new Date(task.dueDate) < new Date() && status !== 'Done' ? 'text-danger-500' : 'text-neutral-400')}>
-                        Due {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      <p className={cn('text-caption', isTaskOverdue(task, status) ? 'text-danger-500' : 'text-neutral-400')}>
+                        Due {formatTaskDueDate(task)}
                       </p>
                     )}
                   </div>
@@ -129,19 +149,15 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 flex-wrap text-caption">
-                <TaskTimer task={task} compact />
-                {task.category && (
-                  <Badge className={getCategoryStyle(task.category)}>{task.category}</Badge>
-                )}
-                {task.priority != null && (
-                  <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 font-medium', priorityStyle.bg, priorityStyle.text)}>
-                    P: {task.priority}
-                  </span>
-                )}
-                {task.fitScore != null && (
-                  <span className="text-neutral-500">Fit: {task.fitScore}%</span>
-                )}
-                <span className="text-neutral-400">{task.timeEstimate ?? '—'}</span>
+                  <TaskTimer task={task} compact />
+                  {task.category && <Badge className={getCategoryStyle(task.category)}>{task.category}</Badge>}
+                  {task.priority != null && (
+                    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 font-medium', priorityStyle.bg, priorityStyle.text)}>
+                      P: {task.priority}
+                    </span>
+                  )}
+                  {task.fitScore != null && <span className="text-neutral-500">Fit: {task.fitScore}%</span>}
+                  <span className="text-neutral-400">{task.timeEstimate ?? '—'}</span>
                 </div>
                 <div className="flex gap-1">
                   {onEditTask && (
@@ -195,7 +211,6 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
         })}
       </div>
 
-      {/* Desktop table layout */}
       <div className="card overflow-hidden hidden md:block">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -237,18 +252,18 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                       </button>
                     </td>
                     <td className="px-4 py-3">
-                      <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50', status === 'Done' && 'line-through')}>{task.title}</p>
+                      <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50', status === 'Done' && 'line-through')}>
+                        {task.title}
+                      </p>
                       {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
                       {task.dueDate && (
-                        <p className={cn('text-caption lg:hidden', new Date(task.dueDate) < new Date() && status !== 'Done' ? 'text-danger-500' : 'text-neutral-400')}>
-                          Due {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        <p className={cn('text-caption lg:hidden', isTaskOverdue(task, status) ? 'text-danger-500' : 'text-neutral-400')}>
+                          Due {formatTaskDueDate(task)}
                         </p>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {task.category && (
-                        <Badge className={getCategoryStyle(task.category)}>{task.category}</Badge>
-                      )}
+                      {task.category && <Badge className={getCategoryStyle(task.category)}>{task.category}</Badge>}
                     </td>
                     <td className="px-4 py-3">
                       {task.priority != null && (
@@ -258,9 +273,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {task.fitScore != null && (
-                        <span className="text-body text-neutral-700 dark:text-neutral-300">{task.fitScore}%</span>
-                      )}
+                      {task.fitScore != null && <span className="text-body text-neutral-700 dark:text-neutral-300">{task.fitScore}%</span>}
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-caption text-neutral-500">{task.timeEstimate ?? '—'}</span>
@@ -270,8 +283,8 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                     </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       {task.dueDate ? (
-                        <span className={cn('text-caption', new Date(task.dueDate) < new Date() && getStatus(task) !== 'Done' ? 'text-danger-500 font-medium' : 'text-neutral-500')}>
-                          {new Date(task.dueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        <span className={cn('text-caption', isTaskOverdue(task, getStatus(task)) ? 'text-danger-500 font-medium' : 'text-neutral-500')}>
+                          {formatTaskDueDate(task)}
                         </span>
                       ) : (
                         <span className="text-caption text-neutral-400">—</span>
@@ -287,7 +300,9 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                           {task.projectName}
                         </span>
                       ) : (
-                        <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>—</span>
+                        <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                          —
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -357,12 +372,13 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
         </div>
       </div>
 
-      {/* Delete confirmation modal */}
       {linkTask && <LinkToProjectModal task={linkTask} onClose={() => setLinkTask(null)} />}
       {confirmId && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="card p-6 max-w-sm w-full space-y-4">
-            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Delete Task?</h3>
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>
+              Delete Task?
+            </h3>
             <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
               This task will be moved to the deleted list.
             </p>
@@ -384,7 +400,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
             </div>
           </div>
         </div>,
-        document.body
+        document.body,
       )}
     </>
   );

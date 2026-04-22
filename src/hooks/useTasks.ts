@@ -4,6 +4,7 @@ import { todayService } from '@/services/endpoints/todayService';
 import { useTaskStore } from '@/app/store/taskStore';
 import { useAudit } from './useAudit';
 import { QUERY_KEYS } from '@/constants';
+import { today } from '@/utils/date';
 import type { Task } from '@/types';
 
 export function useTasks() {
@@ -26,11 +27,12 @@ export function useTasks() {
 
 export function useTodayTasks() {
   const { setTodayTasks } = useTaskStore();
+  const currentDate = today();
 
   return useQuery({
-    queryKey: QUERY_KEYS.todayTasks,
+    queryKey: [...QUERY_KEYS.todayTasks, currentDate],
     queryFn: async () => {
-      const res = await todayService.getTodayTasks();
+      const res = await todayService.getTodayTasks(currentDate);
       setTodayTasks(res.data);
       return res.data;
     },

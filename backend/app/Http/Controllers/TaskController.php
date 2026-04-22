@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use App\Models\Project;
+use App\Models\TodayView;
 use App\Services\ClassificationService;
 use App\Services\AIService;
 use Illuminate\Http\Request;
@@ -27,10 +28,14 @@ class TaskController extends Controller
         return response()->json(['success' => true, 'data' => $tasks, 'total' => $tasks->count()]);
     }
 
-    public function today(): JsonResponse
+    public function today(Request $request): JsonResponse
     {
-        $tasks = \App\Models\TodayView::with('task.project')
-            ->whereDate('date', today())
+        $date = $request->validate([
+            'date' => 'nullable|date',
+        ])['date'] ?? now()->toDateString();
+
+        $todayViewTasks = TodayView::with('task.project')
+            ->whereDate('date', $date)
             ->get()
             ->map(function ($tv) {
                 $t = $tv->task;
@@ -43,7 +48,23 @@ class TaskController extends Controller
                 return $data;
             })
             ->filter()
-            ->values();
+            ->keyBy('id');
+
+        $scheduledTasks = Task::with('project')
+            ->whereNotIn('status', ['Deleted'])
+            ->whereDate('due_date', $date)
+            ->get()
+            ->map(fn($task) => $this->format($task));
+
+        foreach ($scheduledTasks as $task) {
+            if (!$todayViewTasks->has($task['id'])) {
+                $todayViewTasks->put($task['id'], $task);
+            }
+        }
+
+        $tasks = $todayViewTasks->values()->all();
+
+        usort($tasks, fn(array $a, array $b) => $this->compareTodayTasks($a, $b, $date));
 
         return response()->json(['success' => true, 'data' => $tasks]);
     }
@@ -287,5 +308,47 @@ class TaskController extends Controller
             'timerRunning' => $task->timer_running ?? false,
             'timerStartedAt' => $task->timer_started_at?->toISOString() ?? '',
         ];
+    }
+
+    private function compareTodayTasks(array $a, array $b, string $date): int
+    {
+        $aOverdue = $this->isOverdueForDate($a, $date);
+        $bOverdue = $this->isOverdueForDate($b, $date);
+        if ($aOverdue !== $bOverdue) {
+            return $aOverdue ? -1 : 1;
+        }
+
+        $aRunning = !empty($a['timerRunning']);
+        $bRunning = !empty($b['timerRunning']);
+        if ($aRunning !== $bRunning) {
+            return $aRunning ? -1 : 1;
+        }
+
+        $priorityCompare = ($b['priority'] ?? 0) <=> ($a['priority'] ?? 0);
+        if ($priorityCompare !== 0) {
+            return $priorityCompare;
+        }
+
+        $fitScoreCompare = ($b['fitScore'] ?? 0) <=> ($a['fitScore'] ?? 0);
+        if ($fitScoreCompare !== 0) {
+            return $fitScoreCompare;
+        }
+
+        $aDueDate = $a['dueDate'] ?? '';
+        $bDueDate = $b['dueDate'] ?? '';
+        if ($aDueDate !== $bDueDate) {
+            if ($aDueDate === '') return 1;
+            if ($bDueDate === '') return -1;
+            return $aDueDate <=> $bDueDate;
+        }
+
+        return ($b['createdAt'] ?? '') <=> ($a['createdAt'] ?? '');
+    }
+
+    private function isOverdueForDate(array $task, string $date): bool
+    {
+        return !empty($task['dueDate'])
+            && ($task['status'] ?? '') !== 'Done'
+            && $task['dueDate'] < $date;
     }
 }

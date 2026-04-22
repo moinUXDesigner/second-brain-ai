@@ -47,6 +47,7 @@ export function TodayPage() {
   const { data: tasks, isLoading, isError, dataUpdatedAt } = useTodayTasks();
   const queryClient = useQueryClient();
   const { log } = useAudit();
+  const currentDate = today();
 
   const [showModal, setShowModal] = useState(false);
   const [loaderPhase, setLoaderPhase] = useState<LoaderPhase>(null);
@@ -69,7 +70,7 @@ export function TodayPage() {
     try {
       await taskService.updateTaskStatus(id, status);
       // Update cache
-      queryClient.setQueryData<Task[]>(QUERY_KEYS.todayTasks, (old) => {
+      queryClient.setQueryData<Task[]>([...QUERY_KEYS.todayTasks, currentDate], (old) => {
         if (!old) return old;
         return old.map((t) => 
           t.id === id ? { ...t, status, completedAt: status === 'Done' ? new Date().toISOString() : undefined } : t
@@ -145,7 +146,7 @@ export function TodayPage() {
         dirtyEntries.map(([id, status]) => taskService.updateTaskStatus(id, status)),
       );
       // Patch the query cache so refetch doesn't revert the UI
-      queryClient.setQueryData<Task[]>(QUERY_KEYS.todayTasks, (old) => {
+      queryClient.setQueryData<Task[]>([...QUERY_KEYS.todayTasks, currentDate], (old) => {
         if (!old) return old;
         return old.map((t) => {
           const newStatus = localStatus[t.id];
@@ -195,7 +196,7 @@ export function TodayPage() {
 
       // Phase 3: Load tasks into cache
       setLoaderPhase('loading');
-      queryClient.setQueryData(QUERY_KEYS.todayTasks, result.data);
+      queryClient.setQueryData([...QUERY_KEYS.todayTasks, currentDate], result.data);
       // Small delay to let React render the data
       await new Promise((r) => setTimeout(r, 400));
 
@@ -212,7 +213,7 @@ export function TodayPage() {
       setLoaderPhase(null);
       toast.error('Failed to generate today view.');
     }
-  }, [energy, mood, focus, availableTime, queryClient, log]);
+  }, [energy, mood, focus, availableTime, queryClient, log, currentDate]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -220,7 +221,7 @@ export function TodayPage() {
         <div>
           <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Today</h1>
           <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-            {today()}
+            {currentDate}
             {dataUpdatedAt > 0 && (
               <span className="ml-3 text-caption" style={{ color: 'var(--color-muted-fg)' }}>
                 · Updated {new Date(dataUpdatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
