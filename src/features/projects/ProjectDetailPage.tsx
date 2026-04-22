@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProject, useDeleteProject, useUpdateProject } from '@/hooks/useProjects';
-import { useUpdateTaskStatus, useDeleteTask, useCreateTask, useUpdateTask, useScheduleToday } from '@/hooks/useTasks';
+import { useUpdateTaskStatus, useDeleteTask, useCreateTask, useScheduleToday } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,6 +11,7 @@ import { TaskTimer } from '@/components/task/TaskTimer';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { formatDate, formatDateRelative } from '@/utils/dateFormat';
 import type { Task } from '@/types';
+import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 
 // ── Task Row ──
 
@@ -133,7 +134,6 @@ export function ProjectDetailPage() {
   const updateStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteTask();
   const createTask = useCreateTask();
-  const updateTask = useUpdateTask();
   const deleteProject = useDeleteProject();
   const updateProject = useUpdateProject();
   const scheduleToday = useScheduleToday();
@@ -148,7 +148,6 @@ export function ProjectDetailPage() {
   const [newNoteContent, setNewNoteContent] = useState('');
   const [editProjectTitle, setEditProjectTitle] = useState('');
   const [editProjectDescription, setEditProjectDescription] = useState('');
-  const [editTaskTitle, setEditTaskTitle] = useState('');
 
   const { pending, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
     if (!project?.subtasks) return { pending: [], completed: [], overdue: [], highPriority: [], suggestedNext: null };
@@ -215,16 +214,6 @@ export function ProjectDetailPage() {
       },
     });
     setShowEditProject(false);
-  };
-
-  const handleEditTask = async () => {
-    if (!showEditTask || !editTaskTitle.trim()) return;
-    await updateTask.mutateAsync({
-      id: showEditTask.id,
-      updates: { title: editTaskTitle.trim() },
-    });
-    setShowEditTask(null);
-    setEditTaskTitle('');
   };
 
   if (isLoading) {
@@ -388,10 +377,7 @@ export function ProjectDetailPage() {
                     task={t}
                     variant="pending"
                     onToggle={(tid) => updateStatus.mutate({ id: tid, status: 'Done' })}
-                    onEdit={(task) => {
-                      setShowEditTask(task);
-                      setEditTaskTitle(task.title);
-                    }}
+                    onEdit={setShowEditTask}
                     onDelete={(tid) => deleteTask.mutate(tid)}
                     onScheduleToday={(tid) => scheduleToday.mutate(tid)}
                     deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
@@ -645,31 +631,7 @@ export function ProjectDetailPage() {
         document.body
       )}
 
-      {/* Edit Task modal */}
-      {showEditTask && createPortal(
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="card p-6 max-w-md w-full space-y-4">
-            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Edit Task</h3>
-            <Input
-              id="editTaskTitle"
-              label="Task Title"
-              value={editTaskTitle}
-              onChange={(e) => setEditTaskTitle(e.target.value)}
-              placeholder="Enter task title..."
-              required
-            />
-            <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => { setShowEditTask(null); setEditTaskTitle(''); }}>
-                Cancel
-              </Button>
-              <Button onClick={handleEditTask} isLoading={updateTask.isPending} disabled={!editTaskTitle.trim()}>
-                Save Changes
-              </Button>
-            </div>
-          </div>
-        </div>,
-        document.body
-      )}
+      {showEditTask && <EditTaskModal task={showEditTask} onClose={() => setShowEditTask(null)} />}
     </motion.div>
   );
 }
