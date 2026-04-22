@@ -35,7 +35,7 @@ export function useAuth() {
     } catch {
       // ignore if token already expired
     } finally {
-      await log('LOGOUT', 'auth');
+      log('LOGOUT', 'auth');
       localStorage.removeItem('auth_token');
       clearAuth();
     }
