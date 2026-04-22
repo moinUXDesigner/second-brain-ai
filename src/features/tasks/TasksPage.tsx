@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
@@ -8,7 +8,7 @@ import { TableSkeleton } from '@/components/ui/Skeleton';
 import { taskService } from '@/services/endpoints/taskService';
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/constants';
-import { toInputDate } from '@/utils/dateFormat';
+import { parseLocalDate } from '@/utils/dateFormat';
 import toast from 'react-hot-toast';
 
 type SortField = 'newest' | 'oldest' | 'priority' | 'impact';
@@ -83,22 +83,30 @@ export function TasksPage() {
 
     // Date range filter
     if (dateFrom) {
-      const fromDate = new Date(dateFrom);
+      const fromDate = parseLocalDate(dateFrom);
+      if (!fromDate) return list;
+
       fromDate.setHours(0, 0, 0, 0);
       list = list.filter((t) => {
         if (!t.dueDate) return false;
-        const taskDate = new Date(t.dueDate);
+        const taskDate = parseLocalDate(t.dueDate);
+        if (!taskDate) return false;
+
         taskDate.setHours(0, 0, 0, 0);
         return taskDate >= fromDate;
       });
     }
 
     if (dateTo) {
-      const toDate = new Date(dateTo);
+      const toDate = parseLocalDate(dateTo);
+      if (!toDate) return list;
+
       toDate.setHours(23, 59, 59, 999);
       list = list.filter((t) => {
         if (!t.dueDate) return false;
-        const taskDate = new Date(t.dueDate);
+        const taskDate = parseLocalDate(t.dueDate);
+        if (!taskDate) return false;
+
         taskDate.setHours(0, 0, 0, 0);
         return taskDate <= toDate;
       });

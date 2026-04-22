@@ -1,17 +1,48 @@
 /**
+ * Parse a YYYY-MM-DD string as a local calendar date instead of UTC.
+ */
+export function parseLocalDate(dateStr: string): Date | null {
+  if (!dateStr) return null;
+
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]) - 1;
+  const day = Number(match[3]);
+  const date = new Date(year, month, day);
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return date;
+}
+
+function parseDateValue(date: string | Date): Date {
+  if (date instanceof Date) return date;
+  return parseLocalDate(date) ?? new Date(date);
+}
+
+/**
  * Format date to dd-mm-yyyy
  */
 export function formatDate(date: string | Date | null | undefined): string {
   if (!date) return '—';
-  
-  const d = typeof date === 'string' ? new Date(date) : date;
-  
-  if (isNaN(d.getTime())) return '—';
-  
+
+  const d = parseDateValue(date);
+
+  if (Number.isNaN(d.getTime())) return '—';
+
   const day = String(d.getDate()).padStart(2, '0');
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const year = d.getFullYear();
-  
+
   return `${day}-${month}-${year}`;
 }
 
@@ -20,18 +51,24 @@ export function formatDate(date: string | Date | null | undefined): string {
  */
 export function parseDate(dateStr: string): Date | null {
   if (!dateStr) return null;
-  
+
   const parts = dateStr.split('-');
   if (parts.length !== 3) return null;
-  
+
   const day = parseInt(parts[0], 10);
   const month = parseInt(parts[1], 10) - 1;
   const year = parseInt(parts[2], 10);
-  
   const date = new Date(year, month, day);
-  
-  if (isNaN(date.getTime())) return null;
-  
+
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+
   return date;
 }
 
@@ -40,15 +77,15 @@ export function parseDate(dateStr: string): Date | null {
  */
 export function toInputDate(date: Date | string | null | undefined): string {
   if (!date) return '';
-  
-  const d = typeof date === 'string' ? new Date(date) : date;
-  
-  if (isNaN(d.getTime())) return '';
-  
+
+  const d = parseDateValue(date);
+
+  if (Number.isNaN(d.getTime())) return '';
+
   const year = d.getFullYear();
   const month = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
-  
+
   return `${year}-${month}-${day}`;
 }
 
@@ -57,20 +94,19 @@ export function toInputDate(date: Date | string | null | undefined): string {
  */
 export function formatDateRelative(date: string | Date | null | undefined): string {
   if (!date) return '—';
-  
-  const d = typeof date === 'string' ? new Date(date) : date;
-  
-  if (isNaN(d.getTime())) return '—';
-  
+
+  const d = parseDateValue(date);
+
+  if (Number.isNaN(d.getTime())) return '—';
+
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const targetDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  
   const diffDays = Math.ceil((targetDate.getTime() - today.getTime()) / 86400000);
-  
+
   if (diffDays < 0) return 'Overdue';
   if (diffDays === 0) return 'Today';
   if (diffDays === 1) return 'Tomorrow';
-  
+
   return formatDate(date);
 }
