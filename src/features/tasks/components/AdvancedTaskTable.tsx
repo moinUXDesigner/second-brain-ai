@@ -311,7 +311,8 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                 </th>
                 <th className="px-4 py-3 text-left hidden xl:table-cell text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Due Date</th>
                 <th className="px-4 py-3 text-left hidden xl:table-cell text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Deadline Date</th>
-                <th className="px-4 py-3 text-left hidden xl:table-cell text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Time</th>
+                <th className="px-4 py-3 text-left hidden xl:table-cell text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>AI Time</th>
+                <th className="px-4 py-3 text-left hidden xl:table-cell text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Actual Time</th>
                 <th className="px-4 py-3 text-left hidden xl:table-cell">
                   <button
                     onClick={() => handleSort('updated')}
@@ -408,6 +409,11 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                   <td className="px-4 py-3 hidden xl:table-cell">
                     <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
                       {task.deadlineDate ? formatDate(task.deadlineDate) : '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                      {task.timeEstimate || 'â€”'}
                     </span>
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
