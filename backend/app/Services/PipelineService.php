@@ -58,51 +58,61 @@ class PipelineService
         }
     }
 
-    public function generateTodayView(): array
+    public function generateTodayView(?string $date = null): array
     {
         $state = DailyState::orderByDesc('date')->first();
         $availableMinutes = $state?->available_time ?? 120;
         $energy = $state ? $this->toLevel($state->energy) : 'Medium';
+        $today = $date ?: Carbon::today()->toDateString();
 
         $tasks = Task::with('project')
             ->whereNotIn('status', ['Done', 'Deleted'])
             ->orderByDesc('priority')
             ->get();
 
-        TodayView::whereDate('date', today())->delete();
+        TodayView::whereDate('date', $today)->delete();
 
         $output = [];
         $totalMins = 0;
-        $today = Carbon::today()->toDateString();
+        $selectedTaskIds = [];
+
+        $scheduledToday = $tasks->filter(
+            fn(Task $task) => $task->due_date?->toDateString() === $today
+        );
+
+        foreach ($scheduledToday as $task) {
+            $result = $this->addTaskToTodayView($task, $today, $energy);
+            if (!$result) {
+                continue;
+            }
+
+            $output[] = $result;
+            $selectedTaskIds[$task->id] = true;
+            $totalMins += $result['taskMins'];
+        }
 
         foreach ($tasks as $task) {
+            if (isset($selectedTaskIds[$task->id])) {
+                continue;
+            }
+
             $taskMins = $this->classifier->parseTimeEstimate($task->time_estimate ?? '', $task->effort ?? 5);
 
             if ($totalMins + $taskMins > $availableMinutes && count($output) > 0) break;
 
-            $projectPriority = $task->project?->priority ?? 0;
-            $adjustedPriority = $task->priority + ($projectPriority * 0.2);
-            $category = $this->classifier->getCategory((int)$adjustedPriority, $task->fit_score ?? 0, $energy);
+            $result = $this->addTaskToTodayView($task, $today, $energy);
+            if (!$result) {
+                continue;
+            }
 
-            TodayView::create([
-                'task_id'   => $task->id,
-                'priority'  => (int)$adjustedPriority,
-                'fit_score' => $task->fit_score ?? 0,
-                'category'  => $category,
-                'status'    => 'Pending',
-                'date'      => $today,
-            ]);
-
-            $output[] = array_merge($task->toArray(), [
-                'priority'  => (int)$adjustedPriority,
-                'fit_score' => $task->fit_score ?? 0,
-                'category'  => $category,
-            ]);
-
-            $totalMins += $taskMins;
+            $output[] = $result;
+            $totalMins += $result['taskMins'];
         }
 
-        return $output;
+        return array_map(function (array $task) {
+            unset($task['taskMins']);
+            return $task;
+        }, $output);
     }
 
     public function runFullPipeline(): array
@@ -117,5 +127,29 @@ class PipelineService
         if ($val <= 3) return 'Low';
         if ($val <= 6) return 'Medium';
         return 'High';
+    }
+
+    private function addTaskToTodayView(Task $task, string $today, string $energy): ?array
+    {
+        $projectPriority = $task->project?->priority ?? 0;
+        $adjustedPriority = $task->priority + ($projectPriority * 0.2);
+        $category = $this->classifier->getCategory((int)$adjustedPriority, $task->fit_score ?? 0, $energy);
+        $taskMins = $this->classifier->parseTimeEstimate($task->time_estimate ?? '', $task->effort ?? 5);
+
+        TodayView::create([
+            'task_id'   => $task->id,
+            'priority'  => (int)$adjustedPriority,
+            'fit_score' => $task->fit_score ?? 0,
+            'category'  => $category,
+            'status'    => 'Pending',
+            'date'      => $today,
+        ]);
+
+        return array_merge($task->toArray(), [
+            'priority'  => (int)$adjustedPriority,
+            'fit_score' => $task->fit_score ?? 0,
+            'category'  => $category,
+            'taskMins'  => $taskMins,
+        ]);
     }
 }

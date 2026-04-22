@@ -191,7 +191,7 @@ export function TodayPage() {
 
       // Phase 2: Generate today view
       setLoaderPhase('generating');
-      const result = await todayService.generateTodayView();
+      const result = await todayService.generateTodayView(currentDate);
       log('RUN_PIPELINE', 'system');
 
       // Phase 3: Load tasks into cache

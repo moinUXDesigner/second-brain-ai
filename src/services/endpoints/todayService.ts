@@ -9,8 +9,8 @@ export const todayService = {
     return data;
   },
 
-  async generateTodayView(): Promise<ApiResponse<Task[]>> {
-    const { data } = await apiClient.post('/pipeline/today');
+  async generateTodayView(date?: string): Promise<ApiResponse<Task[]>> {
+    const { data } = await apiClient.post('/pipeline/today', date ? { date } : undefined);
     return data;
   },
 };

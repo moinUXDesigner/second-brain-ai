@@ -129,7 +129,11 @@ class InputController extends Controller
 
     public function generateToday(): JsonResponse
     {
-        $tasks = $this->pipeline->generateTodayView();
+        $date = request()->validate([
+            'date' => 'nullable|date',
+        ])['date'] ?? now()->toDateString();
+
+        $tasks = $this->pipeline->generateTodayView($date);
         return response()->json(['success' => true, 'data' => $tasks]);
     }
 
