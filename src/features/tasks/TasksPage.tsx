@@ -99,6 +99,7 @@ export function TasksPage() {
       list = list.filter((t) => {
         if (!t.dueDate) return false;
         const taskDate = new Date(t.dueDate);
+        taskDate.setHours(0, 0, 0, 0);
         return taskDate <= toDate;
       });
     }
