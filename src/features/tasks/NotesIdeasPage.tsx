@@ -37,7 +37,7 @@ export function NotesIdeasPage() {
   const filtered = useMemo(() => {
     if (!tasks) return [];
 
-    let list = tasks.filter((t) => t.status === 'Note' || t.status === 'Idea');
+    let list = [...tasks.filter((t) => t.status === 'Note' || t.status === 'Idea')];
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -53,7 +53,8 @@ export function NotesIdeasPage() {
       list = list.filter((t) => t.area === filterArea);
     }
 
-    return list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    list.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+    return list;
   }, [tasks, filterArea, searchQuery]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));

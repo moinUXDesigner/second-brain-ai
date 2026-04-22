@@ -98,24 +98,29 @@ export function TodayPage() {
       (projects ?? []).map((p) => [p.id, p.title]),
     );
 
-    return tasks
-      .map((task) => {
-        if (task.projectName) return task;
-        if (task.projectId && projectTitleById.has(task.projectId)) {
-          return { ...task, projectName: projectTitleById.get(task.projectId) };
+    const result: Task[] = [];
+    
+    for (const task of tasks) {
+      const overrideStatus = localStatus[task.id];
+      const statusToCheck = overrideStatus || task.status;
+      
+      if (
+        statusToCheck !== 'Done' &&
+        statusToCheck !== 'Deleted' &&
+        statusToCheck !== 'Note' &&
+        statusToCheck !== 'Idea'
+      ) {
+        if (task.projectName) {
+          result.push(task);
+        } else if (task.projectId && projectTitleById.has(task.projectId)) {
+          result.push({ ...task, projectName: projectTitleById.get(task.projectId) });
+        } else {
+          result.push(task);
         }
-        return task;
-      })
-      .filter((task) => {
-        const overrideStatus = localStatus[task.id];
-        const statusToCheck = overrideStatus || task.status;
-        return (
-          statusToCheck !== 'Done' &&
-          statusToCheck !== 'Deleted' &&
-          statusToCheck !== 'Note' &&
-          statusToCheck !== 'Idea'
-        );
-      });
+      }
+    }
+    
+    return result;
   }, [tasks, localStatus, projects]);
 
   // Count how many tasks actually changed

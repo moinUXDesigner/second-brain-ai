@@ -54,11 +54,18 @@ export function RecurringTasksPage() {
     });
 
     const filtered = recurring.filter((t) => recurrence === 'All' || t.recurrence === recurrence);
-    return {
-      active: filtered.filter((t) => t.status !== 'Done'),
-      completed: filtered.filter((t) => t.status === 'Done'),
-      counts,
-    };
+    const active: Task[] = [];
+    const completed: Task[] = [];
+    
+    for (const t of filtered) {
+      if (t.status === 'Done') {
+        completed.push(t);
+      } else {
+        active.push(t);
+      }
+    }
+    
+    return { active, completed, counts };
   }, [tasks, recurrence]);
 
   const handleComplete = async (task: Task) => {
