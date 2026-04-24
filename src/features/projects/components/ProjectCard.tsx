@@ -1,9 +1,14 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Project } from '@/types';
+import type { Project, Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 
-export function ProjectCard({ project, onDelete, deleting }: { project: Project; onDelete?: (id: string) => void; deleting?: boolean }) {
+export function ProjectCard({ project, onDelete, onViewTask, deleting }: {
+  project: Project;
+  onDelete?: (id: string) => void;
+  onViewTask?: (task: Task) => void;
+  deleting?: boolean;
+}) {
   const navigate = useNavigate();
 
   const { doneCount, totalCount, progress, pendingTasks } = useMemo(() => {
@@ -102,7 +107,19 @@ export function ProjectCard({ project, onDelete, deleting }: { project: Project;
       {totalCount > 0 && (
         <div className="px-4 pt-2.5 pb-1 space-y-0.5">
           {pendingTasks.map((task) => (
-            <div key={task.id} className="flex items-center gap-2 py-0.5">
+            <div
+              key={task.id}
+              onClick={(e) => {
+                if (!onViewTask) return;
+                e.stopPropagation();
+                onViewTask({
+                  ...task,
+                  projectId: task.projectId || project.id,
+                  projectName: task.projectName || project.title,
+                });
+              }}
+              className="flex items-center gap-2 py-0.5 cursor-pointer rounded-sm transition-colors hover:bg-black/[.015] dark:hover:bg-white/[.015]"
+            >
               <div
                 className="h-3 w-3 rounded-[3px] border shrink-0"
                 style={{ borderColor: 'var(--color-border)' }}

@@ -5,6 +5,7 @@ import type { Task, TaskStatus } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { TaskTimer } from '@/components/task/TaskTimer';
 import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
+import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
 import { cn } from '@/utils/cn';
 import { parseLocalDate } from '@/utils/dateFormat';
@@ -51,6 +52,7 @@ interface TodayTableProps {
 
 export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onDeleteTask, deletingId }: TodayTableProps) {
   const navigate = useNavigate();
+  const [viewTask, setViewTask] = useState<Task | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [linkTask, setLinkTask] = useState<Task | null>(null);
 
@@ -84,6 +86,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
     return (
       <select
         value={status}
+        onClick={(e) => e.stopPropagation()}
         onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
         className={cn(
           'rounded-md border px-2 py-1 text-caption font-medium transition-colors cursor-pointer',
@@ -105,10 +108,17 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
           const status = getStatus(task);
           const priorityStyle = getPriorityVariant(task.priority);
           return (
-            <div key={task.id} className={cn('card p-4 space-y-2', status === 'Done' && 'opacity-60')}>
+            <div
+              key={task.id}
+              onClick={() => setViewTask(task)}
+              className={cn('card cursor-pointer p-4 space-y-2 transition-colors hover:bg-black/[.015] dark:hover:bg-white/[.015]', status === 'Done' && 'opacity-60')}
+            >
               <div className="flex items-start justify-between gap-2">
                 <button
-                  onClick={() => onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done');
+                  }}
                   className="shrink-0 mt-1 flex items-center justify-center h-[22px] w-[22px] rounded-full border-[1.5px] transition-all duration-200"
                   style={{
                     borderColor: status === 'Done' ? 'var(--primary-500)' : 'var(--color-border)',
@@ -132,7 +142,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                       <p
                         className="text-caption cursor-pointer hover:underline"
                         style={{ color: 'var(--primary-600)' }}
-                        onClick={() => task.projectId && navigate(`/projects/${task.projectId}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (task.projectId) navigate(`/projects/${task.projectId}`);
+                        }}
                       >
                         {task.projectName}
                       </p>
@@ -162,7 +175,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                 <div className="flex gap-1">
                   {onEditTask && (
                     <button
-                      onClick={() => onEditTask(task)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEditTask(task);
+                      }}
                       className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                       style={{ color: 'var(--color-text-secondary)' }}
                       title="Edit task"
@@ -173,7 +189,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                     </button>
                   )}
                   <button
-                    onClick={() => setLinkTask(task)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setLinkTask(task);
+                    }}
                     className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                     style={{ color: 'var(--color-text-secondary)' }}
                     title="Link to project"
@@ -183,7 +202,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                     </svg>
                   </button>
                   <button
-                    onClick={() => navigate('/create', { state: { skipStep1: true, text: task.title, area: task.area, type: 'project' } })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/create', { state: { skipStep1: true, text: task.title, area: task.area, type: 'project' } });
+                    }}
                     className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                     style={{ color: 'var(--color-text-secondary)' }}
                     title="Convert to project"
@@ -194,7 +216,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                   </button>
                   {onDeleteTask && (
                     <button
-                      onClick={() => handleDeleteClick(task.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(task.id);
+                      }}
                       className="flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                       style={{ color: 'var(--color-danger, #ef4444)' }}
                       title="Delete task"
@@ -234,10 +259,17 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                 const status = getStatus(task);
                 const priorityStyle = getPriorityVariant(task.priority);
                 return (
-                  <tr key={task.id} className={cn('transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30', status === 'Done' && 'opacity-60')}>
+                  <tr
+                    key={task.id}
+                    onClick={() => setViewTask(task)}
+                    className={cn('cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30', status === 'Done' && 'opacity-60')}
+                  >
                     <td className="px-3 py-3">
                       <button
-                        onClick={() => onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done');
+                        }}
                         className="flex items-center justify-center h-5 w-5 rounded-full border-[1.5px] transition-all duration-200"
                         style={{
                           borderColor: status === 'Done' ? 'var(--primary-500)' : 'var(--color-border)',
@@ -295,7 +327,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                         <span
                           className="text-caption cursor-pointer hover:underline"
                           style={{ color: 'var(--primary-600)' }}
-                          onClick={() => task.projectId && navigate(`/projects/${task.projectId}`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (task.projectId) navigate(`/projects/${task.projectId}`);
+                          }}
                         >
                           {task.projectName}
                         </span>
@@ -312,7 +347,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                       <div className="inline-flex gap-1">
                         {onEditTask && (
                           <button
-                            onClick={() => onEditTask(task)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onEditTask(task);
+                            }}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                             style={{ color: 'var(--color-text-secondary)' }}
                             title="Edit task"
@@ -323,7 +361,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                           </button>
                         )}
                         <button
-                          onClick={() => setLinkTask(task)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setLinkTask(task);
+                          }}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                           style={{ color: 'var(--color-text-secondary)' }}
                           title="Link to project"
@@ -333,7 +374,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                           </svg>
                         </button>
                         <button
-                          onClick={() => navigate('/create', { state: { skipStep1: true, text: task.title, area: task.area, type: 'project' } })}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate('/create', { state: { skipStep1: true, text: task.title, area: task.area, type: 'project' } });
+                          }}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                           style={{ color: 'var(--color-text-secondary)' }}
                           title="Convert to project"
@@ -344,7 +388,10 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
                         </button>
                         {onDeleteTask && (
                           <button
-                            onClick={() => handleDeleteClick(task.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteClick(task.id);
+                            }}
                             disabled={deletingId === task.id}
                             className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5 disabled:opacity-40"
                             style={{ color: 'var(--color-danger, #ef4444)' }}
@@ -372,6 +419,7 @@ export function TodayTable({ tasks, localStatus, onStatusChange, onEditTask, onD
         </div>
       </div>
 
+      {viewTask && <TaskViewModal task={viewTask} onClose={() => setViewTask(null)} />}
       {linkTask && <LinkToProjectModal task={linkTask} onClose={() => setLinkTask(null)} />}
       {confirmId && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>

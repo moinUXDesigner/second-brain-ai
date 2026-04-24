@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { TaskTimer } from '@/components/task/TaskTimer';
+import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { formatDate, formatDateRelative } from '@/utils/dateFormat';
 import type { Task } from '@/types';
@@ -15,21 +16,28 @@ import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 
 // ── Task Row ──
 
-function TaskRow({ task, variant, onToggle, onDelete, onEdit, onScheduleToday, deletingId, schedulingId }: {
+function TaskRow({ task, variant, onToggle, onDelete, onEdit, onView, onScheduleToday, deletingId, schedulingId }: {
   task: Task;
   variant: 'pending' | 'done';
   onToggle: (id: string) => void;
   onDelete?: (id: string) => void;
   onEdit?: (task: Task) => void;
+  onView: (task: Task) => void;
   onScheduleToday?: (id: string) => void;
   deletingId?: string | null;
   schedulingId?: string | null;
 }) {
   const isDone = variant === 'done';
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-black/[.015] dark:hover:bg-white/[.015]">
+    <div
+      onClick={() => onView(task)}
+      className="flex cursor-pointer items-center gap-3 px-4 py-2.5 transition-colors hover:bg-black/[.015] dark:hover:bg-white/[.015]"
+    >
       <button
-        onClick={() => onToggle(task.id)}
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle(task.id);
+        }}
         className="shrink-0 flex items-center justify-center h-[20px] w-[20px] rounded-full border-[1.5px] transition-all"
         style={{
           borderColor: isDone ? 'var(--success-500, #22c55e)' : 'var(--color-border)',
@@ -71,7 +79,10 @@ function TaskRow({ task, variant, onToggle, onDelete, onEdit, onScheduleToday, d
         )}
         {onScheduleToday && !isDone && (
           <button
-            onClick={() => onScheduleToday(task.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onScheduleToday(task.id);
+            }}
             disabled={schedulingId === task.id}
             className="p-1 rounded-md transition-colors opacity-60 hover:opacity-100 disabled:opacity-30"
             style={{ color: 'var(--primary-600)' }}
@@ -91,7 +102,10 @@ function TaskRow({ task, variant, onToggle, onDelete, onEdit, onScheduleToday, d
         )}
         {onEdit && !isDone && (
           <button
-            onClick={() => onEdit(task)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(task);
+            }}
             className="p-1 rounded-md transition-colors opacity-60 hover:opacity-100"
             style={{ color: 'var(--primary-600)' }}
             title="Edit task"
@@ -103,7 +117,10 @@ function TaskRow({ task, variant, onToggle, onDelete, onEdit, onScheduleToday, d
         )}
         {onDelete && !isDone && (
           <button
-            onClick={() => onDelete(task.id)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(task.id);
+            }}
             disabled={deletingId === task.id}
             className="p-1 rounded-md transition-colors opacity-60 hover:opacity-100 disabled:opacity-30"
             style={{ color: 'var(--color-danger, #ef4444)' }}
@@ -142,6 +159,7 @@ export function ProjectDetailPage() {
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddNote, setShowAddNote] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
+  const [showViewTask, setShowViewTask] = useState<Task | null>(null);
   const [showEditTask, setShowEditTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newNoteTitle, setNewNoteTitle] = useState('');
@@ -374,9 +392,10 @@ export function ProjectDetailPage() {
                 {pending.map((t) => (
                   <TaskRow
                     key={t.id}
-                    task={t}
+                    task={{ ...t, projectName: t.projectName || project.title }}
                     variant="pending"
                     onToggle={(tid) => updateStatus.mutate({ id: tid, status: 'Done' })}
+                    onView={setShowViewTask}
                     onEdit={setShowEditTask}
                     onDelete={(tid) => deleteTask.mutate(tid)}
                     onScheduleToday={(tid) => scheduleToday.mutate(tid)}
@@ -415,9 +434,10 @@ export function ProjectDetailPage() {
                   {completed.map((t) => (
                     <TaskRow
                       key={t.id}
-                      task={t}
+                      task={{ ...t, projectName: t.projectName || project.title }}
                       variant="done"
                       onToggle={(tid) => updateStatus.mutate({ id: tid, status: 'Pending' })}
+                      onView={setShowViewTask}
                     />
                   ))}
                 </div>
@@ -631,6 +651,7 @@ export function ProjectDetailPage() {
         document.body
       )}
 
+      {showViewTask && <TaskViewModal task={showViewTask} onClose={() => setShowViewTask(null)} />}
       {showEditTask && <EditTaskModal task={showEditTask} onClose={() => setShowEditTask(null)} />}
     </motion.div>
   );

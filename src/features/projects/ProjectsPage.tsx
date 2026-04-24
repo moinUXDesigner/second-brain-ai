@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProjects, useDeleteProject } from '@/hooks/useProjects';
 import { ProjectCard } from './components/ProjectCard';
+import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { CardSkeleton } from '@/components/ui/Skeleton';
+import type { Task } from '@/types';
 
 export function ProjectsPage() {
   const { data: projects, isLoading, isError } = useProjects();
@@ -14,6 +16,7 @@ export function ProjectsPage() {
   const [domainFilter, setDomainFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<'progress' | 'created' | 'updated' | 'title'>('progress');
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewTask, setViewTask] = useState<Task | null>(null);
 
   const handleDelete = (id: string) => {
     setConfirmId(id);
@@ -267,11 +270,14 @@ export function ProjectsPage() {
               key={p.id}
               project={p}
               onDelete={handleDelete}
+              onViewTask={setViewTask}
               deleting={deleteProject.isPending && deleteProject.variables === p.id}
             />
           ))}
         </div>
       )}
+
+      {viewTask && <TaskViewModal task={viewTask} onClose={() => setViewTask(null)} />}
 
       {/* Delete confirmation modal */}
       {confirmId && createPortal(
