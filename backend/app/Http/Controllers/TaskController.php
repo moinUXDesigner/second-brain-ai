@@ -77,6 +77,8 @@ class TaskController extends Controller
             'area'          => 'nullable|string',
             'notes'         => 'nullable|string',
             'project_id'    => 'nullable|exists:projects,id',
+            'phase_id'      => 'nullable|string',
+            'milestone_id'  => 'nullable|string',
             'recurrence'    => 'nullable|in:Daily,Weekly,Monthly,Yearly',
             'due_date'      => 'nullable|date',
             'deadline_date' => 'nullable|date',
@@ -111,6 +113,8 @@ class TaskController extends Controller
             'area'          => 'nullable|string',
             'notes'         => 'nullable|string',
             'project_id'    => 'nullable|exists:projects,id',
+            'phase_id'      => 'nullable|string',
+            'milestone_id'  => 'nullable|string',
             'recurrence'    => 'nullable|in:Daily,Weekly,Monthly,Yearly',
             'due_date'      => 'nullable|date',
             'deadline_date' => 'nullable|date',
@@ -278,6 +282,11 @@ class TaskController extends Controller
 
     private function format(Task $task): array
     {
+        $phases = $task->project?->phases ?? [];
+        $milestones = $task->project?->milestones ?? [];
+        $phaseNames = collect($phases)->pluck('title', 'id');
+        $milestoneNames = collect($milestones)->pluck('title', 'id');
+
         return [
             'id'           => (string) $task->id,
             'title'        => $task->title,
@@ -286,6 +295,10 @@ class TaskController extends Controller
             'notes'        => $task->notes ?? '',
             'projectId'    => $task->project_id ? (string) $task->project_id : '',
             'projectName'  => $task->project?->title ?? '',
+            'phaseId'      => $task->phase_id ?? '',
+            'phaseName'    => $phaseNames[$task->phase_id] ?? '',
+            'milestoneId'  => $task->milestone_id ?? '',
+            'milestoneName'=> $milestoneNames[$task->milestone_id] ?? '',
             'maslow'       => $task->maslow ?? '',
             'impact'       => $task->impact ?? 0,
             'effort'       => $task->effort ?? 0,

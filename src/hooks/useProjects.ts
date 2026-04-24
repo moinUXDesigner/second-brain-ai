@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { projectService } from '@/services/endpoints/projectService';
 import { useAudit } from './useAudit';
 import { QUERY_KEYS } from '@/constants';
+import type { Project } from '@/types';
 
 export function useProjects() {
   return useQuery({
@@ -84,7 +85,7 @@ export function useUpdateProject() {
   const { log } = useAudit();
 
   return useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: { title?: string; description?: string; status?: 'Active' | 'Completed' | 'Archived' | 'Deleted' } }) =>
+    mutationFn: ({ id, updates }: { id: string; updates: Partial<Project> }) =>
       projectService.updateProject(id, updates),
     onSuccess: (res, { id }) => {
       log('UPDATE_PROJECT', 'project', id, { title: res.data.title });

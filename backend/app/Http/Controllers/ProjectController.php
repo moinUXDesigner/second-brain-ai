@@ -54,6 +54,8 @@ class ProjectController extends Controller
             'area'        => 'nullable|string',
             'priority'    => 'nullable|integer',
             'subtasks'    => 'nullable|array',
+            'phases'      => 'nullable|array',
+            'milestones'  => 'nullable|array',
         ]);
 
         // Generate concise project title using AI or rule-based fallback
@@ -71,6 +73,8 @@ class ProjectController extends Controller
             'status'      => 'Active',
             'priority'    => $data['priority'] ?? 0,
             'domain'      => $data['area'] ?? '',
+            'phases'      => $data['phases'] ?? [],
+            'milestones'  => $data['milestones'] ?? [],
         ]);
 
         $subtaskTitles = $data['subtasks'] ?? [];
@@ -112,6 +116,8 @@ class ProjectController extends Controller
             'status'      => 'nullable|in:Active,Completed,Archived,Deleted',
             'priority'    => 'nullable|integer',
             'due_date'    => 'nullable|date',
+            'phases'      => 'nullable|array',
+            'milestones'  => 'nullable|array',
         ]);
 
         $project->update($data);
@@ -132,6 +138,11 @@ class ProjectController extends Controller
 
     private function format(Project $project): array
     {
+        $phases = $project->phases ?? [];
+        $milestones = $project->milestones ?? [];
+        $phaseNames = collect($phases)->pluck('title', 'id');
+        $milestoneNames = collect($milestones)->pluck('title', 'id');
+
         $subtasks = $project->tasks->map(fn($t) => [
             'id'             => (string) $t->id,
             'title'          => $t->title,
@@ -139,12 +150,29 @@ class ProjectController extends Controller
             'area'           => $t->area ?? '',
             'notes'          => $t->notes ?? '',
             'projectId'      => (string) $project->id,
+            'projectName'    => $project->title,
+            'phaseId'        => $t->phase_id ?? '',
+            'phaseName'      => $phaseNames[$t->phase_id] ?? '',
+            'milestoneId'    => $t->milestone_id ?? '',
+            'milestoneName'  => $milestoneNames[$t->milestone_id] ?? '',
+            'maslow'         => $t->maslow ?? '',
+            'impact'         => $t->impact ?? 0,
+            'effort'         => $t->effort ?? 0,
             'status'         => $t->status,
             'priority'       => $t->priority ?? 0,
             'fitScore'       => $t->fit_score ?? 0,
             'category'       => $t->category ?? '',
+            'confidence'     => $t->confidence ?? 0,
             'urgency'        => $t->urgency ?? '',
+            'timeEstimate'   => $t->time_estimate ?? '',
             'dueDate'        => $t->due_date?->toDateString() ?? '',
+            'deadlineDate'   => $t->deadline_date?->toDateString() ?? '',
+            'source'         => $t->source ?? '',
+            'recurrence'     => $t->recurrence ?? '',
+            'tags'           => $t->tags ?? [],
+            'completedAt'    => $t->completed_at?->toISOString() ?? '',
+            'createdAt'      => $t->created_at?->toISOString() ?? '',
+            'updatedAt'      => $t->updated_at?->toISOString() ?? '',
             'timeSpent'      => $t->time_spent ?? 0,
             'timerRunning'   => $t->timer_running ?? false,
             'timerStartedAt' => $t->timer_started_at?->toISOString() ?? '',
@@ -161,6 +189,8 @@ class ProjectController extends Controller
             'status'      => $project->status,
             'priority'    => $project->priority ?? 0,
             'progress'    => $progress,
+            'phases'      => $phases,
+            'milestones'  => $milestones,
             'subtasks'    => $subtasks,
             'dueDate'     => $project->due_date?->toDateString() ?? '',
             'domain'      => $project->domain ?? '',

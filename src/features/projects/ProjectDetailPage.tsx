@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProject, useDeleteProject, useUpdateProject } from '@/hooks/useProjects';
-import { useUpdateTaskStatus, useDeleteTask, useCreateTask, useScheduleToday } from '@/hooks/useTasks';
+import { useUpdateTaskStatus, useUpdateTask, useDeleteTask, useCreateTask, useScheduleToday } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -11,23 +11,44 @@ import { TaskTimer } from '@/components/task/TaskTimer';
 import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { formatDate, formatDateRelative } from '@/utils/dateFormat';
-import type { Task } from '@/types';
+import type { ProjectMilestone, ProjectPhase, Task } from '@/types';
 import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
+
+function createStructureId(prefix: string) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function resolveTaskStructure(task: Task, phases: ProjectPhase[], milestones: ProjectMilestone[]) {
+  const phase = phases.find((p) => p.id === task.phaseId);
+  const milestone = milestones.find((m) => m.id === task.milestoneId);
+  return {
+    ...task,
+    phaseName: phase?.title || task.phaseName,
+    milestoneName: milestone?.title || task.milestoneName,
+  };
+}
 
 // ── Task Row ──
 
-function TaskRow({ task, variant, onToggle, onDelete, onEdit, onView, onScheduleToday, deletingId, schedulingId }: {
+function TaskRow({ task, variant, phases, milestones, onToggle, onDelete, onEdit, onView, onPhaseChange, onMilestoneChange, onScheduleToday, deletingId, schedulingId, updatingStructureId }: {
   task: Task;
   variant: 'pending' | 'done';
+  phases: ProjectPhase[];
+  milestones: ProjectMilestone[];
   onToggle: (id: string) => void;
   onDelete?: (id: string) => void;
   onEdit?: (task: Task) => void;
   onView: (task: Task) => void;
+  onPhaseChange: (task: Task, phaseId: string) => void;
+  onMilestoneChange: (task: Task, milestoneId: string) => void;
   onScheduleToday?: (id: string) => void;
   deletingId?: string | null;
   schedulingId?: string | null;
+  updatingStructureId?: string | null;
 }) {
   const isDone = variant === 'done';
+  const phaseMilestones = milestones.filter((m) => !m.phaseId || m.phaseId === task.phaseId);
+  const isUpdatingStructure = updatingStructureId === task.id;
   return (
     <div
       onClick={() => onView(task)}
@@ -66,9 +87,91 @@ function TaskRow({ task, variant, onToggle, onDelete, onEdit, onView, onSchedule
             <TaskTimer task={task} compact />
           </div>
         )}
+        {phases.length > 0 && (
+          <div className="mt-2 flex gap-1 md:hidden">
+            <select
+              value={task.phaseId || ''}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => onPhaseChange(task, e.target.value)}
+              disabled={isUpdatingStructure}
+              className="min-w-0 flex-1 rounded-md border px-2 py-1 text-[11px] outline-none disabled:opacity-50"
+              style={{
+                borderColor: 'var(--color-border)',
+                backgroundColor: 'var(--color-surface)',
+                color: task.phaseId ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+              }}
+              title="Assign phase"
+            >
+              <option value="">No phase</option>
+              {phases.map((phase) => (
+                <option key={phase.id} value={phase.id}>{phase.title}</option>
+              ))}
+            </select>
+            {phaseMilestones.length > 0 && (
+              <select
+                value={task.milestoneId || ''}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => onMilestoneChange(task, e.target.value)}
+                disabled={isUpdatingStructure}
+                className="min-w-0 flex-1 rounded-md border px-2 py-1 text-[11px] outline-none disabled:opacity-50"
+                style={{
+                  borderColor: 'var(--color-border)',
+                  backgroundColor: 'var(--color-surface)',
+                  color: task.milestoneId ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+                }}
+                title="Assign milestone"
+              >
+                <option value="">No milestone</option>
+                {phaseMilestones.map((milestone) => (
+                  <option key={milestone.id} value={milestone.id}>{milestone.title}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="shrink-0 flex items-center gap-2">
+        {phases.length > 0 && (
+          <select
+            value={task.phaseId || ''}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onPhaseChange(task, e.target.value)}
+            disabled={isUpdatingStructure}
+            className="hidden md:block rounded-md border px-2 py-1 text-[11px] outline-none disabled:opacity-50"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-surface)',
+              color: task.phaseId ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+            }}
+            title="Assign phase"
+          >
+            <option value="">No phase</option>
+            {phases.map((phase) => (
+              <option key={phase.id} value={phase.id}>{phase.title}</option>
+            ))}
+          </select>
+        )}
+        {phaseMilestones.length > 0 && (
+          <select
+            value={task.milestoneId || ''}
+            onClick={(e) => e.stopPropagation()}
+            onChange={(e) => onMilestoneChange(task, e.target.value)}
+            disabled={isUpdatingStructure}
+            className="hidden lg:block rounded-md border px-2 py-1 text-[11px] outline-none disabled:opacity-50"
+            style={{
+              borderColor: 'var(--color-border)',
+              backgroundColor: 'var(--color-surface)',
+              color: task.milestoneId ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+            }}
+            title="Assign milestone"
+          >
+            <option value="">No milestone</option>
+            {phaseMilestones.map((milestone) => (
+              <option key={milestone.id} value={milestone.id}>{milestone.title}</option>
+            ))}
+          </select>
+        )}
         {task.urgency === 'High' && !isDone && (
           <Badge variant="danger" className="!text-[9px] !px-1.5 !py-0">HIGH</Badge>
         )}
@@ -149,6 +252,7 @@ export function ProjectDetailPage() {
   const navigate = useNavigate();
   const { data: project, isLoading } = useProject(id!);
   const updateStatus = useUpdateTaskStatus();
+  const updateTask = useUpdateTask();
   const deleteTask = useDeleteTask();
   const createTask = useCreateTask();
   const deleteProject = useDeleteProject();
@@ -159,11 +263,18 @@ export function ProjectDetailPage() {
   const [showAddTask, setShowAddTask] = useState(false);
   const [showAddNote, setShowAddNote] = useState(false);
   const [showEditProject, setShowEditProject] = useState(false);
+  const [showAddPhase, setShowAddPhase] = useState(false);
+  const [showAddMilestone, setShowAddMilestone] = useState(false);
   const [showViewTask, setShowViewTask] = useState<Task | null>(null);
   const [showEditTask, setShowEditTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
+  const [newPhaseTitle, setNewPhaseTitle] = useState('');
+  const [newPhaseDescription, setNewPhaseDescription] = useState('');
+  const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
+  const [newMilestonePhaseId, setNewMilestonePhaseId] = useState('');
+  const [newMilestoneDueDate, setNewMilestoneDueDate] = useState('');
   const [editProjectTitle, setEditProjectTitle] = useState('');
   const [editProjectDescription, setEditProjectDescription] = useState('');
 
@@ -192,6 +303,22 @@ export function ProjectDetailPage() {
 
   const totalTasks = pending.length + completed.length;
   const progress = totalTasks > 0 ? Math.round((completed.length / totalTasks) * 100) : 0;
+  const phases = project?.phases ?? [];
+  const milestones = project?.milestones ?? [];
+  const updatingStructureId = updateTask.isPending ? (updateTask.variables?.id ?? null) : null;
+  const taskCountsByPhase = useMemo(() => {
+    const counts = new Map<string, { total: number; done: number }>();
+
+    project?.subtasks?.forEach((task) => {
+      const phaseId = task.phaseId || '';
+      const existing = counts.get(phaseId) ?? { total: 0, done: 0 };
+      existing.total += task.status !== 'Deleted' ? 1 : 0;
+      existing.done += task.status === 'Done' ? 1 : 0;
+      counts.set(phaseId, existing);
+    });
+
+    return counts;
+  }, [project?.subtasks]);
 
   const handleDeleteProject = () => {
     deleteProject.mutate(id!, { onSuccess: () => navigate('/projects') });
@@ -232,6 +359,73 @@ export function ProjectDetailPage() {
       },
     });
     setShowEditProject(false);
+  };
+
+  const handleAddPhase = async () => {
+    if (!newPhaseTitle.trim()) return;
+
+    const nextPhase: ProjectPhase = {
+      id: createStructureId('phase'),
+      title: newPhaseTitle.trim(),
+      description: newPhaseDescription.trim() || undefined,
+      status: 'Active',
+      createdAt: new Date().toISOString(),
+    };
+
+    await updateProject.mutateAsync({
+      id: id!,
+      updates: { phases: [...phases, nextPhase] },
+    });
+    setNewPhaseTitle('');
+    setNewPhaseDescription('');
+    setShowAddPhase(false);
+  };
+
+  const handleAddMilestone = async () => {
+    if (!newMilestoneTitle.trim()) return;
+
+    const nextMilestone: ProjectMilestone = {
+      id: createStructureId('milestone'),
+      title: newMilestoneTitle.trim(),
+      phaseId: newMilestonePhaseId || undefined,
+      dueDate: newMilestoneDueDate || undefined,
+      status: 'Planned',
+      createdAt: new Date().toISOString(),
+    };
+
+    await updateProject.mutateAsync({
+      id: id!,
+      updates: { milestones: [...milestones, nextMilestone] },
+    });
+    setNewMilestoneTitle('');
+    setNewMilestonePhaseId('');
+    setNewMilestoneDueDate('');
+    setShowAddMilestone(false);
+  };
+
+  const handlePhaseChange = (task: Task, phaseId: string) => {
+    const currentMilestone = milestones.find((m) => m.id === task.milestoneId);
+    const shouldClearMilestone = currentMilestone && currentMilestone.phaseId && currentMilestone.phaseId !== phaseId;
+
+    updateTask.mutate({
+      id: task.id,
+      updates: {
+        phaseId: phaseId || null,
+        milestoneId: shouldClearMilestone ? null : task.milestoneId,
+      },
+    });
+  };
+
+  const handleMilestoneChange = (task: Task, milestoneId: string) => {
+    const milestone = milestones.find((m) => m.id === milestoneId);
+
+    updateTask.mutate({
+      id: task.id,
+      updates: {
+        milestoneId: milestoneId || null,
+        phaseId: milestone?.phaseId || task.phaseId || null,
+      },
+    });
   };
 
   if (isLoading) {
@@ -372,6 +566,113 @@ export function ProjectDetailPage() {
         </div>
       </div>
 
+      {/* Project structure */}
+      <div className="card p-4 space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-bold" style={{ color: 'var(--color-text)' }}>Phases & Milestones</h2>
+            <p className="text-[12px] mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+              Organize project tasks by delivery phase and milestone.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="secondary" onClick={() => setShowAddPhase(true)}>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Phase
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setShowAddMilestone(true)}>
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              Milestone
+            </Button>
+          </div>
+        </div>
+
+        {phases.length === 0 && milestones.length === 0 ? (
+          <div className="rounded-lg border border-dashed px-4 py-5 text-center" style={{ borderColor: 'var(--color-border)' }}>
+            <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>No phases yet</p>
+            <p className="text-[12px] mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+              Create phases like Discovery, Build, Review, or Launch, then assign tasks from the task rows.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {phases.map((phase) => {
+              const counts = taskCountsByPhase.get(phase.id) ?? { total: 0, done: 0 };
+              const phaseMilestones = milestones.filter((m) => m.phaseId === phase.id);
+              return (
+                <div key={phase.id} className="rounded-lg border p-3 space-y-2" style={{ borderColor: 'var(--color-border)' }}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="text-sm font-semibold truncate" style={{ color: 'var(--color-text)' }}>{phase.title}</h3>
+                      {phase.description && (
+                        <p className="text-[12px] mt-0.5 line-clamp-2" style={{ color: 'var(--color-text-secondary)' }}>{phase.description}</p>
+                      )}
+                    </div>
+                    <Badge variant={phase.status === 'Completed' ? 'success' : phase.status === 'Active' ? 'primary' : 'default'} className="!text-[10px] !px-1.5 !py-0">
+                      {phase.status}
+                    </Badge>
+                  </div>
+                  <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--color-muted)' }}>
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0}%`,
+                        backgroundColor: 'var(--primary-500)',
+                      }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                    <span>{counts.done}/{counts.total} tasks done</span>
+                    <span>{phaseMilestones.length} milestone{phaseMilestones.length !== 1 ? 's' : ''}</span>
+                  </div>
+                  {phaseMilestones.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {phaseMilestones.map((milestone) => (
+                        <span
+                          key={milestone.id}
+                          className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                          style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
+                        >
+                          {milestone.title}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+            {milestones.filter((m) => !m.phaseId).length > 0 && (
+              <div className="rounded-lg border p-3 space-y-2" style={{ borderColor: 'var(--color-border)' }}>
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Unassigned Milestones</h3>
+                <div className="flex flex-wrap gap-1">
+                  {milestones.filter((m) => !m.phaseId).map((milestone) => (
+                    <span
+                      key={milestone.id}
+                      className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                      style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
+                    >
+                      {milestone.title}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(taskCountsByPhase.get('')?.total ?? 0) > 0 && (
+              <div className="rounded-lg border border-dashed p-3 space-y-1" style={{ borderColor: 'var(--color-border)' }}>
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Unassigned Tasks</h3>
+                <p className="text-[12px]" style={{ color: 'var(--color-text-secondary)' }}>
+                  {taskCountsByPhase.get('')?.total ?? 0} task{(taskCountsByPhase.get('')?.total ?? 0) !== 1 ? 's' : ''} waiting for a phase.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Two-col layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left: Task lists */}
@@ -392,15 +693,20 @@ export function ProjectDetailPage() {
                 {pending.map((t) => (
                   <TaskRow
                     key={t.id}
-                    task={{ ...t, projectName: t.projectName || project.title }}
+                    task={resolveTaskStructure({ ...t, projectName: t.projectName || project.title }, phases, milestones)}
                     variant="pending"
+                    phases={phases}
+                    milestones={milestones}
                     onToggle={(tid) => updateStatus.mutate({ id: tid, status: 'Done' })}
                     onView={setShowViewTask}
+                    onPhaseChange={handlePhaseChange}
+                    onMilestoneChange={handleMilestoneChange}
                     onEdit={setShowEditTask}
                     onDelete={(tid) => deleteTask.mutate(tid)}
                     onScheduleToday={(tid) => scheduleToday.mutate(tid)}
                     deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
                     schedulingId={scheduleToday.isPending ? (scheduleToday.variables ?? null) : null}
+                    updatingStructureId={updatingStructureId}
                   />
                 ))}
               </div>
@@ -434,10 +740,15 @@ export function ProjectDetailPage() {
                   {completed.map((t) => (
                     <TaskRow
                       key={t.id}
-                      task={{ ...t, projectName: t.projectName || project.title }}
+                      task={resolveTaskStructure({ ...t, projectName: t.projectName || project.title }, phases, milestones)}
                       variant="done"
+                      phases={phases}
+                      milestones={milestones}
                       onToggle={(tid) => updateStatus.mutate({ id: tid, status: 'Pending' })}
                       onView={setShowViewTask}
+                      onPhaseChange={handlePhaseChange}
+                      onMilestoneChange={handleMilestoneChange}
+                      updatingStructureId={updatingStructureId}
                     />
                   ))}
                 </div>
@@ -605,6 +916,94 @@ export function ProjectDetailPage() {
               </Button>
               <Button onClick={handleAddNote} isLoading={createTask.isPending} disabled={!newNoteTitle.trim()}>
                 Add Note
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Add Phase modal */}
+      {showAddPhase && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="card p-6 max-w-md w-full space-y-4">
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Create Phase</h3>
+            <Input
+              id="phaseTitle"
+              label="Phase Name"
+              value={newPhaseTitle}
+              onChange={(e) => setNewPhaseTitle(e.target.value)}
+              placeholder="e.g., Discovery, Build, Launch"
+              required
+            />
+            <div>
+              <label htmlFor="phaseDescription" className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
+                Description (optional)
+              </label>
+              <textarea
+                id="phaseDescription"
+                value={newPhaseDescription}
+                onChange={(e) => setNewPhaseDescription(e.target.value)}
+                placeholder="Add what this phase should cover..."
+                rows={3}
+                className="input-base w-full resize-none"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => { setShowAddPhase(false); setNewPhaseTitle(''); setNewPhaseDescription(''); }}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddPhase} isLoading={updateProject.isPending} disabled={!newPhaseTitle.trim()}>
+                Create Phase
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Add Milestone modal */}
+      {showAddMilestone && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="card p-6 max-w-md w-full space-y-4">
+            <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>Create Milestone</h3>
+            <Input
+              id="milestoneTitle"
+              label="Milestone Name"
+              value={newMilestoneTitle}
+              onChange={(e) => setNewMilestoneTitle(e.target.value)}
+              placeholder="e.g., Prototype approved"
+              required
+            />
+            <div>
+              <label htmlFor="milestonePhase" className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
+                Phase (optional)
+              </label>
+              <select
+                id="milestonePhase"
+                value={newMilestonePhaseId}
+                onChange={(e) => setNewMilestonePhaseId(e.target.value)}
+                className="input-base w-full"
+              >
+                <option value="">No phase</option>
+                {phases.map((phase) => (
+                  <option key={phase.id} value={phase.id}>{phase.title}</option>
+                ))}
+              </select>
+            </div>
+            <Input
+              id="milestoneDueDate"
+              label="Due Date (optional)"
+              type="date"
+              value={newMilestoneDueDate}
+              onChange={(e) => setNewMilestoneDueDate(e.target.value)}
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="secondary" onClick={() => { setShowAddMilestone(false); setNewMilestoneTitle(''); setNewMilestonePhaseId(''); setNewMilestoneDueDate(''); }}>
+                Cancel
+              </Button>
+              <Button onClick={handleAddMilestone} isLoading={updateProject.isPending} disabled={!newMilestoneTitle.trim()}>
+                Create Milestone
               </Button>
             </div>
           </div>

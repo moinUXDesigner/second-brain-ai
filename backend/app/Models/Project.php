@@ -10,9 +10,16 @@ class Project extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['title', 'description', 'domain', 'status', 'priority', 'due_date'];
+    protected $fillable = [
+        'title', 'description', 'domain', 'status', 'priority', 'due_date',
+        'phases', 'milestones',
+    ];
 
-    protected $casts = ['due_date' => 'date'];
+    protected $casts = [
+        'due_date' => 'date',
+        'phases' => 'array',
+        'milestones' => 'array',
+    ];
 
     public function tasks(): HasMany
     {

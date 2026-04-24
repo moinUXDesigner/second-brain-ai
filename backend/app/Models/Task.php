@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Task extends Model
 {
     protected $fillable = [
-        'project_id', 'title', 'type', 'area', 'notes', 'maslow',
+        'project_id', 'phase_id', 'milestone_id', 'title', 'type', 'area', 'notes', 'maslow',
         'impact', 'effort', 'time_estimate', 'urgency', 'category',
         'confidence', 'priority', 'fit_score', 'status', 'source',
         'recurrence', 'due_date', 'deadline_date', 'tags', 'completed_at',

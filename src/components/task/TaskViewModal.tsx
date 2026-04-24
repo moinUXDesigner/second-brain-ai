@@ -134,6 +134,8 @@ export function TaskViewModal({ task, onClose }: TaskViewModalProps) {
               <DetailRow label="Type" value={display(task.type)} />
               <DetailRow label="Area" value={display(task.area)} />
               <DetailRow label="Project" value={display(task.projectName)} />
+              <DetailRow label="Phase" value={display(task.phaseName || task.phaseId)} />
+              <DetailRow label="Milestone" value={display(task.milestoneName || task.milestoneId)} />
               <DetailRow label="Status" value={<Badge variant={statusVariant(task.status)}>{task.status}</Badge>} />
               <DetailRow label="Priority" value={display(task.priority)} />
               <DetailRow label="Urgency" value={task.urgency ? <Badge variant={urgencyVariant(task.urgency)}>{task.urgency}</Badge> : 'Not set'} />

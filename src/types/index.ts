@@ -50,6 +50,10 @@ export interface Task {
   area: string;
   notes: string;
   projectId?: string;
+  phaseId?: string | null;
+  phaseName?: string;
+  milestoneId?: string | null;
+  milestoneName?: string;
   maslow?: MaslowLevel | string;
   impact?: number;
   effort?: number;
@@ -75,6 +79,27 @@ export interface Task {
   timerStartedAt?: string;
 }
 
+export type ProjectPhaseStatus = 'Planned' | 'Active' | 'Completed';
+
+export interface ProjectPhase {
+  id: string;
+  title: string;
+  description?: string;
+  status: ProjectPhaseStatus;
+  createdAt?: string;
+}
+
+export type ProjectMilestoneStatus = 'Planned' | 'Completed';
+
+export interface ProjectMilestone {
+  id: string;
+  title: string;
+  phaseId?: string;
+  dueDate?: string;
+  status: ProjectMilestoneStatus;
+  createdAt?: string;
+}
+
 export interface Project {
   id: string;
   title: string;
@@ -83,6 +108,8 @@ export interface Project {
   status: 'Active' | 'Completed' | 'Archived' | 'Deleted';
   priority?: number;
   dueDate?: string;
+  phases?: ProjectPhase[];
+  milestones?: ProjectMilestone[];
   progress: number;
   subtasks: Task[];
   createdAt?: string;
