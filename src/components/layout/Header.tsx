@@ -9,15 +9,15 @@ import { Badge } from '@/components/ui/Badge';
 
 export function Header() {
   const user = useAuthStore((s) => s.user);
-  const { toggleSidebar, toggleSidebarCollapse, isSidebarCollapsed, aiEnabled, toggleAI } = useUiStore();
+  const { toggleSidebar, aiEnabled, toggleAI } = useUiStore();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const [showA11y, setShowA11y] = useState(false);
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-between border-b px-3 lg:px-6 gap-2" style={{ borderColor: 'var(--color-border)', backgroundColor: 'color-mix(in srgb, var(--color-surface) 80%, transparent)', backdropFilter: 'blur(8px)' }}>
-        {/* Left — hamburger for mobile, collapse toggle for desktop */}
+      <header className="sticky top-0 z-30 flex h-14 lg:h-16 items-center justify-end border-b px-3 lg:px-6 gap-2" style={{ borderColor: 'var(--color-border)', backgroundColor: 'color-mix(in srgb, var(--color-surface) 80%, transparent)', backdropFilter: 'blur(8px)' }}>
+        {/* Left — hamburger for mobile */}
         <button
           onClick={toggleSidebar}
           className="rounded-md p-2 lg:hidden shrink-0 transition-colors"
@@ -26,24 +26,6 @@ export function Header() {
         >
           <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
-
-        <button
-          onClick={toggleSidebarCollapse}
-          className="hidden lg:inline-flex h-10 w-10 items-center justify-center rounded-xl border transition-colors hover:bg-opacity-80"
-          style={{
-            borderColor: 'var(--color-border)',
-            backgroundColor: 'var(--color-surface)',
-            color: 'var(--color-text-secondary)',
-          }}
-          aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-            <rect width="18" height="18" x="3" y="3" rx="2"></rect>
-            <path d="M9 3v18"></path>
-            <path d={isSidebarCollapsed ? 'm15 9 3 3-3 3' : 'm16 15-3-3 3-3'}></path>
           </svg>
         </button>
 

@@ -30,7 +30,7 @@ const adminItem = {
 
 export function Sidebar() {
   const role = useAuthStore((s) => s.role);
-  const { isSidebarOpen, isSidebarCollapsed, toggleSidebar, toggleSidebarCollapse } = useUiStore();
+  const { isSidebarOpen, isSidebarCollapsed, toggleSidebar } = useUiStore();
   const navigate = useNavigate();
   const { logout } = useAuth();
 
@@ -69,16 +69,6 @@ export function Sidebar() {
               {APP_NAME}
             </span>
           )}
-          <button
-            onClick={toggleSidebarCollapse}
-            className="ml-auto hidden lg:flex items-center justify-center h-8 w-8 rounded-md hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
-            style={{ color: 'var(--sidebar-fg)' }}
-            title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d={isSidebarCollapsed ? 'M9 5l7 7-7 7' : 'M15 19l-7-7 7-7'} />
-            </svg>
-          </button>
         </div>
 
         {/* Create button */}

@@ -7,6 +7,30 @@ import { formatDate } from '@/utils/dateFormat';
 
 const PAGE_SIZE = 10;
 
+function CompletionIcon({ isDeleted = false }: { isDeleted?: boolean }) {
+  return (
+    <span
+      className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-full"
+      style={{
+        backgroundColor: isDeleted ? 'var(--color-danger, #ef4444)' : 'var(--success-500, #22c55e)',
+        color: '#fff',
+      }}
+      aria-label={isDeleted ? 'Deleted task' : 'Completed task'}
+      title={isDeleted ? 'Deleted task' : 'Completed task'}
+    >
+      {isDeleted ? (
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      ) : (
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      )}
+    </span>
+  );
+}
+
 export function CompletedTasksPage() {
   const { data: tasks, isLoading } = useTasks();
   const updateStatus = useUpdateTaskStatus();
@@ -135,13 +159,16 @@ export function CompletedTasksPage() {
               {paginated.map((task) => (
                 <div key={task.id} className="card p-4 space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="text-body font-medium line-through opacity-70" style={{ color: 'var(--color-text)' }}>
-                        {task.title}
-                      </p>
-                      {task.area && (
-                        <p className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>{task.area}</p>
-                      )}
+                    <div className="min-w-0 flex items-start gap-3">
+                      <CompletionIcon isDeleted={task.status === 'Deleted'} />
+                      <div className="min-w-0">
+                        <p className="text-body font-medium leading-snug" style={{ color: 'var(--color-text)' }}>
+                          {task.title}
+                        </p>
+                        {task.area && (
+                          <p className="text-caption mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>{task.area}</p>
+                        )}
+                      </div>
                     </div>
                     <Badge variant={task.status === 'Deleted' ? 'danger' : 'success'} className="!text-[10px] !px-1.5 !py-0.5">{task.status === 'Deleted' ? 'Deleted' : 'Done'}</Badge>
                   </div>
@@ -194,9 +221,12 @@ export function CompletedTasksPage() {
                         }}
                       >
                         <td className="px-4 py-3">
-                          <p className="text-body font-medium line-through opacity-70" style={{ color: 'var(--color-text)' }}>
-                            {task.title}
-                          </p>
+                          <div className="flex items-center gap-3">
+                            <CompletionIcon isDeleted={task.status === 'Deleted'} />
+                            <p className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
+                              {task.title}
+                            </p>
+                          </div>
                         </td>
                         <td className="px-4 py-3">
                           <Badge className="!text-[10px] !px-1.5 !py-0.5">{task.type || '—'}</Badge>
