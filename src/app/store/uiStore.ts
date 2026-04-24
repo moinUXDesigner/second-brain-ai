@@ -12,6 +12,7 @@ interface UiState {
   isLoading: boolean;
   activeModal: string | null;
   toggleSidebar: () => void;
+  toggleSidebarCollapse: () => void;
   toggleDarkMode: () => void;
   toggleColorScheme: () => void;
   toggleAI: () => void;
@@ -27,7 +28,7 @@ function applyColorScheme(scheme: ColorScheme) {
 
 export const useUiStore = create<UiState>()((set) => ({
   isSidebarOpen: typeof window !== 'undefined' && window.innerWidth >= 1024,
-  isSidebarCollapsed: false,
+  isSidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true',
   isDarkMode: localStorage.getItem('theme') === 'dark',
   colorScheme: (localStorage.getItem('colorScheme') as ColorScheme) || 'blue',
   aiEnabled: localStorage.getItem('aiEnabled') !== 'false',
@@ -35,6 +36,12 @@ export const useUiStore = create<UiState>()((set) => ({
   isLoading: false,
   activeModal: null,
   toggleSidebar: () => set((s) => ({ isSidebarOpen: !s.isSidebarOpen })),
+  toggleSidebarCollapse: () =>
+    set((s) => {
+      const next = !s.isSidebarCollapsed;
+      localStorage.setItem('sidebarCollapsed', String(next));
+      return { isSidebarCollapsed: next };
+    }),
   incrementAuditVersion: () => set((s) => ({ auditVersion: s.auditVersion + 1 })),
   toggleDarkMode: () =>
     set((s) => {

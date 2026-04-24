@@ -5,6 +5,7 @@ import type { Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { TaskTimer } from '@/components/task/TaskTimer';
 import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
+import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { EditTaskModal } from './EditTaskModal';
 import { useScheduleToday } from '@/hooks/useTasks';
 import { formatDateRelative, formatDate } from '@/utils/dateFormat';
@@ -29,6 +30,7 @@ function MobileTaskRow({
   onReveal,
   onEdit,
   onConvert,
+  onView,
   onLinkProject,
   onScheduleToday,
   isScheduling,
@@ -42,6 +44,7 @@ function MobileTaskRow({
   onReveal: (id: string | null) => void;
   onEdit: (task: Task) => void;
   onConvert: (task: Task) => void;
+  onView: (task: Task) => void;
   onLinkProject: (task: Task) => void;
   onScheduleToday: (id: string) => void;
   isScheduling: boolean;
@@ -49,6 +52,7 @@ function MobileTaskRow({
   const rowRef = useRef<HTMLDivElement>(null);
   const touchRef = useRef<{ startX: number; startY: number; locked: boolean | null } | null>(null);
   const posRef = useRef(isRevealed ? -SWIPE_WIDTH : 0);
+  const suppressClickRef = useRef(false);
 
   useEffect(() => {
     if (!isRevealed && rowRef.current) {
@@ -98,6 +102,10 @@ function MobileTaskRow({
     }
     rowRef.current.style.transition = 'transform 0.2s ease-out';
 
+    if (touchRef.current.locked === true) {
+      suppressClickRef.current = true;
+    }
+
     if (posRef.current < -SWIPE_WIDTH / 3) {
       rowRef.current.style.transform = `translateX(-${SWIPE_WIDTH}px)`;
       posRef.current = -SWIPE_WIDTH;
@@ -109,6 +117,15 @@ function MobileTaskRow({
     }
     touchRef.current = null;
   }, [task.id, onReveal]);
+
+  const handleRowClick = useCallback(() => {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+
+    onView(task);
+  }, [onView, task]);
 
   // Modal state for editing and converting (lifted up in TaskList)
   // ...existing code...
@@ -140,8 +157,9 @@ function MobileTaskRow({
       {/* Row content */}
       <div
         ref={rowRef}
-        className="relative flex items-center gap-3 px-4 py-2.5"
+        className="relative flex cursor-pointer items-center gap-3 px-4 py-2.5"
         style={{ backgroundColor: 'var(--color-bg)', touchAction: 'pan-y', willChange: 'transform' }}
+        onClick={handleRowClick}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -207,7 +225,10 @@ function MobileTaskRow({
             <TaskTimer task={task} compact />
             <button
               className="btn btn-xs btn-outline p-1"
-              onClick={() => onScheduleToday(task.id)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onScheduleToday(task.id);
+              }}
               disabled={isScheduling}
               title="Schedule for today"
             >
@@ -217,7 +238,10 @@ function MobileTaskRow({
             </button>
             <button
               className="btn btn-xs btn-outline p-1"
-              onClick={() => onEdit(task)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit(task);
+              }}
               title="Edit task"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -226,7 +250,10 @@ function MobileTaskRow({
             </button>
             <button
               className="btn btn-xs btn-outline p-1"
-              onClick={() => onLinkProject(task)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onLinkProject(task);
+              }}
               title="Link to project"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -235,7 +262,10 @@ function MobileTaskRow({
             </button>
             <button
               className="btn btn-xs btn-outline p-1"
-              onClick={() => onConvert(task)}
+              onClick={(event) => {
+                event.stopPropagation();
+                onConvert(task);
+              }}
               title="Convert to project"
             >
               <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -260,6 +290,7 @@ function MobileTaskRow({
 }
 
 export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId }: TaskListProps) {
+  const [viewTask, setViewTask] = useState<Task | null>(null);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [convertTask, setConvertTask] = useState<Task | null>(null);
   const [linkTask, setLinkTask] = useState<Task | null>(null);
@@ -339,6 +370,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
             onReveal={setSwipedId}
             onEdit={setEditTask}
             onConvert={setConvertTask}
+            onView={setViewTask}
             onLinkProject={setLinkTask}
             onScheduleToday={(id) => scheduleToday.mutate(id)}
             isScheduling={scheduleToday.isPending && scheduleToday.variables === task.id}
@@ -374,7 +406,8 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
               {tasks.map((task, i) => (
                 <tr
                   key={task.id}
-                  className="transition-colors"
+                  onClick={() => setViewTask(task)}
+                  className="cursor-pointer transition-colors hover:bg-black/[.015] dark:hover:bg-white/[.015]"
                   style={{
                     borderBottom: i < tasks.length - 1 ? '1px solid var(--color-border)' : undefined,
                   }}
@@ -382,7 +415,10 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                   {onComplete && (
                     <td className="px-3 py-3">
                       <button
-                        onClick={() => onComplete(task.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onComplete(task.id);
+                        }}
                         disabled={completingId === task.id}
                         className="flex items-center justify-center h-5 w-5 rounded-full border-[1.5px] transition-all duration-200"
                         style={{
@@ -474,7 +510,10 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                     <div className="flex gap-1">
                       <button
                         className="btn btn-xs btn-outline p-1"
-                        onClick={() => scheduleToday.mutate(task.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          scheduleToday.mutate(task.id);
+                        }}
                         disabled={scheduleToday.isPending}
                         title="Schedule for today"
                       >
@@ -484,7 +523,10 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                       </button>
                       <button
                         className="btn btn-xs btn-outline p-1"
-                        onClick={() => setEditTask(task)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditTask(task);
+                        }}
                         title="Edit task"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -493,7 +535,10 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                       </button>
                       <button
                         className="btn btn-xs btn-outline p-1"
-                        onClick={() => setLinkTask(task)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setLinkTask(task);
+                        }}
                         title="Link to project"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -502,7 +547,10 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                       </button>
                       <button
                         className="btn btn-xs btn-outline p-1"
-                        onClick={() => setConvertTask(task)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setConvertTask(task);
+                        }}
                         title="Convert to project"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -514,7 +562,10 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                   {onDelete && (
                     <td className="px-4 py-3 text-right">
                       <button
-                        onClick={() => handleDeleteClick(task.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDeleteClick(task.id);
+                        }}
                         disabled={deletingId === task.id}
                         className="p-1.5 rounded-md transition-colors hover:opacity-80 disabled:opacity-40"
                         style={{ color: 'var(--color-danger, #ef4444)' }}
@@ -541,6 +592,7 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
       </div>
 
       {/* Delete confirmation modal */}
+      {viewTask && <TaskViewModal task={viewTask} onClose={() => setViewTask(null)} />}
       {editTaskModal}
       {ConvertTaskModal}
       {linkTask && <LinkToProjectModal task={linkTask} onClose={() => setLinkTask(null)} />}

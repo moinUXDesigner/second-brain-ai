@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/Badge';
 import { TaskTimer } from '@/components/task/TaskTimer';
 import { EditTaskModal } from './EditTaskModal';
 import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
+import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { useScheduleToday } from '@/hooks/useTasks';
 import { formatDate } from '@/utils/dateFormat';
 
@@ -35,6 +36,7 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
     project: [],
   });
   const [showFilters, setShowFilters] = useState<Record<string, boolean>>({});
+  const [viewTask, setViewTask] = useState<Task | null>(null);
   const [editTask, setEditTask] = useState<Task | null>(null);
   const [linkTask, setLinkTask] = useState<Task | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -331,14 +333,18 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
               {filteredAndSorted.map((task, i) => (
                 <tr
                   key={task.id}
-                  className="transition-colors"
+                  onClick={() => setViewTask(task)}
+                  className="cursor-pointer transition-colors hover:bg-black/[.015] dark:hover:bg-white/[.015]"
                   style={{
                     borderBottom: i < filteredAndSorted.length - 1 ? '1px solid var(--color-border)' : undefined,
                   }}
                 >
                   <td className="px-3 py-3">
                     <button
-                      onClick={() => onComplete(task.id)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onComplete(task.id);
+                      }}
                       disabled={completingId === task.id}
                       className="flex items-center justify-center h-5 w-5 rounded-full border-[1.5px] transition-all duration-200"
                       style={{
@@ -428,7 +434,10 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                     <div className="flex gap-1">
                       <button
                         className="btn btn-xs btn-outline p-1"
-                        onClick={() => scheduleToday.mutate(task.id)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          scheduleToday.mutate(task.id);
+                        }}
                         disabled={scheduleToday.isPending}
                         title="Schedule for today"
                       >
@@ -438,7 +447,10 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                       </button>
                       <button
                         className="btn btn-xs btn-outline p-1"
-                        onClick={() => setEditTask(task)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditTask(task);
+                        }}
                         title="Edit task"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -447,7 +459,10 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                       </button>
                       <button
                         className="btn btn-xs btn-outline p-1"
-                        onClick={() => setLinkTask(task)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setLinkTask(task);
+                        }}
                         title="Link to project"
                       >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -458,7 +473,10 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => setConfirmId(task.id)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setConfirmId(task.id);
+                      }}
                       disabled={deletingId === task.id}
                       className="p-1.5 rounded-md transition-colors hover:opacity-80 disabled:opacity-40"
                       style={{ color: 'var(--color-danger, #ef4444)' }}
@@ -483,6 +501,7 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
         </div>
       </div>
 
+      {viewTask && <TaskViewModal task={viewTask} onClose={() => setViewTask(null)} />}
       {editTask && <EditTaskModal task={editTask} onClose={() => setEditTask(null)} />}
       {linkTask && <LinkToProjectModal task={linkTask} onClose={() => setLinkTask(null)} />}
 
