@@ -22,23 +22,13 @@ function MetricCard({
   accent: string;
 }) {
   return (
-    <div className="rounded-xl p-4" style={{ backgroundColor: 'var(--color-muted)' }}>
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
-            {label}
-          </p>
-          <p className="mt-1 text-2xl font-bold" style={{ color: accent }}>
-            {value}/10
-          </p>
-        </div>
-        <div
-          className="flex h-12 w-12 items-center justify-center rounded-full text-2xl"
-          style={{ backgroundColor: 'var(--color-surface)' }}
-          aria-label={`${label} emoji ${emoji}`}
-        >
-          {emoji}
-        </div>
+    <div className="rounded-lg p-2.5 md:p-3 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
+      <div className="text-lg md:text-2xl mb-1">{emoji}</div>
+      <div className="text-lg md:text-2xl font-bold" style={{ color: accent }}>
+        {value}
+      </div>
+      <div className="text-[10px] md:text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+        {label}
       </div>
     </div>
   );
@@ -74,22 +64,23 @@ export function WellbeingSnapshot() {
         <div>
           <CardTitle>Today&apos;s State</CardTitle>
           <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
-            Mood, Energy, and Focus based on today&apos;s saved daily state
+            Your current mood, energy, and focus levels
           </p>
         </div>
       </CardHeader>
 
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3 md:gap-4 px-4 pb-4">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="rounded-xl p-4 animate-pulse" style={{ backgroundColor: 'var(--color-muted)' }}>
-              <div className="h-4 w-20 rounded" style={{ backgroundColor: 'var(--color-surface)' }} />
-              <div className="mt-3 h-8 w-16 rounded" style={{ backgroundColor: 'var(--color-surface)' }} />
+            <div key={i} className="rounded-lg p-2.5 md:p-3 animate-pulse" style={{ backgroundColor: 'var(--color-muted)' }}>
+              <div className="h-6 w-8 rounded mx-auto mb-1" style={{ backgroundColor: 'var(--color-surface)' }} />
+              <div className="h-6 w-12 rounded mx-auto mb-1" style={{ backgroundColor: 'var(--color-surface)' }} />
+              <div className="h-3 w-10 rounded mx-auto" style={{ backgroundColor: 'var(--color-surface)' }} />
             </div>
           ))}
         </div>
       ) : state ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3 md:gap-4 px-4 pb-4">
           <MetricCard
             label="Mood"
             value={state.mood}
@@ -110,7 +101,7 @@ export function WellbeingSnapshot() {
           />
         </div>
       ) : (
-        <div className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+        <div className="px-4 pb-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           No daily state found yet.
         </div>
       )}
