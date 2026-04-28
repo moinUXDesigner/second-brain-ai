@@ -28,23 +28,44 @@ export function SummaryCards() {
   }).length;
 
   const cards = [
-    { label: 'Total Tasks', value: tasks.length, color: 'text-primary-600', bg: 'bg-primary-50 dark:bg-primary-900/20' },
-    { label: 'Completed', value: doneTasks, color: 'text-success-600', bg: 'bg-success-50 dark:bg-success-900/20' },
-    { label: 'Pending', value: pendingTasks, color: 'text-warning-600', bg: 'bg-warning-50 dark:bg-warning-900/20' },
-    { label: 'Overdue', value: overdueTasks, color: 'text-danger-600', bg: 'bg-danger-50 dark:bg-danger-900/20' },
+    { 
+      label: 'Total Tasks', 
+      value: tasks.length, 
+      color: 'var(--primary-600)', 
+      bgColor: 'var(--primary-50, #f0f4ff)',
+      icon: '📋'
+    },
+    { 
+      label: 'Completed', 
+      value: doneTasks, 
+      color: 'var(--success-600, #16a34a)', 
+      bgColor: 'var(--success-50, #f0fdf4)',
+      icon: '✅'
+    },
+    { 
+      label: 'Pending', 
+      value: pendingTasks, 
+      color: 'var(--warning-600, #d97706)', 
+      bgColor: 'var(--warning-50, #fffbeb)',
+      icon: '⏳'
+    },
+    { 
+      label: 'Overdue', 
+      value: overdueTasks, 
+      color: 'var(--color-danger, #ef4444)', 
+      bgColor: 'var(--danger-50, #fef2f2)',
+      icon: '🔴'
+    },
   ];
 
   if (loadingTasks || loadingToday) {
     return (
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="card p-3 md:p-4 animate-pulse">
-            <div className="flex flex-col md:flex-row items-center md:gap-4">
-              <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg mb-2 md:mb-0" style={{ backgroundColor: 'var(--color-muted)' }} />
-              <div className="space-y-2 flex-1 text-center md:text-left w-full">
-                <div className="h-3 rounded w-2/3 mx-auto md:mx-0" style={{ backgroundColor: 'var(--color-muted)' }} />
-                <div className="h-6 rounded w-1/2 mx-auto md:mx-0" style={{ backgroundColor: 'var(--color-muted)' }} />
-              </div>
+          <div key={i} className="rounded-lg p-3 md:p-4 animate-pulse" style={{ backgroundColor: 'var(--color-muted)' }}>
+            <div className="space-y-2">
+              <div className="h-4 w-16 rounded" style={{ backgroundColor: 'var(--color-surface)' }} />
+              <div className="h-6 w-12 rounded" style={{ backgroundColor: 'var(--color-surface)' }} />
             </div>
           </div>
         ))}
@@ -56,15 +77,15 @@ export function SummaryCards() {
     <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       {cards.map((c) => (
         <motion.div key={c.label} variants={item}>
-          <Card className="flex flex-col md:flex-row md:items-center md:gap-4 p-3 md:p-4">
-            <div className={`flex h-10 w-10 md:h-12 md:w-12 items-center justify-center rounded-lg flex-shrink-0 ${c.bg} mb-2 md:mb-0`}>
-              <span className={`text-h3 font-bold ${c.color}`}>{c.value}</span>
+          <div className="rounded-lg p-3 md:p-4 text-center" style={{ backgroundColor: c.bgColor }}>
+            <div className="text-2xl md:text-3xl mb-2">{c.icon}</div>
+            <div className="text-2xl md:text-3xl font-bold mb-1" style={{ color: c.color }}>
+              {c.value}
             </div>
-            <div className="text-center md:text-left">
-              <p className="text-caption text-neutral-500 text-xs md:text-sm">{c.label}</p>
-              <p className={`text-h3 md:text-h2 font-bold ${c.color}`}>{c.value}</p>
+            <div className="text-xs md:text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+              {c.label}
             </div>
-          </Card>
+          </div>
         </motion.div>
       ))}
     </motion.div>
