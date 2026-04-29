@@ -289,7 +289,7 @@ export function TasksPage() {
             {/* Desktop view with advanced table */}
             <div className="hidden md:block">
               <AdvancedTaskTable
-                tasks={filtered}
+                tasks={paginated}
                 onDelete={(id) => deleteTask.mutate(id)}
                 deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
                 onComplete={(id) => completeTask.mutate({ id, status: 'Done' })}
