@@ -216,7 +216,7 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead>
+            <thead className="sticky top-0 z-20">
               <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-muted)' }}>
                 <th className="w-10 px-3 py-3"></th>
                 <th className="px-4 py-3 text-left">

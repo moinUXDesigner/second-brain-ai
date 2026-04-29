@@ -13,7 +13,7 @@ import toast from 'react-hot-toast';
 
 type SortField = 'newest' | 'oldest' | 'priority' | 'impact';
 
-const PAGE_SIZE = 10;
+const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
 
 export function TasksPage() {
   const navigate = useNavigate();
@@ -28,6 +28,7 @@ export function TasksPage() {
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const [assigningDates, setAssigningDates] = useState(false);
   const queryClient = useQueryClient();
 
@@ -130,9 +131,9 @@ export function TasksPage() {
     return list;
   }, [tasks, sortBy, filterArea, filterUrgency, searchQuery, dateFrom, dateTo]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
-  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const pendingCount = tasks?.filter((t) => t.status === 'Pending').length ?? 0;
 
   return (
@@ -267,6 +268,22 @@ export function TasksPage() {
               ✕ Clear
             </button>
           )}
+          <label className="shrink-0 flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            Entries
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setPage(1);
+              }}
+              className="rounded-full border py-1 pl-2.5 pr-6 text-xs outline-none"
+              style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+            >
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <option key={size} value={size}>{size}</option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 
@@ -304,7 +321,7 @@ export function TasksPage() {
       {totalPages > 1 && (
         <div className="shrink-0 flex items-center justify-between pt-3 pb-1">
           <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            Page {currentPage} of {totalPages}
+            Page {currentPage} of {totalPages} · Showing {paginated.length} of {filtered.length}
           </span>
           <div className="flex gap-1">
             <button
