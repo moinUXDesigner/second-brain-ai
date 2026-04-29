@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { useProject, useDeleteProject, useUpdateProject } from '@/hooks/useProjects';
 import { useUpdateTaskStatus, useUpdateTask, useDeleteTask, useCreateTask, useScheduleToday } from '@/hooks/useTasks';
 import { Badge } from '@/components/ui/Badge';
@@ -16,6 +17,103 @@ import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 
 function createStructureId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+const MASLOW_LEVELS = [
+  'Physiological',
+  'Safety',
+  'Love',
+  'Esteem',
+  'Self-Actualization',
+] as const;
+
+const MASLOW_PHASE_DETAILS: Record<string, { title: string; description: string }> = {
+  Physiological: {
+    title: 'Maslow 1 - Physiological',
+    description: 'Stabilize essential work that keeps the project functioning.',
+  },
+  Safety: {
+    title: 'Maslow 2 - Safety',
+    description: 'Handle reliability, access, data protection, error handling, and risk reduction.',
+  },
+  Love: {
+    title: 'Maslow 3 - Connection',
+    description: 'Improve collaboration, integration, communication, and user relationships.',
+  },
+  Esteem: {
+    title: 'Maslow 4 - Esteem',
+    description: 'Polish quality, usability, confidence, reporting, and stakeholder-visible value.',
+  },
+  'Self-Actualization': {
+    title: 'Maslow 5 - Self-Actualization',
+    description: 'Advance growth features, intelligence, optimization, and strategic refinement.',
+  },
+};
+
+const MILESTONE_BUCKETS = [
+  { key: 'critical', title: 'Critical First', description: 'High priority and urgent work' },
+  { key: 'core', title: 'Core Delivery', description: 'Important foundation work' },
+  { key: 'enhancement', title: 'Enhancement', description: 'Polish, optimization, and nice-to-have work' },
+] as const;
+
+function normalizeText(value?: string | null) {
+  return (value || '').trim().toLowerCase();
+}
+
+function inferMaslowLevel(task: Task) {
+  const explicit = MASLOW_LEVELS.find((level) => normalizeText(task.maslow) === normalizeText(level));
+  if (explicit) return explicit;
+
+  const text = normalizeText(`${task.title} ${task.notes || ''} ${task.category || ''} ${task.area || ''}`);
+  if (/\b(error|bug|fix|security|login|signin|backup|permission|risk|safe|delete|validation|handling|zakat|finance|asset|loan|receivable)\b/.test(text)) {
+    return 'Safety';
+  }
+  if (/\b(mail|email|google|share|collab|comment|note|notification|user|profile|team)\b/.test(text)) {
+    return 'Love';
+  }
+  if (/\b(ui|ux|enhance|dashboard|analytics|report|print|export|sort|filter|pagination|display|view|refine)\b/.test(text)) {
+    return 'Esteem';
+  }
+  if (/\b(ai|automate|intelligence|optimize|sequence|analyz|suggest|strategy)\b/.test(text)) {
+    return 'Self-Actualization';
+  }
+
+  return 'Physiological';
+}
+
+function urgencyScore(task: Task) {
+  const urgency = normalizeText(task.urgency);
+  if (urgency === 'high') return 30;
+  if (urgency === 'medium') return 15;
+  return 0;
+}
+
+function dueDateScore(task: Task) {
+  const dateValue = task.dueDate || task.deadlineDate;
+  if (!dateValue) return 0;
+
+  const due = new Date(dateValue).getTime();
+  if (Number.isNaN(due)) return 0;
+
+  const days = Math.ceil((due - Date.now()) / 86400000);
+  if (days < 0) return 25;
+  if (days <= 3) return 20;
+  if (days <= 7) return 12;
+  return 4;
+}
+
+function getTaskPriorityScore(task: Task) {
+  const priority = task.priority ?? 0;
+  const impact = task.impact ?? 0;
+  const effort = task.effort ?? 0;
+  return priority * 10 + impact * 2 - effort + urgencyScore(task) + dueDateScore(task);
+}
+
+function getMilestoneBucket(task: Task) {
+  const score = getTaskPriorityScore(task);
+  if (score >= 95 || task.urgency === 'High') return 'critical';
+  if (score >= 45 || (task.priority ?? 0) >= 5) return 'core';
+  return 'enhancement';
 }
 
 function resolveTaskStructure(task: Task, phases: ProjectPhase[], milestones: ProjectMilestone[]) {
@@ -277,6 +375,7 @@ export function ProjectDetailPage() {
   const [newMilestoneDueDate, setNewMilestoneDueDate] = useState('');
   const [editProjectTitle, setEditProjectTitle] = useState('');
   const [editProjectDescription, setEditProjectDescription] = useState('');
+  const [isSequencing, setIsSequencing] = useState(false);
 
   const { pending, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
     if (!project?.subtasks) return { pending: [], completed: [], overdue: [], highPriority: [], suggestedNext: null };
@@ -428,6 +527,115 @@ export function ProjectDetailPage() {
     });
   };
 
+  const handleSequencing = async () => {
+    if (!project) return;
+
+    const unarrangedTasks = (project.subtasks || []).filter((task) => (
+      task.status !== 'Deleted'
+      && task.status !== 'Note'
+      && (!task.phaseId || !task.milestoneId)
+    ));
+
+    if (unarrangedTasks.length === 0) {
+      toast.success('All project tasks are already sequenced');
+      return;
+    }
+
+    setIsSequencing(true);
+    const toastId = toast.loading('AI is sequencing phases and milestones...');
+
+    try {
+      const nextPhases = [...phases];
+      const nextMilestones = [...milestones];
+      const phaseByMaslow = new Map<string, ProjectPhase>();
+      const milestoneByPhaseAndBucket = new Map<string, ProjectMilestone>();
+      const groupedTasks = [...unarrangedTasks].sort((a, b) => {
+        const maslowDiff = MASLOW_LEVELS.indexOf(inferMaslowLevel(a)) - MASLOW_LEVELS.indexOf(inferMaslowLevel(b));
+        if (maslowDiff !== 0) return maslowDiff;
+        return getTaskPriorityScore(b) - getTaskPriorityScore(a);
+      });
+
+      MASLOW_LEVELS.forEach((level) => {
+        const details = MASLOW_PHASE_DETAILS[level];
+        const existing = nextPhases.find((phase) => normalizeText(phase.title) === normalizeText(details.title));
+        if (existing) phaseByMaslow.set(level, existing);
+      });
+
+      groupedTasks.forEach((task) => {
+        const maslowLevel = inferMaslowLevel(task);
+        const phaseDetails = MASLOW_PHASE_DETAILS[maslowLevel];
+        let phase = phaseByMaslow.get(maslowLevel);
+
+        if (!phase) {
+          phase = {
+            id: createStructureId('phase'),
+            title: phaseDetails.title,
+            description: phaseDetails.description,
+            status: nextPhases.length === phases.length ? 'Active' : 'Planned',
+            createdAt: new Date().toISOString(),
+          };
+          nextPhases.push(phase);
+          phaseByMaslow.set(maslowLevel, phase);
+        }
+
+        MILESTONE_BUCKETS.forEach((bucket) => {
+          const existing = nextMilestones.find((milestone) => (
+            milestone.phaseId === phase?.id
+            && normalizeText(milestone.title) === normalizeText(bucket.title)
+          ));
+          if (existing) milestoneByPhaseAndBucket.set(`${phase?.id}:${bucket.key}`, existing);
+        });
+      });
+
+      const taskAssignments = groupedTasks.map((task) => {
+        const maslowLevel = inferMaslowLevel(task);
+        const phase = phaseByMaslow.get(maslowLevel)!;
+        const bucketKey = getMilestoneBucket(task);
+        const bucket = MILESTONE_BUCKETS.find((item) => item.key === bucketKey)!;
+        const milestoneKey = `${phase.id}:${bucket.key}`;
+        let milestone = milestoneByPhaseAndBucket.get(milestoneKey);
+
+        if (!milestone) {
+          milestone = {
+            id: createStructureId('milestone'),
+            title: bucket.title,
+            phaseId: phase.id,
+            status: 'Planned',
+            createdAt: new Date().toISOString(),
+          };
+          nextMilestones.push(milestone);
+          milestoneByPhaseAndBucket.set(milestoneKey, milestone);
+        }
+
+        return { task, phase, milestone };
+      });
+
+      await updateProject.mutateAsync({
+        id: id!,
+        updates: {
+          phases: nextPhases,
+          milestones: nextMilestones,
+        },
+      });
+
+      for (const assignment of taskAssignments) {
+        await updateTask.mutateAsync({
+          id: assignment.task.id,
+          updates: {
+            phaseId: assignment.task.phaseId || assignment.phase.id,
+            milestoneId: assignment.task.milestoneId || assignment.milestone.id,
+          },
+        });
+      }
+
+      toast.success(`Sequenced ${taskAssignments.length} task${taskAssignments.length !== 1 ? 's' : ''}`, { id: toastId });
+    } catch {
+      toast.error('Could not sequence this project', { id: toastId });
+    } finally {
+      setIsSequencing(false);
+    }
+  };
+
   if (isLoading) {
     return <div className="space-y-6 p-4"><TableSkeleton /></div>;
   }
@@ -503,7 +711,7 @@ export function ProjectDetailPage() {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button size="sm" onClick={() => setShowAddTask(true)}>
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -515,6 +723,22 @@ export function ProjectDetailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
             Add Note
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={handleSequencing}
+            isLoading={isSequencing}
+            disabled={totalTasks === 0}
+            title="Automatically create phases and milestones, then assign unarranged tasks by Maslow priority"
+          >
+            {!isSequencing && (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 4a2 2 0 114 0v1a2 2 0 11-4 0V4zM6 12a2 2 0 114 0v1a2 2 0 11-4 0v-1zM16 12a2 2 0 114 0v1a2 2 0 11-4 0v-1zM11 20a2 2 0 114 0v1a2 2 0 11-4 0v-1z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 7v3m-3 2h6m-3 3v3" />
+              </svg>
+            )}
+            Sequencing
           </Button>
         </div>
 
