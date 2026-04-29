@@ -15,6 +15,8 @@ import {
 import type { PieLabelRenderProps } from 'recharts';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useTasks } from '@/hooks/useTasks';
+import { useProjects } from '@/hooks/useProjects';
+import type { Project, Task } from '@/types';
 
 const COLORS = ['#6172f3', '#22c55e', '#f59e0b', '#ef4444', '#06b6d4', '#8b5cf6'];
 
@@ -23,6 +25,79 @@ type CategoryDatum = {
   value: number;
   percent: number;
 };
+
+type CompletionRateDatum = {
+  month: string;
+  rate: number;
+  completed: number;
+  total: number;
+};
+
+const PROJECT_ACCENTS = [
+  { bg: '#dbeafe', text: '#2563eb' },
+  { bg: '#d1fae5', text: '#059669' },
+  { bg: '#cffafe', text: '#0891b2' },
+  { bg: '#ffedd5', text: '#ea580c' },
+  { bg: '#ffe4e6', text: '#e11d48' },
+];
+
+function getProjectTaskStats(project: Project) {
+  const tasks = project.subtasks?.filter((task) => task.status !== 'Deleted' && task.status !== 'Note') ?? [];
+  const completed = tasks.filter((task) => task.status === 'Done').length;
+  const rate = tasks.length > 0 ? Math.round((completed / tasks.length) * 100) : project.progress || 0;
+
+  return {
+    total: tasks.length,
+    completed,
+    rate,
+  };
+}
+
+function getTaskMonthKey(task: Task) {
+  const sourceDate = task.createdAt || task.completedAt || task.dueDate;
+  if (!sourceDate) return null;
+
+  const date = new Date(sourceDate);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return `${date.getFullYear()}-${date.getMonth()}`;
+}
+
+function getCompletedMonthKey(task: Task) {
+  if (!task.completedAt) return null;
+
+  const date = new Date(task.completedAt);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return `${date.getFullYear()}-${date.getMonth()}`;
+}
+
+function CompletionRateTooltip({
+  active,
+  payload,
+}: {
+  active?: boolean;
+  payload?: Array<{ payload: CompletionRateDatum }>;
+}) {
+  if (!active || !payload?.length) return null;
+
+  const item = payload[0].payload;
+
+  return (
+    <div
+      className="rounded-lg border px-3 py-2 text-xs shadow-sm"
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        borderColor: 'var(--color-border)',
+        color: 'var(--color-text)',
+      }}
+    >
+      <div className="font-semibold">{item.month}</div>
+      <div>{item.rate}% completion rate</div>
+      <div>{item.completed}/{item.total} tasks completed</div>
+    </div>
+  );
+}
 
 function CategoryTooltip({
   active,
@@ -93,6 +168,7 @@ function renderCategoryLabel({
 
 export function Charts() {
   const { data: tasks = [], isLoading } = useTasks();
+  const { data: projects = [], isLoading: loadingProjects } = useProjects();
 
   const pendingTasks = tasks.filter((t) => t.status === 'Pending');
   const categoryMap = pendingTasks.reduce<Record<string, number>>((acc, t) => {
@@ -129,7 +205,34 @@ export function Charts() {
     return { day, completed };
   });
 
-  if (isLoading) {
+  const runningProjects = projects
+    .filter((project) => project.status === 'Active')
+    .map((project) => ({
+      ...project,
+      stats: getProjectTaskStats(project),
+    }))
+    .sort((a, b) => b.stats.rate - a.stats.rate)
+    .slice(0, 5);
+
+  const monthlyCompletionRateData: CompletionRateDatum[] = Array.from({ length: 12 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(date.getMonth() - (11 - i), 1);
+    date.setHours(0, 0, 0, 0);
+
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    const monthTasks = tasks.filter((task) => task.status !== 'Deleted' && task.status !== 'Note' && getTaskMonthKey(task) === key);
+    const completed = tasks.filter((task) => task.status === 'Done' && getCompletedMonthKey(task) === key).length;
+    const rate = monthTasks.length > 0 ? Math.round((completed / monthTasks.length) * 100) : 0;
+
+    return {
+      month: date.toLocaleDateString('en-US', { month: 'short' }),
+      rate: Math.min(rate, 100),
+      completed,
+      total: monthTasks.length,
+    };
+  });
+
+  if (isLoading || loadingProjects) {
     return (
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {[0, 1, 2].map((i) => (
@@ -144,6 +247,115 @@ export function Charts() {
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      <Card className="overflow-hidden !p-0">
+        <div className="flex items-center justify-between px-5 py-4">
+          <CardTitle>Running Projects</CardTitle>
+          <select
+            value="completion"
+            aria-label="Project analytics metric"
+            className="h-9 rounded-md border px-3 text-sm outline-none"
+            style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+            onChange={() => undefined}
+          >
+            <option value="completion">Completion Rate</option>
+          </select>
+        </div>
+
+        {runningProjects.length > 0 ? (
+          <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
+            {runningProjects.map((project, index) => {
+              const accent = PROJECT_ACCENTS[index % PROJECT_ACCENTS.length];
+              const initial = project.title.trim().charAt(0).toUpperCase() || 'P';
+
+              return (
+                <div key={project.id} className="flex items-center gap-4 px-5 py-3">
+                  <div
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
+                    style={{ backgroundColor: accent.bg, color: accent.text }}
+                  >
+                    {initial}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="truncate text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                        {project.title}
+                      </span>
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[10px] font-bold"
+                        style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-700)' }}
+                      >
+                        {project.stats.rate}%
+                      </span>
+                    </div>
+                    <div className="mt-1 text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                      {project.stats.completed}/{project.stats.total} tasks completed
+                    </div>
+                  </div>
+                  <div className="hidden w-28 shrink-0 sm:block">
+                    <div className="h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-muted)' }}>
+                      <div
+                        className="h-full rounded-full"
+                        style={{ width: `${project.stats.rate}%`, backgroundColor: 'var(--primary-600)' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex h-64 items-center justify-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+            No active projects yet.
+          </div>
+        )}
+      </Card>
+
+      <Card className="overflow-hidden !p-0">
+        <div className="flex items-center justify-between px-5 py-4">
+          <div>
+            <CardTitle>Task Completion Rate</CardTitle>
+            <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              Month-wise completion percentage
+            </p>
+          </div>
+          <select
+            value="last12"
+            aria-label="Completion rate range"
+            className="h-9 rounded-md border px-3 text-sm outline-none"
+            style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+            onChange={() => undefined}
+          >
+            <option value="last12">Last 12 Months</option>
+          </select>
+        </div>
+        <div className="h-72 px-3 pb-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={monthlyCompletionRateData} margin={{ top: 12, right: 20, left: 0, bottom: 4 }}>
+              <defs>
+                <linearGradient id="completionRateFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#2f7cf6" stopOpacity={0.22} />
+                  <stop offset="95%" stopColor="#2f7cf6" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} strokeDasharray="4 4" stroke="#dbe5f2" />
+              <XAxis dataKey="month" axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#94a3b8' }} />
+              <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} axisLine={false} tickLine={false} fontSize={12} tick={{ fill: '#94a3b8' }} />
+              <Tooltip content={<CompletionRateTooltip />} />
+              <Area
+                type="monotone"
+                dataKey="rate"
+                stroke="#2f7cf6"
+                fill="url(#completionRateFill)"
+                strokeWidth={2}
+                dot={{ r: 4, strokeWidth: 2, fill: 'var(--color-surface)', stroke: '#2f7cf6' }}
+                activeDot={{ r: 5, strokeWidth: 2, fill: '#2f7cf6', stroke: '#fff' }}
+                name="Completion Rate"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Tasks by Status</CardTitle>

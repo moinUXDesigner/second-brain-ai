@@ -15,6 +15,9 @@ import { formatDate, formatDateRelative } from '@/utils/dateFormat';
 import type { ProjectMilestone, ProjectPhase, Task } from '@/types';
 import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 
+type ProjectTaskSort = 'priority' | 'dueDate' | 'newest' | 'oldest' | 'phase' | 'milestone' | 'maslow';
+type ProjectTaskStatusFilter = 'all' | 'pending' | 'done';
+
 function createStructureId(prefix: string) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
@@ -58,6 +61,15 @@ const MILESTONE_BUCKETS = [
 
 function normalizeText(value?: string | null) {
   return (value || '').trim().toLowerCase();
+}
+
+function escapeHtml(value?: string | number | null) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
 function inferMaslowLevel(task: Task) {
@@ -376,6 +388,12 @@ export function ProjectDetailPage() {
   const [editProjectTitle, setEditProjectTitle] = useState('');
   const [editProjectDescription, setEditProjectDescription] = useState('');
   const [isSequencing, setIsSequencing] = useState(false);
+  const [taskSearchQuery, setTaskSearchQuery] = useState('');
+  const [taskStatusFilter, setTaskStatusFilter] = useState<ProjectTaskStatusFilter>('all');
+  const [taskPhaseFilter, setTaskPhaseFilter] = useState('');
+  const [taskMilestoneFilter, setTaskMilestoneFilter] = useState('');
+  const [taskUrgencyFilter, setTaskUrgencyFilter] = useState('');
+  const [taskSortBy, setTaskSortBy] = useState<ProjectTaskSort>('priority');
 
   const { pending, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
     if (!project?.subtasks) return { pending: [], completed: [], overdue: [], highPriority: [], suggestedNext: null };
@@ -405,6 +423,67 @@ export function ProjectDetailPage() {
   const phases = project?.phases ?? [];
   const milestones = project?.milestones ?? [];
   const updatingStructureId = updateTask.isPending ? (updateTask.variables?.id ?? null) : null;
+  const projectTasks = useMemo(() => (
+    project?.subtasks?.filter((task) => task.status !== 'Deleted' && task.status !== 'Note') ?? []
+  ), [project?.subtasks]);
+  const urgencyOptions = useMemo(() => {
+    const options = new Set<string>();
+    projectTasks.forEach((task) => {
+      if (task.urgency) options.add(task.urgency);
+    });
+    return Array.from(options).sort();
+  }, [projectTasks]);
+  const filteredProjectTasks = useMemo(() => {
+    let list = projectTasks.map((task) => resolveTaskStructure(task, phases, milestones));
+
+    if (taskSearchQuery.trim()) {
+      const query = normalizeText(taskSearchQuery);
+      list = list.filter((task) => (
+        normalizeText(task.title).includes(query)
+        || normalizeText(task.notes).includes(query)
+        || normalizeText(task.area).includes(query)
+        || normalizeText(task.category).includes(query)
+        || normalizeText(task.phaseName).includes(query)
+        || normalizeText(task.milestoneName).includes(query)
+      ));
+    }
+
+    if (taskStatusFilter === 'pending') list = list.filter((task) => task.status !== 'Done');
+    if (taskStatusFilter === 'done') list = list.filter((task) => task.status === 'Done');
+    if (taskPhaseFilter) {
+      list = list.filter((task) => taskPhaseFilter === 'unassigned' ? !task.phaseId : task.phaseId === taskPhaseFilter);
+    }
+    if (taskMilestoneFilter) {
+      list = list.filter((task) => taskMilestoneFilter === 'unassigned' ? !task.milestoneId : task.milestoneId === taskMilestoneFilter);
+    }
+    if (taskUrgencyFilter) list = list.filter((task) => task.urgency === taskUrgencyFilter);
+
+    list.sort((a, b) => {
+      switch (taskSortBy) {
+        case 'dueDate':
+          return (a.dueDate || '9999-12-31').localeCompare(b.dueDate || '9999-12-31');
+        case 'newest':
+          return (b.createdAt || '').localeCompare(a.createdAt || '');
+        case 'oldest':
+          return (a.createdAt || '').localeCompare(b.createdAt || '');
+        case 'phase':
+          return (a.phaseName || 'Unassigned').localeCompare(b.phaseName || 'Unassigned');
+        case 'milestone':
+          return (a.milestoneName || 'Unassigned').localeCompare(b.milestoneName || 'Unassigned');
+        case 'maslow':
+          return MASLOW_LEVELS.indexOf(inferMaslowLevel(a)) - MASLOW_LEVELS.indexOf(inferMaslowLevel(b))
+            || getTaskPriorityScore(b) - getTaskPriorityScore(a);
+        case 'priority':
+        default:
+          return getTaskPriorityScore(b) - getTaskPriorityScore(a);
+      }
+    });
+
+    return list;
+  }, [milestones, phases, projectTasks, taskMilestoneFilter, taskPhaseFilter, taskSearchQuery, taskSortBy, taskStatusFilter, taskUrgencyFilter]);
+  const visiblePending = filteredProjectTasks.filter((task) => task.status !== 'Done');
+  const visibleCompleted = filteredProjectTasks.filter((task) => task.status === 'Done');
+  const hasTaskFilters = Boolean(taskSearchQuery || taskStatusFilter !== 'all' || taskPhaseFilter || taskMilestoneFilter || taskUrgencyFilter || taskSortBy !== 'priority');
   const taskCountsByPhase = useMemo(() => {
     const counts = new Map<string, { total: number; done: number }>();
 
@@ -636,6 +715,85 @@ export function ProjectDetailPage() {
     }
   };
 
+  const resetTaskFilters = () => {
+    setTaskSearchQuery('');
+    setTaskStatusFilter('all');
+    setTaskPhaseFilter('');
+    setTaskMilestoneFilter('');
+    setTaskUrgencyFilter('');
+    setTaskSortBy('priority');
+  };
+
+  const handlePrintTasks = () => {
+    if (!project || projectTasks.length === 0) {
+      toast.error('No project tasks to print');
+      return;
+    }
+
+    const printableTasks = projectTasks
+      .map((task) => resolveTaskStructure(task, phases, milestones))
+      .sort((a, b) => getTaskPriorityScore(b) - getTaskPriorityScore(a));
+    const printWindow = window.open('', '_blank', 'width=1100,height=800');
+
+    if (!printWindow) {
+      toast.error('Allow popups to print or save the task list');
+      return;
+    }
+
+    const rows = printableTasks.map((task, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${escapeHtml(task.title)}</td>
+        <td>${escapeHtml(task.status)}</td>
+        <td>${escapeHtml(task.phaseName || 'Unassigned')}</td>
+        <td>${escapeHtml(task.milestoneName || 'Unassigned')}</td>
+        <td>${escapeHtml(task.urgency || '-')}</td>
+        <td>${escapeHtml(task.priority ?? '-')}</td>
+        <td>${escapeHtml(task.dueDate ? formatDate(task.dueDate) : '-')}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>${escapeHtml(project.title)} - Tasks</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #111827; margin: 24px; }
+            h1 { font-size: 22px; margin: 0 0 4px; }
+            p { margin: 0 0 16px; color: #4b5563; font-size: 12px; }
+            table { border-collapse: collapse; width: 100%; font-size: 11px; }
+            th, td { border: 1px solid #d1d5db; padding: 7px 8px; text-align: left; vertical-align: top; }
+            th { background: #f3f4f6; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+            @media print { button { display: none; } body { margin: 12mm; } }
+          </style>
+        </head>
+        <body>
+          <button onclick="window.print()" style="margin-bottom:16px;padding:8px 12px;border:1px solid #d1d5db;background:#fff;border-radius:6px;cursor:pointer;">Print / Save PDF</button>
+          <h1>${escapeHtml(project.title)}</h1>
+          <p>${printableTasks.length} tasks exported on ${escapeHtml(formatDate(new Date().toISOString()))}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Task</th>
+                <th>Status</th>
+                <th>Phase</th>
+                <th>Milestone</th>
+                <th>Urgency</th>
+                <th>Priority</th>
+                <th>Due</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <script>window.onload = () => window.print();</script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
   if (isLoading) {
     return <div className="space-y-6 p-4"><TableSkeleton /></div>;
   }
@@ -739,6 +897,18 @@ export function ProjectDetailPage() {
               </svg>
             )}
             Sequencing
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={handlePrintTasks}
+            disabled={totalTasks === 0}
+            title="Print the full project task list or save it as a PDF"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
+            </svg>
+            Print / Save
           </Button>
         </div>
 
@@ -901,8 +1071,110 @@ export function ProjectDetailPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Left: Task lists */}
         <div className="lg:col-span-2 space-y-4">
+          <div className="card p-3 space-y-2">
+            <div className="flex flex-col gap-2 xl:flex-row xl:items-center xl:justify-between">
+              <div className="relative flex-1">
+                <svg
+                  className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  style={{ color: 'var(--color-muted-fg)' }}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  value={taskSearchQuery}
+                  onChange={(e) => setTaskSearchQuery(e.target.value)}
+                  placeholder="Search project tasks..."
+                  className="input-base h-9 pl-9 text-sm"
+                />
+              </div>
+              <div className="text-[12px] shrink-0" style={{ color: 'var(--color-text-secondary)' }}>
+                {filteredProjectTasks.length} of {projectTasks.length} task{projectTasks.length !== 1 ? 's' : ''}
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+              <select
+                value={taskSortBy}
+                onChange={(e) => setTaskSortBy(e.target.value as ProjectTaskSort)}
+                className="shrink-0 rounded-full border py-1 pl-2.5 pr-6 text-xs outline-none"
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+              >
+                <option value="priority">Priority</option>
+                <option value="dueDate">Due Date</option>
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="phase">Phase</option>
+                <option value="milestone">Milestone</option>
+                <option value="maslow">Maslow</option>
+              </select>
+              <select
+                value={taskStatusFilter}
+                onChange={(e) => setTaskStatusFilter(e.target.value as ProjectTaskStatusFilter)}
+                className="shrink-0 rounded-full border py-1 pl-2.5 pr-6 text-xs outline-none"
+                style={{ borderColor: taskStatusFilter !== 'all' ? 'var(--primary-500)' : 'var(--color-border)', backgroundColor: taskStatusFilter !== 'all' ? 'var(--primary-50)' : 'var(--color-surface)', color: taskStatusFilter !== 'all' ? 'var(--primary-700)' : 'var(--color-text)' }}
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="done">Completed</option>
+              </select>
+              <select
+                value={taskPhaseFilter}
+                onChange={(e) => {
+                  setTaskPhaseFilter(e.target.value);
+                  setTaskMilestoneFilter('');
+                }}
+                className="shrink-0 rounded-full border py-1 pl-2.5 pr-6 text-xs outline-none"
+                style={{ borderColor: taskPhaseFilter ? 'var(--primary-500)' : 'var(--color-border)', backgroundColor: taskPhaseFilter ? 'var(--primary-50)' : 'var(--color-surface)', color: taskPhaseFilter ? 'var(--primary-700)' : 'var(--color-text)' }}
+              >
+                <option value="">All Phases</option>
+                <option value="unassigned">No Phase</option>
+                {phases.map((phase) => (
+                  <option key={phase.id} value={phase.id}>{phase.title}</option>
+                ))}
+              </select>
+              <select
+                value={taskMilestoneFilter}
+                onChange={(e) => setTaskMilestoneFilter(e.target.value)}
+                className="shrink-0 rounded-full border py-1 pl-2.5 pr-6 text-xs outline-none"
+                style={{ borderColor: taskMilestoneFilter ? 'var(--primary-500)' : 'var(--color-border)', backgroundColor: taskMilestoneFilter ? 'var(--primary-50)' : 'var(--color-surface)', color: taskMilestoneFilter ? 'var(--primary-700)' : 'var(--color-text)' }}
+              >
+                <option value="">All Milestones</option>
+                <option value="unassigned">No Milestone</option>
+                {milestones
+                  .filter((milestone) => !taskPhaseFilter || taskPhaseFilter === 'unassigned' || !milestone.phaseId || milestone.phaseId === taskPhaseFilter)
+                  .map((milestone) => (
+                    <option key={milestone.id} value={milestone.id}>{milestone.title}</option>
+                  ))}
+              </select>
+              <select
+                value={taskUrgencyFilter}
+                onChange={(e) => setTaskUrgencyFilter(e.target.value)}
+                className="shrink-0 rounded-full border py-1 pl-2.5 pr-6 text-xs outline-none"
+                style={{ borderColor: taskUrgencyFilter ? 'var(--primary-500)' : 'var(--color-border)', backgroundColor: taskUrgencyFilter ? 'var(--primary-50)' : 'var(--color-surface)', color: taskUrgencyFilter ? 'var(--primary-700)' : 'var(--color-text)' }}
+              >
+                <option value="">All Urgency</option>
+                {urgencyOptions.map((urgency) => (
+                  <option key={urgency} value={urgency}>{urgency}</option>
+                ))}
+              </select>
+              {hasTaskFilters && (
+                <button
+                  onClick={resetTaskFilters}
+                  className="shrink-0 rounded-full px-2 py-1 text-xs font-medium"
+                  style={{ color: 'var(--primary-600)' }}
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+          </div>
+
           {/* Pending */}
-          {pending.length > 0 && (
+          {visiblePending.length > 0 && (
             <div className="card overflow-hidden">
               <div
                 className="px-4 py-3 flex items-center justify-between"
@@ -910,14 +1182,14 @@ export function ProjectDetailPage() {
               >
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Pending</h3>
                 <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}>
-                  {pending.length}
+                  {visiblePending.length}
                 </span>
               </div>
               <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                {pending.map((t) => (
+                {visiblePending.map((t) => (
                   <TaskRow
                     key={t.id}
-                    task={resolveTaskStructure({ ...t, projectName: t.projectName || project.title }, phases, milestones)}
+                    task={{ ...t, projectName: t.projectName || project.title }}
                     variant="pending"
                     phases={phases}
                     milestones={milestones}
@@ -938,7 +1210,7 @@ export function ProjectDetailPage() {
           )}
 
           {/* Completed */}
-          {completed.length > 0 && (
+          {visibleCompleted.length > 0 && (
             <div className="card overflow-hidden">
               <button
                 onClick={() => setShowCompleted(!showCompleted)}
@@ -948,7 +1220,7 @@ export function ProjectDetailPage() {
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>Completed</h3>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-medium px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--success-50, #f0fdf4)', color: 'var(--success-700, #15803d)' }}>
-                    {completed.length}
+                    {visibleCompleted.length}
                   </span>
                   <svg
                     className="h-3.5 w-3.5 transition-transform"
@@ -961,10 +1233,10 @@ export function ProjectDetailPage() {
               </button>
               {showCompleted && (
                 <div className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                  {completed.map((t) => (
+                  {visibleCompleted.map((t) => (
                     <TaskRow
                       key={t.id}
-                      task={resolveTaskStructure({ ...t, projectName: t.projectName || project.title }, phases, milestones)}
+                      task={{ ...t, projectName: t.projectName || project.title }}
                       variant="done"
                       phases={phases}
                       milestones={milestones}
@@ -981,9 +1253,16 @@ export function ProjectDetailPage() {
           )}
 
           {/* Empty state */}
-          {totalTasks === 0 && (
+          {totalTasks === 0 ? (
             <div className="card p-10 text-center">
               <p className="text-body" style={{ color: 'var(--color-text-secondary)' }}>No subtasks in this project</p>
+            </div>
+          ) : filteredProjectTasks.length === 0 && (
+            <div className="card p-10 text-center">
+              <p className="text-body" style={{ color: 'var(--color-text-secondary)' }}>No tasks match the selected filters</p>
+              <button onClick={resetTaskFilters} className="mt-2 text-xs font-medium" style={{ color: 'var(--primary-600)' }}>
+                Clear filters
+              </button>
             </div>
           )}
         </div>
