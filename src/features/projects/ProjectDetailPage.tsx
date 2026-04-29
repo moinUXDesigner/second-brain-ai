@@ -724,13 +724,13 @@ export function ProjectDetailPage() {
     setTaskSortBy('priority');
   };
 
-  const handlePrintTasks = () => {
-    if (!project || projectTasks.length === 0) {
-      toast.error('No project tasks to print');
+  const printTaskList = (tasksToPrint: Task[], titleSuffix: string, emptyMessage: string) => {
+    if (!project || tasksToPrint.length === 0) {
+      toast.error(emptyMessage);
       return;
     }
 
-    const printableTasks = projectTasks
+    const printableTasks = tasksToPrint
       .map((task) => resolveTaskStructure(task, phases, milestones))
       .sort((a, b) => getTaskPriorityScore(b) - getTaskPriorityScore(a));
     const printWindow = window.open('', '_blank', 'width=1100,height=800');
@@ -757,7 +757,7 @@ export function ProjectDetailPage() {
       <!doctype html>
       <html>
         <head>
-          <title>${escapeHtml(project.title)} - Tasks</title>
+          <title>${escapeHtml(project.title)} - ${escapeHtml(titleSuffix)}</title>
           <style>
             body { font-family: Arial, sans-serif; color: #111827; margin: 24px; }
             h1 { font-size: 22px; margin: 0 0 4px; }
@@ -771,7 +771,7 @@ export function ProjectDetailPage() {
         <body>
           <button onclick="window.print()" style="margin-bottom:16px;padding:8px 12px;border:1px solid #d1d5db;background:#fff;border-radius:6px;cursor:pointer;">Print / Save PDF</button>
           <h1>${escapeHtml(project.title)}</h1>
-          <p>${printableTasks.length} tasks exported on ${escapeHtml(formatDate(new Date().toISOString()))}</p>
+          <p>${escapeHtml(titleSuffix)} - ${printableTasks.length} tasks exported on ${escapeHtml(formatDate(new Date().toISOString()))}</p>
           <table>
             <thead>
               <tr>
@@ -792,6 +792,14 @@ export function ProjectDetailPage() {
       </html>
     `);
     printWindow.document.close();
+  };
+
+  const handlePrintTasks = () => {
+    printTaskList(projectTasks, 'All Tasks', 'No project tasks to print');
+  };
+
+  const handlePrintPendingTasks = () => {
+    printTaskList(projectTasks.filter((task) => task.status !== 'Done'), 'Pending Tasks', 'No pending project tasks to print');
   };
 
   if (isLoading) {
@@ -909,6 +917,18 @@ export function ProjectDetailPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
             </svg>
             Print / Save
+          </Button>
+          <Button
+            size="sm"
+            variant="secondary"
+            onClick={handlePrintPendingTasks}
+            disabled={pending.length === 0}
+            title="Print only pending project tasks or save them as a PDF"
+          >
+            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M8 14h8M8 18h5" />
+            </svg>
+            Print Pending
           </Button>
         </div>
 
