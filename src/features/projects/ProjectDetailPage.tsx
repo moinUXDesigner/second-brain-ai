@@ -59,6 +59,18 @@ const MILESTONE_BUCKETS = [
   { key: 'enhancement', title: 'Enhancement', description: 'Polish, optimization, and nice-to-have work' },
 ] as const;
 
+const PROJECT_DOMAIN_OPTIONS = [
+  'Work',
+  'Personal',
+  'Health',
+  'Finance',
+  'Learning',
+  'Apps',
+  'Social',
+  'Creative',
+  'Home',
+];
+
 function normalizeText(value?: string | null) {
   return (value || '').trim().toLowerCase();
 }
@@ -387,6 +399,7 @@ export function ProjectDetailPage() {
   const [newMilestoneDueDate, setNewMilestoneDueDate] = useState('');
   const [editProjectTitle, setEditProjectTitle] = useState('');
   const [editProjectDescription, setEditProjectDescription] = useState('');
+  const [editProjectDomain, setEditProjectDomain] = useState('');
   const [isSequencing, setIsSequencing] = useState(false);
   const [taskSearchQuery, setTaskSearchQuery] = useState('');
   const [taskStatusFilter, setTaskStatusFilter] = useState<ProjectTaskStatusFilter>('all');
@@ -534,6 +547,7 @@ export function ProjectDetailPage() {
       updates: {
         title: editProjectTitle.trim(),
         description: editProjectDescription.trim() || undefined,
+        domain: editProjectDomain.trim(),
       },
     });
     setShowEditProject(false);
@@ -851,6 +865,7 @@ export function ProjectDetailPage() {
               onClick={() => {
                 setEditProjectTitle(project.title);
                 setEditProjectDescription(project.description || '');
+                setEditProjectDomain(project.domain || '');
                 setShowEditProject(true);
               }}
               className="p-1.5 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5"
@@ -1547,6 +1562,19 @@ export function ProjectDetailPage() {
               placeholder="Enter project title..."
               required
             />
+            <Input
+              id="projectDomain"
+              label="Project Domain"
+              value={editProjectDomain}
+              onChange={(e) => setEditProjectDomain(e.target.value)}
+              placeholder="Choose or enter a domain..."
+              list="projectDomainOptions"
+            />
+            <datalist id="projectDomainOptions">
+              {PROJECT_DOMAIN_OPTIONS.map((domain) => (
+                <option key={domain} value={domain} />
+              ))}
+            </datalist>
             <div>
               <label htmlFor="projectDescription" className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
                 Description (optional)

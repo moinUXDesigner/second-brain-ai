@@ -113,6 +113,7 @@ class ProjectController extends Controller
         $data = $request->validate([
             'title'       => 'sometimes|string',
             'description' => 'nullable|string',
+            'domain'      => 'nullable|string',
             'status'      => 'nullable|in:Active,Completed,Archived,Deleted',
             'priority'    => 'nullable|integer',
             'due_date'    => 'nullable|date',
