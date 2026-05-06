@@ -14,6 +14,7 @@ const AREA_OPTIONS = [
   'Health',
   'Finance',
   'Learning',
+  'Apps',
   'Social',
   'Creative',
   'Home',
