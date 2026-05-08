@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -149,6 +149,60 @@ function resolveTaskStructure(task: Task, phases: ProjectPhase[], milestones: Pr
     phaseName: phase?.title || task.phaseName,
     milestoneName: milestone?.title || task.milestoneName,
   };
+}
+
+function formatImageAttachment(file: File | null) {
+  if (!file) return '';
+
+  const sizeKb = Math.max(1, Math.round(file.size / 1024));
+  return `Image: ${file.name} (${sizeKb} KB)`;
+}
+
+function combineNotesWithImage(notes: string, image: File | null) {
+  const imageNote = formatImageAttachment(image);
+  return [notes.trim(), imageNote].filter(Boolean).join('\n\n');
+}
+
+function ImageInput({
+  id,
+  image,
+  onChange,
+  onClear,
+}: {
+  id: string;
+  image: File | null;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <label htmlFor={id} className="block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+        Image (optional)
+      </label>
+      <input
+        id={id}
+        type="file"
+        accept="image/*"
+        onChange={onChange}
+        className="input-base text-sm"
+      />
+      {image && (
+        <div className="flex items-center justify-between gap-3 rounded-md px-3 py-2" style={{ backgroundColor: 'var(--color-muted)' }}>
+          <span className="min-w-0 truncate text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+            {formatImageAttachment(image)}
+          </span>
+          <button
+            type="button"
+            onClick={onClear}
+            className="shrink-0 text-caption font-medium"
+            style={{ color: 'var(--primary-600)' }}
+          >
+            Remove
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Task Row ──
@@ -405,8 +459,10 @@ export function ProjectDetailPage() {
   const [showViewTask, setShowViewTask] = useState<Task | null>(null);
   const [showEditTask, setShowEditTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskImage, setNewTaskImage] = useState<File | null>(null);
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
+  const [newNoteImage, setNewNoteImage] = useState<File | null>(null);
   const [newPhaseTitle, setNewPhaseTitle] = useState('');
   const [newPhaseDescription, setNewPhaseDescription] = useState('');
   const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
@@ -536,9 +592,11 @@ export function ProjectDetailPage() {
     await createTask.mutateAsync({
       title: newTaskTitle.trim(),
       status: 'Pending',
+      notes: combineNotesWithImage('', newTaskImage) || undefined,
       projectId: id,
     });
     setNewTaskTitle('');
+    setNewTaskImage(null);
     setShowAddTask(false);
   };
 
@@ -547,11 +605,12 @@ export function ProjectDetailPage() {
     await createTask.mutateAsync({
       title: newNoteTitle.trim(),
       status: 'Note',
-      notes: newNoteContent.trim() || undefined,
+      notes: combineNotesWithImage(newNoteContent, newNoteImage) || undefined,
       projectId: id,
     });
     setNewNoteTitle('');
     setNewNoteContent('');
+    setNewNoteImage(null);
     setShowAddNote(false);
   };
 
@@ -1424,8 +1483,14 @@ export function ProjectDetailPage() {
               placeholder="Enter task title..."
               required
             />
+            <ImageInput
+              id="taskImage"
+              image={newTaskImage}
+              onChange={(event) => setNewTaskImage(event.target.files?.[0] ?? null)}
+              onClear={() => setNewTaskImage(null)}
+            />
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => { setShowAddTask(false); setNewTaskTitle(''); }}>
+              <Button variant="secondary" onClick={() => { setShowAddTask(false); setNewTaskTitle(''); setNewTaskImage(null); }}>
                 Cancel
               </Button>
               <Button onClick={handleAddTask} isLoading={createTask.isPending} disabled={!newTaskTitle.trim()}>
@@ -1463,8 +1528,14 @@ export function ProjectDetailPage() {
                 className="input-base w-full resize-none"
               />
             </div>
+            <ImageInput
+              id="noteImage"
+              image={newNoteImage}
+              onChange={(event) => setNewNoteImage(event.target.files?.[0] ?? null)}
+              onClear={() => setNewNoteImage(null)}
+            />
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => { setShowAddNote(false); setNewNoteTitle(''); setNewNoteContent(''); }}>
+              <Button variant="secondary" onClick={() => { setShowAddNote(false); setNewNoteTitle(''); setNewNoteContent(''); setNewNoteImage(null); }}>
                 Cancel
               </Button>
               <Button onClick={handleAddNote} isLoading={createTask.isPending} disabled={!newNoteTitle.trim()}>
