@@ -9,6 +9,7 @@ use App\Services\ClassificationService;
 use App\Services\AIService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 
 class TaskController extends Controller
 {
@@ -37,9 +38,11 @@ class TaskController extends Controller
         $todayViewTasks = TodayView::with('task.project')
             ->whereDate('date', $date)
             ->get()
-            ->map(function ($tv) {
+            ->map(function ($tv) use ($date) {
                 $t = $tv->task;
                 if (!$t) return null;
+                if (!$this->isTaskEligibleForToday($t, $date)) return null;
+
                 $data = $this->format($t);
                 $data['priority']  = $tv->priority;
                 $data['fit_score'] = $tv->fit_score;
@@ -52,8 +55,13 @@ class TaskController extends Controller
 
         $scheduledTasks = Task::with('project')
             ->whereNotIn('status', ['Deleted'])
-            ->whereDate('due_date', $date)
+            ->where(function ($query) use ($date) {
+                $query
+                    ->whereDate('due_date', $date)
+                    ->orWhereNotNull('recurrence');
+            })
             ->get()
+            ->filter(fn(Task $task) => $this->isScheduledForToday($task, $date))
             ->map(fn($task) => $this->format($task));
 
         foreach ($scheduledTasks as $task) {
@@ -363,5 +371,45 @@ class TaskController extends Controller
         return !empty($task['dueDate'])
             && ($task['status'] ?? '') !== 'Done'
             && $task['dueDate'] < $date;
+    }
+
+    private function isScheduledForToday(Task $task, string $date): bool
+    {
+        if (!$task->recurrence) {
+            return $task->due_date?->toDateString() === $date;
+        }
+
+        return $this->recurringTaskOccursOnDate($task, $date);
+    }
+
+    private function isTaskEligibleForToday(Task $task, string $date): bool
+    {
+        if (!$task->recurrence) {
+            return true;
+        }
+
+        return $this->recurringTaskOccursOnDate($task, $date);
+    }
+
+    private function recurringTaskOccursOnDate(Task $task, string $date): bool
+    {
+        if (!$task->due_date) {
+            return false;
+        }
+
+        $anchor = $task->due_date->copy()->startOfDay();
+        $target = Carbon::parse($date)->startOfDay();
+
+        if ($target->lt($anchor)) {
+            return false;
+        }
+
+        return match ($task->recurrence) {
+            'Daily' => true,
+            'Weekly' => (int) $anchor->diffInDays($target) % 7 === 0,
+            'Monthly' => $anchor->day === $target->day,
+            'Yearly' => $anchor->month === $target->month && $anchor->day === $target->day,
+            default => false,
+        };
     }
 }

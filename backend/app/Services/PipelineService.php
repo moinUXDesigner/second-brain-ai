@@ -69,7 +69,9 @@ class PipelineService
         $tasks = Task::with('project')
             ->whereNotIn('status', ['Done', 'Deleted'])
             ->orderByDesc('priority')
-            ->get();
+            ->get()
+            ->filter(fn(Task $task) => $this->isTaskEligibleForToday($task, $today))
+            ->values();
 
         $tasks = $this->orderTasksForActivityPreference($tasks, $activityPreference);
 
@@ -80,7 +82,9 @@ class PipelineService
         $selectedTaskIds = [];
 
         $scheduledToday = $tasks->filter(
-            fn(Task $task) => $task->due_date?->toDateString() === $today
+            fn(Task $task) => $task->recurrence
+                ? $this->recurringTaskOccursOnDate($task, $today)
+                : $task->due_date?->toDateString() === $today
         );
 
         foreach ($scheduledToday as $task) {
@@ -188,6 +192,37 @@ class PipelineService
         }
 
         return false;
+    }
+
+    private function isTaskEligibleForToday(Task $task, string $today): bool
+    {
+        if (!$task->recurrence) {
+            return true;
+        }
+
+        return $this->recurringTaskOccursOnDate($task, $today);
+    }
+
+    private function recurringTaskOccursOnDate(Task $task, string $date): bool
+    {
+        if (!$task->due_date) {
+            return false;
+        }
+
+        $anchor = $task->due_date->copy()->startOfDay();
+        $target = Carbon::parse($date)->startOfDay();
+
+        if ($target->lt($anchor)) {
+            return false;
+        }
+
+        return match ($task->recurrence) {
+            'Daily' => true,
+            'Weekly' => (int) $anchor->diffInDays($target) % 7 === 0,
+            'Monthly' => $anchor->day === $target->day,
+            'Yearly' => $anchor->month === $target->month && $anchor->day === $target->day,
+            default => false,
+        };
     }
 
     private function addTaskToTodayView(Task $task, string $today, string $energy): ?array
