@@ -7,6 +7,7 @@ import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
 import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { useScheduleToday } from '@/hooks/useTasks';
 import { formatDate } from '@/utils/dateFormat';
+import { formatAiTime, formatDuration } from '@/utils/time';
 
 type SortDirection = 'asc' | 'desc' | null;
 type SortColumn = 'title' | 'type' | 'area' | 'impact' | 'effort' | 'priority' | 'urgency' | 'project' | 'updated';
@@ -419,11 +420,16 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
                     <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-                      {task.timeEstimate || 'â€”'}
+                      {formatAiTime(task.timeEstimate)}
                     </span>
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
-                    <TaskTimer task={task} compact />
+                    <div className="space-y-1">
+                      <span className="block text-caption font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+                        {formatDuration(task.timeSpent)}
+                      </span>
+                      <TaskTimer task={task} compact />
+                    </div>
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">
                     <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>

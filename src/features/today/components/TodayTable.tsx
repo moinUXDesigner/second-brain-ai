@@ -9,6 +9,7 @@ import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
 import { cn } from '@/utils/cn';
 import { parseLocalDate } from '@/utils/dateFormat';
+import { formatAiTime, formatDuration } from '@/utils/time';
 
 function getPriorityVariant(priority?: number) {
   if (!priority) return PRIORITY_COLORS.normal;
@@ -39,6 +40,19 @@ function formatTaskDueDate(task: Task) {
   if (!dueDate) return '—';
 
   return dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+function TimePair({ task }: { task: Task }) {
+  return (
+    <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-caption">
+      <span style={{ color: 'var(--color-text-secondary)' }}>
+        AI: <span className="font-medium" style={{ color: 'var(--color-text)' }}>{formatAiTime(task.timeEstimate)}</span>
+      </span>
+      <span style={{ color: 'var(--color-text-secondary)' }}>
+        Actual: <span className="font-mono" style={{ color: 'var(--color-text)' }}>{formatDuration(task.timeSpent)}</span>
+      </span>
+    </div>
+  );
 }
 
 interface TodayTableProps {
@@ -181,7 +195,7 @@ export function TodayTable({
                     </span>
                   )}
                   {task.fitScore != null && <span className="text-neutral-500">Fit: {task.fitScore}%</span>}
-                  <span className="text-neutral-400">{task.timeEstimate ?? '—'}</span>
+                  <TimePair task={task} />
                 </div>
                 <div className="flex gap-1">
                   {onEditTask && (
@@ -257,7 +271,8 @@ export function TodayTable({
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Category</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Priority</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Fit Score</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Time Est.</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">AI Time</th>
+                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Actual Time</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Timer</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Due Date</th>
                 <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Project</th>
@@ -319,7 +334,10 @@ export function TodayTable({
                       {task.fitScore != null && <span className="text-body text-neutral-700 dark:text-neutral-300">{task.fitScore}%</span>}
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-caption text-neutral-500">{task.timeEstimate ?? '—'}</span>
+                      <span className="text-caption text-neutral-500">{formatAiTime(task.timeEstimate)}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-caption font-mono text-neutral-500">{formatDuration(task.timeSpent)}</span>
                     </td>
                     <td className="px-4 py-3 hidden xl:table-cell">
                       <TaskTimer task={task} compact />

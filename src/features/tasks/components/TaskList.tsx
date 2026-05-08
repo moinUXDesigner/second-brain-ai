@@ -9,6 +9,7 @@ import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { EditTaskModal } from './EditTaskModal';
 import { useScheduleToday } from '@/hooks/useTasks';
 import { formatDateRelative, formatDate } from '@/utils/dateFormat';
+import { formatAiTime, formatDuration } from '@/utils/time';
 
 interface TaskListProps {
   tasks: Task[];
@@ -222,6 +223,12 @@ function MobileTaskRow({
             })()}
           </div>
           <div className="flex gap-1 mt-1">
+            <span className="rounded px-1.5 py-0.5 text-[11px]" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}>
+              AI: <span style={{ color: 'var(--color-text)' }}>{formatAiTime(task.timeEstimate)}</span>
+            </span>
+            <span className="rounded px-1.5 py-0.5 text-[11px]" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}>
+              Actual: <span className="font-mono" style={{ color: 'var(--color-text)' }}>{formatDuration(task.timeSpent)}</span>
+            </span>
             <TaskTimer task={task} compact />
             <button
               className="btn btn-xs btn-outline p-1"
@@ -393,7 +400,9 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Priority</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Urgency</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Project</th>
-                <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Time</th>
+                <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>AI Time</th>
+                <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Actual Time</th>
+                <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Timer</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Due Date</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden xl:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Updated</th>
                 <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider">Actions</th>
@@ -483,6 +492,16 @@ export function TaskList({ tasks, onDelete, onComplete, deletingId, completingId
                   <td className="px-4 py-3 hidden xl:table-cell">
                     <span className="text-caption" style={{ color: task.projectName ? 'var(--primary-600)' : 'var(--color-text-secondary)' }}>
                       {task.projectName || '—'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                      {formatAiTime(task.timeEstimate)}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 hidden xl:table-cell">
+                    <span className="text-caption font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+                      {formatDuration(task.timeSpent)}
                     </span>
                   </td>
                   <td className="px-4 py-3 hidden xl:table-cell">

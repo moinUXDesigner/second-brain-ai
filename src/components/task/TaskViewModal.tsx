@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import type { Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { formatDate, formatDateRelative } from '@/utils/dateFormat';
+import { formatAiTime, formatDuration } from '@/utils/time';
 
 interface TaskViewModalProps {
   task: Task;
@@ -13,20 +14,6 @@ interface TaskViewModalProps {
 function display(value: unknown) {
   if (value === null || value === undefined || value === '') return 'Not set';
   return String(value);
-}
-
-function formatDuration(totalSeconds?: number) {
-  if (!totalSeconds) return '0:00';
-
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-
-  if (hours > 0) {
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  }
-
-  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 }
 
 function formatDateDetail(value?: string) {
@@ -166,8 +153,8 @@ export function TaskViewModal({ task, onClose }: TaskViewModalProps) {
 
           <Section title="Time">
             <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              <DetailRow label="AI Time" value={display(task.timeEstimate)} />
-              <DetailRow label="Actual Time" value={formatDuration(task.timeSpent)} />
+              <DetailRow label="AI Assigned Time" value={formatAiTime(task.timeEstimate)} />
+              <DetailRow label="Actual Time Taken" value={formatDuration(task.timeSpent)} />
               <DetailRow label="Timer" value={task.timerRunning ? 'Running' : 'Stopped'} />
               <DetailRow label="Timer Started" value={formatDateDetail(task.timerStartedAt)} />
             </dl>
