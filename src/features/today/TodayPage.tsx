@@ -52,6 +52,7 @@ export function TodayPage() {
   const [showModal, setShowModal] = useState(false);
   const [loaderPhase, setLoaderPhase] = useState<LoaderPhase>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const deleteTask = useDeleteTask();
 
   // Lifted status overrides for TodayTable
@@ -123,6 +124,29 @@ export function TodayPage() {
     
     return result;
   }, [tasks, localStatus, projects]);
+
+  const searchedTasks = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
+    if (!query) return visibleTasks;
+
+    return visibleTasks.filter((task) => {
+      const searchableText = [
+        task.title,
+        task.area,
+        task.projectName,
+        task.category,
+        task.urgency,
+        task.notes,
+        task.timeEstimate,
+        task.dueDate,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return searchableText.includes(query);
+    });
+  }, [visibleTasks, searchQuery]);
 
   // Count how many tasks actually changed
   const dirtyCount = useMemo(() => {
@@ -247,6 +271,49 @@ export function TodayPage() {
         </div>
       </div>
 
+      {!isLoading && !isError && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-md">
+            <svg
+              className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={2}
+              style={{ color: 'var(--color-muted-fg)' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search today's tasks..."
+              className="input-base h-10 pl-9 pr-9 text-sm"
+              aria-label="Search today's tasks"
+            />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                style={{ color: 'var(--color-text-secondary)' }}
+                aria-label="Clear search"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+          <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+            {searchQuery.trim()
+              ? `${searchedTasks.length} of ${visibleTasks.length} shown`
+              : `${visibleTasks.length} task${visibleTasks.length === 1 ? '' : 's'}`}
+          </span>
+        </div>
+      )}
+
       {/* Content / Loading */}
       {isLoading ? (
         <div className="space-y-3">
@@ -269,12 +336,14 @@ export function TodayPage() {
         </div>
       ) : (
         <TodayTable
-          tasks={visibleTasks}
+          tasks={searchedTasks}
           localStatus={localStatus}
           onStatusChange={handleStatusChange}
           onEditTask={setEditingTask}
           onDeleteTask={(id) => deleteTask.mutate(id)}
           deletingId={deleteTask.isPending ? (deleteTask.variables as string) : null}
+          emptyTitle={searchQuery.trim() ? 'No matching tasks' : undefined}
+          emptyDescription={searchQuery.trim() ? 'Try a different search term or clear search.' : undefined}
         />
       )}
 
