@@ -4,6 +4,7 @@ import { useTasks, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { Badge } from '@/components/ui/Badge';
 import { formatDate } from '@/utils/dateFormat';
+import { formatAiTime, formatDuration } from '@/utils/time';
 
 const PAGE_SIZE = 10;
 
@@ -180,6 +181,12 @@ export function CompletedTasksPage() {
                           {formatDate(task.completedAt)}
                         </span>
                       )}
+                      <span style={{ color: 'var(--color-text-secondary)' }}>
+                        AI: <span style={{ color: 'var(--color-text)' }}>{formatAiTime(task.timeEstimate)}</span>
+                      </span>
+                      <span style={{ color: 'var(--color-text-secondary)' }}>
+                        Actual: <span className="font-mono" style={{ color: 'var(--color-text)' }}>{formatDuration(task.timeSpent)}</span>
+                      </span>
                     </div>
                     <button
                       onClick={() => handleReopen(task.id)}
@@ -207,6 +214,8 @@ export function CompletedTasksPage() {
                       <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Type</th>
                       <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider hidden lg:table-cell" style={{ color: 'var(--color-text-secondary)' }}>Area</th>
                       <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Status</th>
+                      <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>AI Time</th>
+                      <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Actual Time</th>
                       <th className="px-4 py-3 text-left text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Completed</th>
                       <th className="px-4 py-3 text-right text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>Action</th>
                     </tr>
@@ -236,6 +245,16 @@ export function CompletedTasksPage() {
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant={task.status === 'Deleted' ? 'danger' : 'success'} className="!text-[10px] !px-1.5 !py-0.5">{task.status === 'Deleted' ? 'Deleted' : 'Done'}</Badge>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                            {formatAiTime(task.timeEstimate)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-caption font-mono" style={{ color: 'var(--color-text-secondary)' }}>
+                            {formatDuration(task.timeSpent)}
+                          </span>
                         </td>
                         <td className="px-4 py-3">
                           <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>

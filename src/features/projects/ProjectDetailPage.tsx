@@ -12,6 +12,7 @@ import { TaskTimer } from '@/components/task/TaskTimer';
 import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { formatDate, formatDateRelative } from '@/utils/dateFormat';
+import { formatAiTime, formatDuration } from '@/utils/time';
 import type { ProjectMilestone, ProjectPhase, Task } from '@/types';
 import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 
@@ -152,6 +153,19 @@ function resolveTaskStructure(task: Task, phases: ProjectPhase[], milestones: Pr
 
 // ── Task Row ──
 
+function TaskTimeSummary({ task, muted = false }: { task: Task; muted?: boolean }) {
+  return (
+    <div className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]">
+      <span style={{ color: muted ? 'var(--color-muted-fg)' : 'var(--color-text-secondary)' }}>
+        AI: <span style={{ color: muted ? 'var(--color-muted-fg)' : 'var(--color-text)' }}>{formatAiTime(task.timeEstimate)}</span>
+      </span>
+      <span style={{ color: muted ? 'var(--color-muted-fg)' : 'var(--color-text-secondary)' }}>
+        Actual: <span className="font-mono" style={{ color: muted ? 'var(--color-muted-fg)' : 'var(--color-text)' }}>{formatDuration(task.timeSpent)}</span>
+      </span>
+    </div>
+  );
+}
+
 function TaskRow({ task, variant, phases, milestones, onToggle, onDelete, onEdit, onView, onPhaseChange, onMilestoneChange, onScheduleToday, deletingId, schedulingId, updatingStructureId }: {
   task: Task;
   variant: 'pending' | 'done';
@@ -209,6 +223,7 @@ function TaskRow({ task, variant, phases, milestones, onToggle, onDelete, onEdit
             <TaskTimer task={task} compact />
           </div>
         )}
+        {isDone && <TaskTimeSummary task={task} muted />}
         {phases.length > 0 && (
           <div className="mt-2 flex gap-1 md:hidden">
             <select
