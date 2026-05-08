@@ -7,6 +7,8 @@ import { today } from '@/utils/date';
 import { getEnergyEmoji, getFocusEmoji, getMoodEmoji } from '@/utils/wellbeing';
 import toast from 'react-hot-toast';
 
+type ActivityPreference = 'Any' | 'Indoor' | 'Outdoor';
+
 const TIME_PRESETS = [
   { label: '30m', mins: 30 },
   { label: '1h', mins: 60 },
@@ -15,6 +17,12 @@ const TIME_PRESETS = [
   { label: '4h', mins: 240 },
   { label: '6h', mins: 360 },
   { label: '8h', mins: 480 },
+];
+
+const ACTIVITY_OPTIONS: Array<{ value: ActivityPreference; label: string; description: string }> = [
+  { value: 'Any', label: 'Any', description: 'Balanced task selection' },
+  { value: 'Indoor', label: 'Indoor', description: 'Desk, home, or office tasks' },
+  { value: 'Outdoor', label: 'Outdoor', description: 'Errands, walks, or outside tasks' },
 ];
 
 function formatTime(mins: number) {
@@ -30,6 +38,7 @@ export function DailyStatePage() {
   const [mood, setMood] = useState(5);
   const [focus, setFocus] = useState(5);
   const [availableTime, setAvailableTime] = useState(120);
+  const [activityPreference, setActivityPreference] = useState<ActivityPreference>('Any');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -43,6 +52,7 @@ export function DailyStatePage() {
           setMood(res.data.mood || 5);
           setFocus(res.data.focus || 5);
           setAvailableTime(res.data.availableTime || 120);
+          setActivityPreference(res.data.activityPreference || 'Any');
           setNotes(res.data.notes || '');
         }
       })
@@ -59,6 +69,7 @@ export function DailyStatePage() {
         mood,
         focus,
         availableTime,
+        activityPreference,
         notes: notes || undefined,
       });
       toast.success('Daily state saved');
@@ -176,6 +187,40 @@ export function DailyStatePage() {
               {p.label}
             </button>
           ))}
+        </div>
+      </Card>
+
+      <Card className="space-y-3">
+        <div>
+          <h2 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>
+            Activity Preference
+          </h2>
+          <p className="text-caption mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+            Smart Today will prioritize tasks that match this setting when it generates your list.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {ACTIVITY_OPTIONS.map((option) => {
+            const selected = activityPreference === option.value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => setActivityPreference(option.value)}
+                className="rounded-lg border px-3 py-2 text-left transition-colors"
+                style={{
+                  borderColor: selected ? 'var(--primary-500)' : 'var(--color-border)',
+                  backgroundColor: selected ? 'var(--primary-50)' : 'var(--color-surface)',
+                  color: selected ? 'var(--primary-700)' : 'var(--color-text)',
+                }}
+              >
+                <span className="block text-sm font-semibold">{option.label}</span>
+                <span className="block text-caption" style={{ color: selected ? 'var(--primary-700)' : 'var(--color-text-secondary)' }}>
+                  {option.description}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </Card>
 

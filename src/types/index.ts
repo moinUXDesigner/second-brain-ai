@@ -124,6 +124,7 @@ export interface DailyState {
   mood: number;
   focus: number;
   availableTime?: number;
+  activityPreference?: 'Any' | 'Indoor' | 'Outdoor';
   notes?: string;
   userId?: string;
 }

@@ -62,6 +62,7 @@ class PipelineService
     {
         $state = DailyState::orderByDesc('date')->first();
         $availableMinutes = $state?->available_time ?? 120;
+        $activityPreference = $state?->activity_preference ?? 'Any';
         $energy = $state ? $this->toLevel($state->energy) : 'Medium';
         $today = $date ?: Carbon::today()->toDateString();
 
@@ -69,6 +70,8 @@ class PipelineService
             ->whereNotIn('status', ['Done', 'Deleted'])
             ->orderByDesc('priority')
             ->get();
+
+        $tasks = $this->orderTasksForActivityPreference($tasks, $activityPreference);
 
         TodayView::whereDate('date', $today)->delete();
 
@@ -127,6 +130,64 @@ class PipelineService
         if ($val <= 3) return 'Low';
         if ($val <= 6) return 'Medium';
         return 'High';
+    }
+
+    private function orderTasksForActivityPreference($tasks, string $preference)
+    {
+        if ($preference === 'Any') {
+            return $tasks;
+        }
+
+        return $tasks->sortByDesc(
+            fn(Task $task) => $this->activityMatchScore($task, $preference)
+        )->values();
+    }
+
+    private function activityMatchScore(Task $task, string $preference): int
+    {
+        $text = strtolower(implode(' ', array_filter([
+            $task->title,
+            $task->area,
+            $task->category,
+            $task->notes,
+            $task->project?->title,
+            $task->project?->domain,
+        ])));
+
+        $outdoorTerms = [
+            'outdoor', 'outside', 'walk', 'run', 'running', 'cycle', 'cycling',
+            'errand', 'market', 'shop', 'shopping', 'travel', 'commute', 'site visit',
+            'field', 'garden', 'park', 'doctor', 'hospital', 'appointment',
+        ];
+        $indoorTerms = [
+            'indoor', 'inside', 'home', 'office', 'desk', 'computer', 'laptop',
+            'email', 'call', 'meeting', 'read', 'write', 'study', 'code', 'admin',
+            'planning', 'review', 'document',
+        ];
+
+        $isOutdoor = $this->containsAny($text, $outdoorTerms);
+        $isIndoor = $this->containsAny($text, $indoorTerms);
+
+        if ($preference === 'Outdoor') {
+            if ($isOutdoor) return 2;
+            if ($isIndoor) return 0;
+            return 1;
+        }
+
+        if ($isIndoor) return 2;
+        if ($isOutdoor) return 0;
+        return 1;
+    }
+
+    private function containsAny(string $text, array $terms): bool
+    {
+        foreach ($terms as $term) {
+            if (str_contains($text, $term)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function addTaskToTodayView(Task $task, string $today, string $energy): ?array

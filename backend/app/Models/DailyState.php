@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class DailyState extends Model
 {
-    protected $fillable = ['date', 'energy', 'mood', 'focus', 'available_time', 'notes'];
+    protected $fillable = ['date', 'energy', 'mood', 'focus', 'available_time', 'activity_preference', 'notes'];
 
     protected $casts = ['date' => 'date'];
 }

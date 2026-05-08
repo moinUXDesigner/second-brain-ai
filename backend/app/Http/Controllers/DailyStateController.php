@@ -40,6 +40,7 @@ class DailyStateController extends Controller
             'mood'           => 'required|integer|min:1|max:10',
             'focus'          => 'required|integer|min:1|max:10',
             'available_time' => 'nullable|integer|min:0',
+            'activity_preference' => 'nullable|in:Any,Indoor,Outdoor',
             'notes'          => 'nullable|string',
         ]);
 
@@ -50,6 +51,7 @@ class DailyStateController extends Controller
                 'mood'           => $data['mood'],
                 'focus'          => $data['focus'],
                 'available_time' => $data['available_time'] ?? 120,
+                'activity_preference' => $data['activity_preference'] ?? 'Any',
                 'notes'          => $data['notes'] ?? '',
             ]
         );
@@ -66,6 +68,7 @@ class DailyStateController extends Controller
             'mood'          => $state->mood,
             'focus'         => $state->focus,
             'availableTime' => $state->available_time,
+            'activityPreference' => $state->activity_preference ?? 'Any',
             'notes'         => $state->notes ?? '',
         ];
     }

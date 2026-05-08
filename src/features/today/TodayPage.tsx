@@ -17,6 +17,7 @@ import type { TaskStatus, Task } from '@/types';
 import toast from 'react-hot-toast';
 
 type LoaderPhase = 'saving' | 'generating' | 'loading' | 'done' | null;
+type ActivityPreference = 'Any' | 'Indoor' | 'Outdoor';
 
 const PHASE_CONFIG: Record<Exclude<LoaderPhase, null>, { progress: number; label: string }> = {
   saving: { progress: 15, label: 'Saving your daily state…' },
@@ -33,6 +34,12 @@ const TIME_PRESETS = [
   { label: '4h', mins: 240 },
   { label: '6h', mins: 360 },
   { label: '8h', mins: 480 },
+];
+
+const ACTIVITY_OPTIONS: Array<{ value: ActivityPreference; label: string; description: string }> = [
+  { value: 'Any', label: 'Any', description: 'Balanced' },
+  { value: 'Indoor', label: 'Indoor', description: 'Desk or home' },
+  { value: 'Outdoor', label: 'Outdoor', description: 'Outside tasks' },
 ];
 
 function formatTime(mins: number) {
@@ -197,6 +204,7 @@ export function TodayPage() {
   const [mood, setMood] = useState(5);
   const [focus, setFocus] = useState(5);
   const [availableTime, setAvailableTime] = useState(120);
+  const [activityPreference, setActivityPreference] = useState<ActivityPreference>('Any');
 
   const handleSmartGenerate = useCallback(async () => {
     // Close modal immediately
@@ -211,6 +219,7 @@ export function TodayPage() {
         mood,
         focus,
         availableTime,
+        activityPreference,
       });
 
       // Phase 2: Generate today view
@@ -237,7 +246,7 @@ export function TodayPage() {
       setLoaderPhase(null);
       toast.error('Failed to generate today view.');
     }
-  }, [energy, mood, focus, availableTime, queryClient, log, currentDate]);
+  }, [energy, mood, focus, availableTime, activityPreference, queryClient, log, currentDate]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -512,6 +521,39 @@ export function TodayPage() {
                         {p.label}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* Activity Preference */}
+                <div className="space-y-2">
+                  <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    Activity Preference
+                  </span>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {ACTIVITY_OPTIONS.map((option) => {
+                      const selected = activityPreference === option.value;
+                      return (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setActivityPreference(option.value)}
+                          className="rounded-lg border px-2 py-2 text-left transition-colors"
+                          style={{
+                            borderColor: selected ? 'var(--primary-500)' : 'var(--color-border)',
+                            backgroundColor: selected ? 'var(--primary-50)' : 'var(--color-surface)',
+                            color: selected ? 'var(--primary-700)' : 'var(--color-text)',
+                          }}
+                        >
+                          <span className="block text-xs font-semibold">{option.label}</span>
+                          <span
+                            className="block text-[10px]"
+                            style={{ color: selected ? 'var(--primary-700)' : 'var(--color-text-secondary)' }}
+                          >
+                            {option.description}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
