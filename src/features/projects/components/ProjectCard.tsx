@@ -20,7 +20,13 @@ export function ProjectCard({ project, onDelete, onViewTask, deleting }: {
     return { doneCount: done, totalCount: total, progress: pct, pendingTasks: pending };
   }, [project]);
 
-  const statusVariant = project.status === 'Completed' ? 'success' : project.status === 'Active' ? 'primary' : 'default';
+  const effectiveStatus = useMemo(() => {
+    if (project.status !== 'Active') return project.status;
+    const countable = (project.subtasks ?? []).filter((s) => s.status !== 'Deleted' && s.status !== 'Note');
+    return countable.length > 0 && countable.every((s) => s.status === 'Done') ? 'Completed' : 'Active';
+  }, [project]);
+
+  const statusVariant = effectiveStatus === 'Completed' ? 'success' : effectiveStatus === 'Active' ? 'primary' : 'default';
 
   return (
     <div
@@ -33,9 +39,9 @@ export function ProjectCard({ project, onDelete, onViewTask, deleting }: {
         <div
           className="mt-1.5 h-2.5 w-2.5 rounded-full shrink-0"
           style={{
-            backgroundColor: project.status === 'Active'
+            backgroundColor: effectiveStatus === 'Active'
               ? 'var(--primary-500)'
-              : project.status === 'Completed'
+              : effectiveStatus === 'Completed'
                 ? 'var(--success-500, #22c55e)'
                 : 'var(--color-border)',
           }}
@@ -57,7 +63,7 @@ export function ProjectCard({ project, onDelete, onViewTask, deleting }: {
             </Badge>
           )}
           <Badge variant={statusVariant} className="!text-[10px] !px-1.5 !py-0">
-            {project.status}
+            {effectiveStatus}
           </Badge>
           {onDelete && (
             <button

@@ -31,8 +31,19 @@ export function ProjectsPage() {
 
   const stats = useMemo(() => {
     if (!projects) return { total: 0, active: 0, completed: 0, totalTasks: 0, doneTasks: 0, domains: [] };
-    const active = projects.filter((p) => p.status === 'Active').length;
-    const completed = projects.filter((p) => p.status === 'Completed').length;
+    const active = projects.filter((p) => {
+      if (p.status !== 'Active') return false;
+      const subs = p.subtasks ?? [];
+      const countable = subs.filter((s) => s.status !== 'Deleted' && s.status !== 'Note');
+      return countable.length === 0 || !countable.every((s) => s.status === 'Done');
+    }).length;
+    const completed = projects.filter((p) => {
+      if (p.status === 'Completed') return true;
+      if (p.status !== 'Active') return false;
+      const subs = p.subtasks ?? [];
+      const countable = subs.filter((s) => s.status !== 'Deleted' && s.status !== 'Note');
+      return countable.length > 0 && countable.every((s) => s.status === 'Done');
+    }).length;
     let totalTasks = 0;
     let doneTasks = 0;
     const domainSet = new Set<string>();
@@ -45,12 +56,20 @@ export function ProjectsPage() {
     return { total: projects.length, active, completed, totalTasks, doneTasks, domains: Array.from(domainSet).sort() };
   }, [projects]);
 
+  const getEffectiveStatus = (p: (typeof projects)[number]) => {
+    if (p.status !== 'Active') return p.status;
+    const subs = p.subtasks ?? [];
+    const countable = subs.filter((s) => s.status !== 'Deleted' && s.status !== 'Note');
+    if (countable.length > 0 && countable.every((s) => s.status === 'Done')) return 'Completed';
+    return 'Active';
+  };
+
   const filtered = useMemo(() => {
     if (!projects) return [];
     let list = [...projects];
     
     if (filter !== 'all') {
-      list = list.filter((p) => p.status === filter);
+      list = list.filter((p) => getEffectiveStatus(p) === filter);
     }
     
     if (domainFilter) {
