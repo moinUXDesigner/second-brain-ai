@@ -6,7 +6,7 @@ import { useProjects, useDeleteProject } from '@/hooks/useProjects';
 import { ProjectCard } from './components/ProjectCard';
 import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { CardSkeleton } from '@/components/ui/Skeleton';
-import type { Task } from '@/types';
+import type { Task, Project } from '@/types';
 
 export function ProjectsPage() {
   const { data: projects, isLoading, isError } = useProjects();
@@ -56,11 +56,11 @@ export function ProjectsPage() {
     return { total: projects.length, active, completed, totalTasks, doneTasks, domains: Array.from(domainSet).sort() };
   }, [projects]);
 
-  const getEffectiveStatus = (p: (typeof projects)[number]) => {
+  const getEffectiveStatus = (p: Project) => {
     if (p.status !== 'Active') return p.status;
     const subs = p.subtasks ?? [];
-    const countable = subs.filter((s) => s.status !== 'Deleted' && s.status !== 'Note');
-    if (countable.length > 0 && countable.every((s) => s.status === 'Done')) return 'Completed';
+    const countable = subs.filter((s: Task) => s.status !== 'Deleted' && s.status !== 'Note');
+    if (countable.length > 0 && countable.every((s: Task) => s.status === 'Done')) return 'Completed';
     return 'Active';
   };
 
