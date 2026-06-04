@@ -211,6 +211,7 @@ export function Charts() {
       ...project,
       stats: getProjectTaskStats(project),
     }))
+    .filter((project) => project.stats.rate < 100)
     .sort((a, b) => b.stats.rate - a.stats.rate)
     .slice(0, 5);
 
