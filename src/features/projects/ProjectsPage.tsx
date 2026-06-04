@@ -56,16 +56,17 @@ export function ProjectsPage() {
     return { total: projects.length, active, completed, totalTasks, doneTasks, domains: Array.from(domainSet).sort() };
   }, [projects]);
 
-  const getEffectiveStatus = (p: Project) => {
-    if (p.status !== 'Active') return p.status;
-    const subs = p.subtasks ?? [];
-    const countable = subs.filter((s: Task) => s.status !== 'Deleted' && s.status !== 'Note');
-    if (countable.length > 0 && countable.every((s: Task) => s.status === 'Done')) return 'Completed';
-    return 'Active';
-  };
-
   const filtered = useMemo(() => {
     if (!projects) return [];
+    
+    const getEffectiveStatus = (p: Project) => {
+      if (p.status !== 'Active') return p.status;
+      const subs = p.subtasks ?? [];
+      const countable = subs.filter((s: Task) => s.status !== 'Deleted' && s.status !== 'Note');
+      if (countable.length > 0 && countable.every((s: Task) => s.status === 'Done')) return 'Completed';
+      return 'Active';
+    };
+    
     let list = [...projects];
     
     if (filter !== 'all') {
