@@ -129,11 +129,69 @@ class TaskController extends Controller
             'time_estimate' => 'nullable|string',
             'status'        => 'nullable|in:Pending,Done,Deleted,Idea,Note',
             'category'      => 'nullable|string',
+            'priority'      => 'nullable|integer',
+            'urgency'       => 'nullable|string',
             'tags'          => 'nullable|array',
         ]);
 
         $task->update($data);
         return response()->json(['success' => true, 'data' => $this->format($task->load('project'))]);
+    }
+
+    public function analyzeRevision(Request $request, Task $task): JsonResponse
+    {
+        $data = $request->validate([
+            'notes'         => 'nullable|string',
+            'title'         => 'nullable|string',
+            'area'          => 'nullable|string',
+            'category'      => 'nullable|string',
+            'urgency'       => 'nullable|string',
+            'priority'      => 'nullable|integer',
+            'due_date'      => 'nullable|date',
+            'time_estimate' => 'nullable|string',
+        ]);
+
+        $notes = trim($data['notes'] ?? '');
+        $title = trim($data['title'] ?? $task->title);
+        $area = trim($data['area'] ?? $task->area ?? '');
+        $combinedText = trim($title . "\n" . $notes);
+        $taskContext = [
+            'title' => $title,
+            'area' => $area,
+            'category' => $data['category'] ?? $task->category ?? '',
+            'urgency' => $data['urgency'] ?? $task->urgency ?? '',
+            'priority' => $data['priority'] ?? $task->priority ?? 0,
+            'dueDate' => $data['due_date'] ?? $task->due_date?->toDateString(),
+            'timeEstimate' => $data['time_estimate'] ?? $task->time_estimate ?? '',
+        ];
+
+        $rule = $this->classifier->classify($combinedText, $task->type ?? '');
+        $ruleUrgency = $this->classifier->deriveUrgency($combinedText);
+        $rulePriority = $this->classifier->calculatePriority($rule['maslow'], $rule['impact'], $rule['effort'], $ruleUrgency);
+        $ruleSuggestion = [
+            'priority' => $rulePriority,
+            'urgency' => $ruleUrgency,
+            'dueDate' => $this->deriveDueDate($ruleUrgency),
+            'timeEstimate' => $this->classifier->deriveTime($combinedText),
+            'category' => $this->classifier->getCategory($rulePriority, 5, 'Medium'),
+            'confidence' => $rule['confidence'],
+            'source' => 'RULE',
+        ];
+
+        $aiResult = $this->ai->analyzeTaskRevision($taskContext, $notes);
+        if (!$aiResult) {
+            return response()->json(['success' => true, 'data' => $ruleSuggestion]);
+        }
+
+        return response()->json(['success' => true, 'data' => [
+            'priority' => (int) ($aiResult['priority'] ?? $ruleSuggestion['priority']),
+            'urgency' => $this->normalizeUrgency($aiResult['urgency'] ?? null) ?? $ruleSuggestion['urgency'],
+            'dueDate' => $this->normalizeDate($aiResult['dueDate'] ?? null) ?? $ruleSuggestion['dueDate'],
+            'timeEstimate' => (string) ($aiResult['timeEstimate'] ?? $ruleSuggestion['timeEstimate']),
+            'category' => (string) ($aiResult['category'] ?? $ruleSuggestion['category']),
+            'confidence' => (float) ($aiResult['confidence'] ?? 0.9),
+            'source' => 'AI',
+        ]]);
     }
 
     public function updateStatus(Request $request, Task $task): JsonResponse
@@ -364,6 +422,34 @@ class TaskController extends Controller
         }
 
         return ($b['createdAt'] ?? '') <=> ($a['createdAt'] ?? '');
+    }
+
+    private function deriveDueDate(string $urgency): string
+    {
+        return match ($urgency) {
+            'High' => now()->addDays(3)->toDateString(),
+            'Low' => now()->addMonth()->toDateString(),
+            default => now()->addWeeks(2)->toDateString(),
+        };
+    }
+
+    private function normalizeDate(?string $value): ?string
+    {
+        if (!$value || strtolower($value) === 'null') return null;
+
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    private function normalizeUrgency(?string $value): ?string
+    {
+        if (!$value) return null;
+
+        $normalized = ucfirst(strtolower(trim($value)));
+        return in_array($normalized, ['Low', 'Medium', 'High'], true) ? $normalized : null;
     }
 
     private function isOverdueForDate(array $task, string $date): bool

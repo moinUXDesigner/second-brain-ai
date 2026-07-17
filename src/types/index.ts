@@ -79,6 +79,16 @@ export interface Task {
   timerStartedAt?: string;
 }
 
+export interface TaskRevisionSuggestion {
+  priority: number;
+  urgency: 'Low' | 'Medium' | 'High';
+  dueDate: string | null;
+  timeEstimate: string;
+  category?: string;
+  confidence?: number;
+  source: 'AI' | 'RULE';
+}
+
 export type ProjectPhaseStatus = 'Planned' | 'Active' | 'Completed';
 
 export interface ProjectPhase {

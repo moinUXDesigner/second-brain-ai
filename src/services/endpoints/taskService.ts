@@ -1,5 +1,5 @@
 import apiClient from '../apiClient';
-import type { Task, ApiResponse, PaginatedResponse } from '@/types';
+import type { Task, ApiResponse, PaginatedResponse, TaskRevisionSuggestion } from '@/types';
 
 export const taskService = {
   async getTasks(_params?: Record<string, string>): Promise<PaginatedResponse<Task>> {
@@ -24,6 +24,14 @@ export const taskService = {
 
   async updateTask(id: string, payload: Partial<Task>): Promise<ApiResponse<Task>> {
     const { data } = await apiClient.put(`/tasks/${id}`, payload);
+    return data;
+  },
+
+  async analyzeTaskRevision(
+    id: string,
+    payload: Partial<Task>,
+  ): Promise<ApiResponse<TaskRevisionSuggestion>> {
+    const { data } = await apiClient.post(`/tasks/${id}/revise/analyze`, payload);
     return data;
   },
 

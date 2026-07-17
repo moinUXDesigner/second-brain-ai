@@ -30,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/tasks/today',              [TaskController::class, 'today']);
     Route::post('/tasks',                   [TaskController::class, 'store']);
     Route::put('/tasks/{task}',             [TaskController::class, 'update']);
+    Route::post('/tasks/{task}/revise/analyze', [TaskController::class, 'analyzeRevision']);
     Route::patch('/tasks/{task}/status',    [TaskController::class, 'updateStatus']);
     Route::patch('/tasks/{task}/link',      [TaskController::class, 'linkToProject']);
     Route::post('/tasks/{task}/reset',      [TaskController::class, 'resetRecurring']);

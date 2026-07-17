@@ -45,6 +45,42 @@ class AIService
         }
     }
 
+    public function analyzeTaskRevision(array $task, string $notes): ?array
+    {
+        if (!$this->apiKey) return null;
+
+        $today = now()->toDateString();
+
+        try {
+            $response = Http::withToken($this->apiKey)
+                ->timeout(30)
+                ->post('https://api.openai.com/v1/chat/completions', [
+                    'model'       => $this->model,
+                    'temperature' => 0.2,
+                    'messages'    => [
+                        [
+                            'role'    => 'system',
+                            'content' => "Today is {$today}. You revise productivity tasks from user notes. Return ONLY valid JSON with this shape: {\"priority\":12,\"urgency\":\"Low|Medium|High\",\"dueDate\":\"YYYY-MM-DD|null\",\"timeEstimate\":\"e.g. 30 minutes\",\"category\":\"Deep Work|Light Work|Admin|Recovery|Critical|Must Do|Can Do Now|Optional\",\"confidence\":0.8}. Do not include explanations.",
+                        ],
+                        [
+                            'role' => 'user',
+                            'content' => json_encode([
+                                'task' => $task,
+                                'revisionNotes' => $notes,
+                            ]),
+                        ],
+                    ],
+                ]);
+
+            $content = $response->json('choices.0.message.content', '');
+            $content = preg_replace('/```json|```/', '', $content);
+            return json_decode(trim($content), true);
+        } catch (\Throwable $e) {
+            Log::warning('AIService::analyzeTaskRevision failed: ' . $e->getMessage());
+            return null;
+        }
+    }
+
     public function classifyBatch(array $tasks): array
     {
         if (!$this->apiKey) return [];
