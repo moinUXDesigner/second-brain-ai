@@ -6,6 +6,7 @@ import { useProjects, useDeleteProject } from '@/hooks/useProjects';
 import { ProjectCard } from './components/ProjectCard';
 import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { CardSkeleton } from '@/components/ui/Skeleton';
+import { splitDomains } from '@/utils/domains';
 import type { Task, Project } from '@/types';
 
 export function ProjectsPage() {
@@ -51,7 +52,7 @@ export function ProjectsPage() {
       const subs = p.subtasks ?? [];
       totalTasks += subs.filter((s) => s.status !== 'Deleted').length;
       doneTasks += subs.filter((s) => s.status === 'Done').length;
-      if (p.domain) domainSet.add(p.domain);
+      splitDomains(p.domain).forEach((domain) => domainSet.add(domain));
     });
     return { total: projects.length, active, completed, totalTasks, doneTasks, domains: Array.from(domainSet).sort() };
   }, [projects]);
@@ -74,7 +75,7 @@ export function ProjectsPage() {
     }
     
     if (domainFilter) {
-      list = list.filter((p) => p.domain === domainFilter);
+      list = list.filter((p) => splitDomains(p.domain).includes(domainFilter));
     }
     
     if (searchQuery.trim()) {

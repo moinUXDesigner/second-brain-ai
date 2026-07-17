@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useProjects } from '@/hooks/useProjects';
 import { CardSkeleton } from '@/components/ui/Skeleton';
+import { splitDomains } from '@/utils/domains';
 import type { Project, Task } from '@/types';
 
 type EffectiveStatus = 'Active' | 'Completed' | 'Archived' | 'Deleted';
@@ -60,8 +61,11 @@ export function ProjectsDashboardPage() {
       .slice(0, 5);
 
     const domainCounts = allProjects.reduce<Record<string, number>>((counts, project) => {
-      const domain = project.domain || 'Unassigned';
-      counts[domain] = (counts[domain] ?? 0) + 1;
+      const domains = splitDomains(project.domain);
+      const projectDomains = domains.length > 0 ? domains : ['Unassigned'];
+      projectDomains.forEach((domain) => {
+        counts[domain] = (counts[domain] ?? 0) + 1;
+      });
       return counts;
     }, {});
 
@@ -225,7 +229,7 @@ function ProjectList({ projects, empty, showDueDate }: { projects: Project[]; em
               <div className="min-w-0">
                 <p className="text-sm font-medium truncate" style={{ color: 'var(--color-text)' }}>{project.title}</p>
                 <p className="text-caption mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-                  {project.domain || 'Unassigned'} - {openTasks} open task{openTasks === 1 ? '' : 's'}
+                  {(splitDomains(project.domain)[0] || 'Unassigned')} - {openTasks} open task{openTasks === 1 ? '' : 's'}
                 </p>
               </div>
               <span className="text-xs font-semibold shrink-0" style={{ color: 'var(--primary-600)' }}>{project.progress}%</span>

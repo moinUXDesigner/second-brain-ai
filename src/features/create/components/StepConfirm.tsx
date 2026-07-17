@@ -5,6 +5,7 @@ import { useProjects } from '@/hooks/useProjects';
 import { taskService } from '@/services/endpoints/taskService';
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/constants';
+import { splitDomains } from '@/utils/domains';
 import type { Task, Project } from '@/types';
 import type { WizardData } from '../CreateFlowPage';
 
@@ -153,9 +154,15 @@ export function StepConfirm({ data, task, project, onDone }: StepConfirmProps) {
               style={{ backgroundColor: 'var(--color-muted)' }}
             >
               {data.area && (
+                <div className="flex justify-between gap-3 text-caption">
+                  <span style={{ color: 'var(--color-muted-fg)' }}>Domains</span>
+                  <span className="text-right" style={{ color: 'var(--color-text)' }}>{splitDomains(data.area).join(', ')}</span>
+                </div>
+              )}
+              {data.dueDate && (
                 <div className="flex justify-between text-caption">
-                  <span style={{ color: 'var(--color-muted-fg)' }}>Area</span>
-                  <span style={{ color: 'var(--color-text)' }}>{data.area}</span>
+                  <span style={{ color: 'var(--color-muted-fg)' }}>Due Date</span>
+                  <span style={{ color: 'var(--color-text)' }}>{new Date(`${data.dueDate}T00:00:00`).toLocaleDateString()}</span>
                 </div>
               )}
               <div className="flex justify-between text-caption">
@@ -304,6 +311,14 @@ export function StepConfirm({ data, task, project, onDone }: StepConfirmProps) {
                   style={{ color: 'var(--color-muted-fg)' }}
                 >
                   for {data.area.toLowerCase()}
+                </span>
+              )}
+              {data.dueDate && (
+                <span
+                  className="text-caption"
+                  style={{ color: 'var(--color-muted-fg)' }}
+                >
+                  due {new Date(`${data.dueDate}T00:00:00`).toLocaleDateString()}
                 </span>
               )}
             </div>

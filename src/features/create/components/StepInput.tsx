@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
+import { DOMAIN_OPTIONS, joinDomains, splitDomains } from '@/utils/domains';
 
 interface StepInputProps {
   text: string;
@@ -8,23 +9,12 @@ interface StepInputProps {
   onNext: () => void;
 }
 
-const AREA_OPTIONS = [
-  'Work',
-  'Personal',
-  'Health',
-  'Finance',
-  'Learning',
-  'Apps',
-  'Social',
-  'Creative',
-  'Home',
-];
-
 const CUSTOM_KEY = '__custom__';
 
 export function StepInput({ text, area, onChange, onNext }: StepInputProps) {
-  const isCustom = area !== '' && !AREA_OPTIONS.includes(area);
-  const [showCustomInput, setShowCustomInput] = useState(isCustom);
+  const selectedDomains = splitDomains(area);
+  const customDomains = selectedDomains.filter((domain) => !DOMAIN_OPTIONS.includes(domain as typeof DOMAIN_OPTIONS[number]));
+  const [showCustomInput, setShowCustomInput] = useState(customDomains.length > 0);
   const customInputRef = useRef<HTMLInputElement>(null);
   const canProceed = text.trim().length > 0;
 
@@ -37,11 +27,29 @@ export function StepInput({ text, area, onChange, onNext }: StepInputProps) {
   const handleChipClick = (opt: string) => {
     if (opt === CUSTOM_KEY) {
       setShowCustomInput(true);
-      onChange({ area: '' });
-    } else {
-      setShowCustomInput(false);
-      onChange({ area: area === opt ? '' : opt });
+      return;
     }
+
+    const nextDomains = selectedDomains.includes(opt)
+      ? selectedDomains.filter((domain) => domain !== opt)
+      : [...selectedDomains, opt];
+
+    onChange({ area: joinDomains(nextDomains) });
+  };
+
+  const handleCustomChange = (value: string) => {
+    const baseDomains = selectedDomains.filter((domain) => DOMAIN_OPTIONS.includes(domain as typeof DOMAIN_OPTIONS[number]));
+    const customValues = value
+      .split(',')
+      .map((domain) => domain.trim())
+      .filter(Boolean);
+
+    onChange({ area: joinDomains([...baseDomains, ...customValues]) });
+  };
+
+  const handleClearDomains = () => {
+    setShowCustomInput(false);
+    onChange({ area: '' });
   };
 
   return (
@@ -70,35 +78,46 @@ export function StepInput({ text, area, onChange, onNext }: StepInputProps) {
           Describe the task or project you have in mind…
         </p>
 
-        {/* Area selection */}
+        {/* Domain selection */}
         <div className="space-y-2">
-          <label
-            className="text-caption font-medium"
-            style={{ color: 'var(--color-text)' }}
-          >
-            Area
-          </label>
-          <div className="flex flex-wrap gap-2">
-            {AREA_OPTIONS.map((opt) => (
+          <div className="flex items-center justify-between gap-3">
+            <label
+              className="text-caption font-medium"
+              style={{ color: 'var(--color-text)' }}
+            >
+              Domains
+            </label>
+            {selectedDomains.length > 0 && (
               <button
-                key={opt}
                 type="button"
-                onClick={() => handleChipClick(opt)}
-                className="px-3 py-1.5 rounded-full text-caption font-medium transition-all"
-                style={{
-                  backgroundColor:
-                    area === opt && !showCustomInput ? 'var(--primary-100)' : 'var(--color-muted)',
-                  color:
-                    area === opt && !showCustomInput ? 'var(--primary-700)' : 'var(--color-text-secondary)',
-                  border:
-                    area === opt && !showCustomInput
-                      ? '1px solid var(--primary-300)'
-                      : '1px solid transparent',
-                }}
+                onClick={handleClearDomains}
+                className="text-caption font-medium"
+                style={{ color: 'var(--primary-600)' }}
               >
-                {opt}
+                Clear
               </button>
-            ))}
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {DOMAIN_OPTIONS.map((opt) => {
+              const selected = selectedDomains.includes(opt);
+
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => handleChipClick(opt)}
+                  className="px-3 py-1.5 rounded-full text-caption font-medium transition-all"
+                  style={{
+                    backgroundColor: selected ? 'var(--primary-100)' : 'var(--color-muted)',
+                    color: selected ? 'var(--primary-700)' : 'var(--color-text-secondary)',
+                    border: selected ? '1px solid var(--primary-300)' : '1px solid transparent',
+                  }}
+                >
+                  {opt}
+                </button>
+              );
+            })}
             {/* Custom chip */}
             <button
               type="button"
@@ -119,14 +138,14 @@ export function StepInput({ text, area, onChange, onNext }: StepInputProps) {
             </button>
           </div>
 
-          {/* Custom area input */}
+          {/* Custom domain input */}
           {showCustomInput && (
             <input
               ref={customInputRef}
               type="text"
-              value={isCustom ? area : ''}
-              onChange={(e) => onChange({ area: e.target.value })}
-              placeholder="Enter custom area…"
+              value={customDomains.join(', ')}
+              onChange={(e) => handleCustomChange(e.target.value)}
+              placeholder="Enter custom domains, separated by commas..."
               className="input-base text-body mt-2"
             />
           )}

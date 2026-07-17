@@ -53,6 +53,7 @@ class ProjectController extends Controller
             'description' => 'nullable|string',
             'area'        => 'nullable|string',
             'priority'    => 'nullable|integer',
+            'due_date'    => 'nullable|date',
             'subtasks'    => 'nullable|array',
             'phases'      => 'nullable|array',
             'milestones'  => 'nullable|array',
@@ -72,6 +73,7 @@ class ProjectController extends Controller
             'description' => $userInput, // Store original input as description
             'status'      => 'Active',
             'priority'    => $data['priority'] ?? 0,
+            'due_date'    => $data['due_date'] ?? null,
             'domain'      => $data['area'] ?? '',
             'phases'      => $data['phases'] ?? [],
             'milestones'  => $data['milestones'] ?? [],

@@ -185,6 +185,7 @@ export interface CreateInput {
   category?: string;
   priority?: string;
   estimatedTime?: string;
+  dueDate?: string;
   recurrence?: 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
   subtasks?: string[];
 }
@@ -196,6 +197,7 @@ export interface AnalyzeResult {
   category: string;
   priority: 'Low' | 'Medium' | 'High';
   estimatedTime: string;
+  dueDate?: string;
   recurrence?: 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
   subtasks: string[];
   confidence: number;

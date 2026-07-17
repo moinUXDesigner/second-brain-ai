@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Project, Task } from '@/types';
 import { Badge } from '@/components/ui/Badge';
+import { splitDomains } from '@/utils/domains';
 
 export function ProjectCard({ project, onDelete, onViewTask, deleting }: {
   project: Project;
@@ -27,6 +28,7 @@ export function ProjectCard({ project, onDelete, onViewTask, deleting }: {
   }, [project]);
 
   const statusVariant = effectiveStatus === 'Completed' ? 'success' : effectiveStatus === 'Active' ? 'primary' : 'default';
+  const domains = splitDomains(project.domain);
 
   return (
     <div
@@ -57,9 +59,14 @@ export function ProjectCard({ project, onDelete, onViewTask, deleting }: {
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
-          {project.domain && (
+          {domains.slice(0, 2).map((domain) => (
+            <Badge key={domain} variant="default" className="!text-[10px] !px-1.5 !py-0">
+              {domain}
+            </Badge>
+          ))}
+          {domains.length > 2 && (
             <Badge variant="default" className="!text-[10px] !px-1.5 !py-0">
-              {project.domain}
+              +{domains.length - 2}
             </Badge>
           )}
           <Badge variant={statusVariant} className="!text-[10px] !px-1.5 !py-0">

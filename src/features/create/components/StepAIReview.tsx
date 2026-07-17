@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/Button';
 import { TASK_CATEGORIES } from '@/constants';
 import { inputService } from '@/services/endpoints/inputService';
 import { useUiStore } from '@/app/store/uiStore';
+import { splitDomains } from '@/utils/domains';
 import type { WizardData } from '../CreateFlowPage';
 import type { AnalyzeResult } from '@/types';
 
@@ -48,6 +49,28 @@ const inferRecurrence = (text: string): WizardData['recurrence'] => {
   if (t.includes('monthly') || t.includes('every month')) return 'Monthly';
   if (t.includes('yearly')  || t.includes('annual'))      return 'Yearly';
   return undefined;
+};
+
+const addDays = (days: number): string => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+};
+
+const inferDueDate = (priority: WizardData['priority'], text: string): string => {
+  const t = text.toLowerCase();
+  if (t.includes('today')) return addDays(0);
+  if (t.includes('tomorrow')) return addDays(1);
+  if (t.includes('this week')) return addDays(7);
+  if (t.includes('next week')) return addDays(14);
+  if (priority === 'High') return addDays(3);
+  if (priority === 'Medium') return addDays(14);
+  return addDays(30);
+};
+
+const formatDateLabel = (value?: string): string => {
+  if (!value) return 'No due date';
+  return new Date(`${value}T00:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
 
 export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: StepAIReviewProps) {
@@ -95,6 +118,7 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
       const inferredRecurrence = r.recurrence ?? inferRecurrence(initialText.current);
       const nextEstimated      = r.estimatedTime || formatEstimatedTime(estimatedMinutes);
       const nextMinutes        = parseEstimatedTime(nextEstimated);
+      const nextDueDate        = r.dueDate || inferDueDate(r.priority, initialText.current);
 
       // Update local state only — no onChange call here to avoid re-render loop
       setSubtasks(normalizedSubs);
@@ -109,6 +133,7 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
         category:      r.category,
         priority:      r.priority,
         estimatedTime: nextEstimated,
+        dueDate:       nextDueDate,
         recurrence:    inferredRecurrence,
         subtasks:      normalizedSubs,
       });
@@ -177,11 +202,11 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
 
         <div className="px-5 py-4 space-y-3">
           <div className="flex flex-wrap gap-2">
-            {data.area && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-caption" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}>
-                {data.area}
+            {splitDomains(data.area).map((domain) => (
+              <span key={domain} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-caption" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}>
+                {domain}
               </span>
-            )}
+            ))}
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-caption" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}>
               {data.category}
             </span>
@@ -191,6 +216,11 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-caption" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}>
               ⏱ {data.estimatedTime}
             </span>
+            {data.dueDate && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-caption" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}>
+                Due {formatDateLabel(data.dueDate)}
+              </span>
+            )}
             {data.recurrence && (
               <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-caption" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}>
                 🔁 {data.recurrence}
@@ -328,6 +358,17 @@ export function StepAIReview({ data, onChange, onBack, onCreate, submitting }: S
             onClick={() => { const n = estimatedMinutes + 15; setEstimatedMinutes(n); onChange({ estimatedTime: formatEstimatedTime(n) }); }}
           >+15</button>
         </div>
+      </div>
+
+      {/* Due Date */}
+      <div className="space-y-1.5">
+        <label className="text-caption font-medium" style={{ color: 'var(--color-text-secondary)' }}>Due Date</label>
+        <input
+          type="date"
+          value={data.dueDate ?? ''}
+          onChange={(e) => onChange({ dueDate: e.target.value || undefined })}
+          className="input-base text-body"
+        />
       </div>
 
       {/* Subtasks */}

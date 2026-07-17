@@ -19,6 +19,8 @@ class AIService
     {
         if (!$this->apiKey) return null;
 
+        $today = now()->toDateString();
+
         try {
             $response = Http::withToken($this->apiKey)
                 ->timeout(30)
@@ -28,7 +30,7 @@ class AIService
                     'messages'    => [
                         [
                             'role'    => 'system',
-                            'content' => "You are a productivity assistant. Determine if input is a task or project.\nReturn ONLY valid JSON:\n{\"type\":\"task|project\",\"category\":\"Deep Work|Light Work|Admin|Recovery\",\"priority\":\"Low|Medium|High\",\"estimatedTime\":\"e.g. 30 minutes\",\"subtasks\":[]}"
+                            'content' => "Today is {$today}. You are a productivity assistant. Determine if input is a task or project and suggest a realistic editable due date. Return ONLY valid JSON:\n{\"type\":\"task|project\",\"category\":\"Deep Work|Light Work|Admin|Recovery\",\"priority\":\"Low|Medium|High\",\"estimatedTime\":\"e.g. 30 minutes\",\"dueDate\":\"YYYY-MM-DD\",\"subtasks\":[]}"
                         ],
                         ['role' => 'user', 'content' => "Input: {$text}" . ($area ? "\nArea: {$area}" : '')],
                     ],

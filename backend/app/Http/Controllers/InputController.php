@@ -10,6 +10,7 @@ use App\Services\AIService;
 use App\Services\PipelineService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 
 class InputController extends Controller
 {
@@ -36,6 +37,7 @@ class InputController extends Controller
         $category = $this->deriveCategory($rule);
         $priority = $rule['impact'] >= 8 ? 'High' : ($rule['impact'] >= 5 ? 'Medium' : 'Low');
         $estTime  = $this->classifier->deriveTime($text);
+        $dueDate  = $this->deriveDueDate($priority, $text);
         $subtasks = [];
         $source   = 'RULE';
 
@@ -46,6 +48,7 @@ class InputController extends Controller
                 $category = $aiResult['category']      ?? $category;
                 $priority = $aiResult['priority']      ?? $priority;
                 $estTime  = $aiResult['estimatedTime'] ?? $estTime;
+                $dueDate  = $this->normalizeDueDate($aiResult['dueDate'] ?? null) ?? $dueDate;
                 $subtasks = $aiResult['subtasks']      ?? [];
                 $source   = 'AI';
             }
@@ -64,6 +67,7 @@ class InputController extends Controller
             'category'      => $category,
             'priority'      => $priority,
             'estimatedTime' => $estTime,
+            'dueDate'       => $dueDate,
             'subtasks'      => array_values(array_filter($subtasks)),
             'confidence'    => $source === 'AI' ? 0.9 : $rule['confidence'],
             'source'        => $source,
@@ -79,6 +83,7 @@ class InputController extends Controller
             'category'      => 'nullable|string',
             'priority'      => 'nullable|string',
             'estimatedTime' => 'nullable|string',
+            'dueDate'       => 'nullable|date',
             'recurrence'    => 'nullable|in:Daily,Weekly,Monthly,Yearly',
             'subtasks'      => 'nullable|array',
         ]);
@@ -88,6 +93,7 @@ class InputController extends Controller
                 'title'       => $data['text'],
                 'description' => '',
                 'area'        => $data['area'] ?? '',
+                'due_date'    => $data['dueDate'] ?? null,
                 'subtasks'    => $data['subtasks'] ?? [],
             ]));
             return response()->json(['success' => true, 'data' => ['project' => $project->getData(true)['data']]]);
@@ -98,6 +104,7 @@ class InputController extends Controller
             'area'          => $data['area'] ?? '',
             'category'      => $data['category'] ?? '',
             'time_estimate' => $data['estimatedTime'] ?? '',
+            'due_date'      => $data['dueDate'] ?? null,
             'recurrence'    => $data['recurrence'] ?? null,
             'status'        => 'Pending',
         ]));
@@ -143,5 +150,31 @@ class InputController extends Controller
         if ($rule['effort'] <= 3) return 'Light Work';
         if ($rule['maslow'] === 'Physiological') return 'Recovery';
         return 'Admin';
+    }
+
+    private function deriveDueDate(string $priority, string $text): string
+    {
+        $lower = strtolower($text);
+        if (str_contains($lower, 'today')) return now()->toDateString();
+        if (str_contains($lower, 'tomorrow')) return now()->addDay()->toDateString();
+        if (str_contains($lower, 'this week')) return now()->addWeek()->toDateString();
+        if (str_contains($lower, 'next week')) return now()->addWeeks(2)->toDateString();
+
+        return match ($priority) {
+            'High' => now()->addDays(3)->toDateString(),
+            'Medium' => now()->addWeeks(2)->toDateString(),
+            default => now()->addMonth()->toDateString(),
+        };
+    }
+
+    private function normalizeDueDate(?string $value): ?string
+    {
+        if (!$value) return null;
+
+        try {
+            return Carbon::parse($value)->toDateString();
+        } catch (\Throwable) {
+            return null;
+        }
     }
 }
