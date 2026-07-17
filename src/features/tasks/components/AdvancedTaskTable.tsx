@@ -8,7 +8,7 @@ import { useScheduleToday } from '@/hooks/useTasks';
 import { formatDate } from '@/utils/dateFormat';
 
 type SortDirection = 'asc' | 'desc' | null;
-type SortColumn = 'title' | 'priority' | 'urgency' | 'dueDate' | 'updated';
+type SortColumn = 'title' | 'priority' | 'urgency' | 'dueDate' | 'deadlineDate' | 'updated';
 
 interface ColumnFilter {
   urgency: string[];
@@ -88,6 +88,10 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
           case 'dueDate':
             aVal = a.dueDate || '';
             bVal = b.dueDate || '';
+            break;
+          case 'deadlineDate':
+            aVal = a.deadlineDate || '';
+            bVal = b.deadlineDate || '';
             break;
           case 'updated':
             aVal = a.updatedAt || '';
@@ -177,10 +181,10 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
     <>
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead className="sticky top-0 z-20">
               <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-muted)' }}>
-                <th className="px-4 py-3 text-left">
+                <th className="w-[34%] px-4 py-3 text-left">
                   <button
                     onClick={() => handleSort('title')}
                     className="flex items-center gap-1 text-caption font-medium uppercase tracking-wider hover:opacity-80"
@@ -190,7 +194,7 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                     <SortIcon column="title" />
                   </button>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="w-[9%] px-4 py-3 text-left">
                   <button
                     onClick={() => handleSort('priority')}
                     className="flex items-center gap-1 text-caption font-medium uppercase tracking-wider hover:opacity-80"
@@ -200,7 +204,7 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                     <SortIcon column="priority" />
                   </button>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="w-[12%] px-4 py-3 text-left">
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleSort('urgency')}
@@ -213,7 +217,7 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                     <FilterDropdown column="urgency" options={filterOptions.urgency} />
                   </div>
                 </th>
-                <th className="px-4 py-3 text-left">
+                <th className="w-[12%] px-4 py-3 text-left">
                   <button
                     onClick={() => handleSort('dueDate')}
                     className="flex items-center gap-1 text-caption font-medium uppercase tracking-wider hover:opacity-80"
@@ -223,7 +227,17 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                     <SortIcon column="dueDate" />
                   </button>
                 </th>
-                <th className="px-4 py-3 text-right text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>
+                <th className="w-[13%] px-4 py-3 text-left">
+                  <button
+                    onClick={() => handleSort('deadlineDate')}
+                    className="flex items-center gap-1 text-caption font-medium uppercase tracking-wider hover:opacity-80"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Deadline
+                    <SortIcon column="deadlineDate" />
+                  </button>
+                </th>
+                <th className="w-[20%] px-4 py-3 text-right text-caption font-medium uppercase tracking-wider" style={{ color: 'var(--color-text-secondary)' }}>
                   Actions
                 </th>
               </tr>
@@ -239,8 +253,8 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                   }}
                 >
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="truncate text-body font-medium" style={{ color: 'var(--color-text)' }} title={task.title}>
                         {task.title}
                       </p>
                       {(task.source === 'BULK' || task.tags?.includes('Batch Uploaded')) && (
@@ -272,6 +286,11 @@ export function AdvancedTaskTable({ tasks, onDelete, onComplete, deletingId, com
                   <td className="px-4 py-3">
                     <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
                       {task.dueDate ? formatDate(task.dueDate) : '-'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                      {task.deadlineDate ? formatDate(task.deadlineDate) : '-'}
                     </span>
                   </td>
                   <td className="px-4 py-3">
