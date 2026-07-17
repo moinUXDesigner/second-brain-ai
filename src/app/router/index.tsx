@@ -9,6 +9,7 @@ import { TodayPage } from '@/features/today/TodayPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { TasksPage } from '@/features/tasks/TasksPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
+import { ProjectsDashboardPage } from '@/features/projects/ProjectsDashboardPage';
 import { AnalyticsPage } from '@/features/analytics/AnalyticsPage';
 import { DailyStatePage } from '@/features/daily-state/DailyStatePage';
 import { AdminPage } from '@/features/admin/AdminPage';
@@ -56,6 +57,7 @@ export const router = createBrowserRouter([
       { path: 'today', element: <TodayPage /> },
       { path: 'tasks', element: <TasksPage /> },
       { path: 'completed', element: <CompletedTasksPage /> },
+      { path: 'projects-dashboard', element: <ProjectsDashboardPage /> },
       { path: 'projects', element: <ProjectsPage /> },
       { path: 'projects/deleted', element: <DeletedProjectsPage /> },
       { path: 'projects/:id', element: <ProjectDetailPage /> },
