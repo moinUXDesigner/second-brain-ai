@@ -245,13 +245,12 @@ jobs:
 
             mkdir -p "$BACKUP_DIR"
 
-            cat > "$BACKUP_DIR/.backup.cnf" <<CFG
-[client]
-host=$DB_HOST
-port=$DB_PORT
-user=$DB_USERNAME
-password=$DB_PASSWORD
-CFG
+            printf '%s\n' \
+              '[client]' \
+              "host=$DB_HOST" \
+              "port=$DB_PORT" \
+              "user=$DB_USERNAME" \
+              "password=$DB_PASSWORD" > "$BACKUP_DIR/.backup.cnf"
             chmod 600 "$BACKUP_DIR/.backup.cnf"
 
             "$DUMP_CMD" \
