@@ -207,6 +207,68 @@ jobs:
           echo "🔍 Using PHP 8.5 binary..."
           ssh hostinger "/opt/alt/php85/usr/bin/php --version"
 
+      - name: Backup Production Database
+        env:
+          DB_HOST: ${{ secrets.DB_HOST }}
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_DATABASE: ${{ secrets.DB_DATABASE }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          echo "Backing up production database before migrations..."
+
+          DB_HOST_B64=$(printf '%s' "$DB_HOST" | base64 -w0)
+          DB_PORT_B64=$(printf '%s' "$DB_PORT" | base64 -w0)
+          DB_DATABASE_B64=$(printf '%s' "$DB_DATABASE" | base64 -w0)
+          DB_USERNAME_B64=$(printf '%s' "$DB_USERNAME" | base64 -w0)
+          DB_PASSWORD_B64=$(printf '%s' "$DB_PASSWORD" | base64 -w0)
+
+          ssh hostinger \
+            "DB_HOST_B64='$DB_HOST_B64' DB_PORT_B64='$DB_PORT_B64' DB_DATABASE_B64='$DB_DATABASE_B64' DB_USERNAME_B64='$DB_USERNAME_B64' DB_PASSWORD_B64='$DB_PASSWORD_B64' bash -s" << 'EOF'
+            set -euo pipefail
+
+            DB_HOST=$(printf '%s' "$DB_HOST_B64" | base64 -d)
+            DB_PORT=$(printf '%s' "$DB_PORT_B64" | base64 -d)
+            DB_DATABASE=$(printf '%s' "$DB_DATABASE_B64" | base64 -d)
+            DB_USERNAME=$(printf '%s' "$DB_USERNAME_B64" | base64 -d)
+            DB_PASSWORD=$(printf '%s' "$DB_PASSWORD_B64" | base64 -d)
+
+            BACKUP_DIR="/home/u484303972/backups/secondbrain-db"
+            TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+            BACKUP_FILE="$BACKUP_DIR/secondbrain_${TIMESTAMP}.sql"
+            DUMP_CMD=$(command -v mysqldump || command -v mariadb-dump || true)
+
+            if [ -z "$DUMP_CMD" ]; then
+              echo "ERROR: Neither mysqldump nor mariadb-dump is available on the server."
+              exit 1
+            fi
+
+            mkdir -p "$BACKUP_DIR"
+
+            cat > "$BACKUP_DIR/.backup.cnf" <<CFG
+[client]
+host=$DB_HOST
+port=$DB_PORT
+user=$DB_USERNAME
+password=$DB_PASSWORD
+CFG
+            chmod 600 "$BACKUP_DIR/.backup.cnf"
+
+            "$DUMP_CMD" \
+              --defaults-extra-file="$BACKUP_DIR/.backup.cnf" \
+              --single-transaction \
+              --quick \
+              --skip-lock-tables \
+              "$DB_DATABASE" > "$BACKUP_FILE"
+
+            gzip -f "$BACKUP_FILE"
+            rm -f "$BACKUP_DIR/.backup.cnf"
+
+            find "$BACKUP_DIR" -maxdepth 1 -name 'secondbrain_*.sql.gz' -type f | sort -r | tail -n +11 | xargs -r rm -f
+
+            echo "Backup created: ${BACKUP_FILE}.gz"
+          EOF
+
       - name: Run Database Migrations
         run: |
           echo "🗄️ Running database migrations..."

@@ -9,6 +9,9 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__.'/../routes/api.php',
         apiPrefix: 'api',
     )
+    ->withCommands([
+        __DIR__.'/../app/Console/Commands',
+    ])
     ->withMiddleware(function (Middleware $middleware) {
         // Pure token-based API — no CSRF, no sessions
         $middleware->api(remove: [

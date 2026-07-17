@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ThemeToggle } from './ThemeToggle';
 import { AccessibilityMenu } from './AccessibilityMenu';
 import { Badge } from '@/components/ui/Badge';
+import { NotificationBell } from './NotificationBell';
 
 export function Header() {
   const user = useAuthStore((s) => s.user);
@@ -92,6 +93,8 @@ export function Header() {
           <div className="hidden md:flex">
             <ThemeToggle />
           </div>
+
+          <NotificationBell />
 
           {user && (
             <div className="flex items-center gap-2 sm:gap-3">

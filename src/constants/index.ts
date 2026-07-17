@@ -52,6 +52,7 @@ export const QUERY_KEYS = {
   dailyState: (date: string) => ['daily-state', date] as const,
   auditLogs: ['audit-logs'] as const,
   users: ['users'] as const,
+  notifications: ['notifications'] as const,
 };
 
 export const FEATURE_FLAGS = {

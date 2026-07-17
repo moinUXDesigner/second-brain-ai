@@ -69,6 +69,8 @@ export interface Task {
   category?: TaskCategory | string;
   dueDate?: string;
   deadlineDate?: string;
+  reminderAt?: string | null;
+  reminderEnabled?: boolean;
   tags?: string[];
   createdAt?: string;
   updatedAt?: string;
@@ -87,6 +89,28 @@ export interface TaskRevisionSuggestion {
   category?: string;
   confidence?: number;
   source: 'AI' | 'RULE';
+}
+
+export interface AppNotification {
+  id: string;
+  type: string;
+  data: {
+    kind?: string;
+    title?: string;
+    message?: string;
+    taskId?: string;
+    taskTitle?: string;
+    dueDate?: string | null;
+    deadlineDate?: string | null;
+    reminderAt?: string | null;
+  };
+  readAt?: string;
+  createdAt?: string;
+}
+
+export interface NotificationList {
+  items: AppNotification[];
+  unreadCount: number;
 }
 
 export type ProjectPhaseStatus = 'Planned' | 'Active' | 'Completed';

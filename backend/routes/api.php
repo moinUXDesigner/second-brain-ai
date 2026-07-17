@@ -9,6 +9,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\InputController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\ImportController;
+use App\Http\Controllers\NotificationController;
 
 // Auth (public)
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -42,6 +43,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/tasks/{task}',          [TaskController::class, 'destroy']);
     Route::post('/tasks/cleanup',           [TaskController::class, 'cleanup']);
     Route::post('/tasks/assign-due-dates',  [TaskController::class, 'assignDueDates']);
+
+    // Notifications
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);
+    Route::patch('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+    Route::post('/notifications/check-reminders', [NotificationController::class, 'checkReminders']);
 
     // Projects
     Route::get('/projects',                     [ProjectController::class, 'index']);

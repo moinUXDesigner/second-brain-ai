@@ -26,6 +26,14 @@ const RECURRENCE_OPTIONS = [
   { value: 'Yearly', label: 'Yearly' },
 ];
 
+function toDateTimeLocalValue(value?: string | null) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.slice(0, 16);
+  const offsetMs = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
 interface EditTaskModalProps {
   task: Task;
   onClose: () => void;
@@ -44,6 +52,8 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
   const [estimatedTime, setEstimatedTime] = useState(task.timeEstimate || '');
   const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : '');
   const [deadlineDate, setDeadlineDate] = useState(task.deadlineDate ? task.deadlineDate.slice(0, 10) : '');
+  const [reminderEnabled, setReminderEnabled] = useState(Boolean(task.reminderEnabled));
+  const [reminderAt, setReminderAt] = useState(toDateTimeLocalValue(task.reminderAt));
   const [revisionSuggestion, setRevisionSuggestion] = useState<TaskRevisionSuggestion | null>(null);
   const [analyzingRevision, setAnalyzingRevision] = useState(false);
 
@@ -62,6 +72,8 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
     setEstimatedTime(task.timeEstimate || '');
     setDueDate(task.dueDate ? task.dueDate.slice(0, 10) : '');
     setDeadlineDate(task.deadlineDate ? task.deadlineDate.slice(0, 10) : '');
+    setReminderEnabled(Boolean(task.reminderEnabled));
+    setReminderAt(toDateTimeLocalValue(task.reminderAt));
     setRevisionSuggestion(null);
   }, [task]);
 
@@ -95,6 +107,8 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
           timeEstimate: estimatedTime.trim(),
           dueDate: dueDate || undefined,
           deadlineDate: deadlineDate || undefined,
+          reminderEnabled,
+          reminderAt: reminderEnabled && reminderAt ? reminderAt : null,
         },
       },
       {
@@ -297,6 +311,25 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
               value={deadlineDate}
               onChange={(e) => setDeadlineDate(e.target.value)}
             />
+
+            <div className="rounded-lg border p-3 space-y-3" style={{ borderColor: 'var(--color-border)' }}>
+              <label className="flex items-center gap-2 text-sm font-medium text-neutral-700 dark:text-neutral-200">
+                <input
+                  type="checkbox"
+                  checked={reminderEnabled}
+                  onChange={(e) => setReminderEnabled(e.target.checked)}
+                  className="rounded"
+                />
+                Enable reminder
+              </label>
+              <Input
+                label="Reminder Time"
+                type="datetime-local"
+                value={reminderAt}
+                onChange={(e) => setReminderAt(e.target.value)}
+                disabled={!reminderEnabled}
+              />
+            </div>
           </div>
 
           <div className="mt-6 flex justify-end gap-3">

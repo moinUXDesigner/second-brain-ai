@@ -170,6 +170,8 @@ class ProjectController extends Controller
             'timeEstimate'   => $t->time_estimate ?? '',
             'dueDate'        => $t->due_date?->toDateString() ?? '',
             'deadlineDate'   => $t->deadline_date?->toDateString() ?? '',
+            'reminderAt'     => $t->reminder_at?->toISOString() ?? '',
+            'reminderEnabled'=> (bool) $t->reminder_enabled,
             'source'         => $t->source ?? '',
             'recurrence'     => $t->recurrence ?? '',
             'tags'           => $t->tags ?? [],
