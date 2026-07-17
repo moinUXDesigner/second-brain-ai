@@ -16,7 +16,8 @@ import { formatAiTime, formatDuration } from '@/utils/time';
 import type { ProjectMilestone, ProjectPhase, Task } from '@/types';
 import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 
-type ProjectTaskSort = 'priority' | 'dueDate' | 'newest' | 'oldest' | 'phase' | 'milestone' | 'maslow';
+type ProjectTaskSort = 'priority' | 'dueDate' | 'title' | 'newest' | 'oldest' | 'updated' | 'phase' | 'milestone' | 'maslow';
+type SortDirection = 'asc' | 'desc';
 type ProjectTaskStatusFilter = 'all' | 'pending' | 'done';
 
 function createStructureId(prefix: string) {
@@ -132,6 +133,14 @@ function getTaskPriorityScore(task: Task) {
   const impact = task.impact ?? 0;
   const effort = task.effort ?? 0;
   return priority * 10 + impact * 2 - effort + urgencyScore(task) + dueDateScore(task);
+}
+
+function compareText(a: string | undefined, b: string | undefined) {
+  return (a || '').localeCompare(b || '');
+}
+
+function compareDate(a: string | undefined, b: string | undefined) {
+  return (a || '9999-12-31').localeCompare(b || '9999-12-31');
 }
 
 function getMilestoneBucket(task: Task) {
@@ -478,6 +487,7 @@ export function ProjectDetailPage() {
   const [taskMilestoneFilter, setTaskMilestoneFilter] = useState('');
   const [taskUrgencyFilter, setTaskUrgencyFilter] = useState('');
   const [taskSortBy, setTaskSortBy] = useState<ProjectTaskSort>('priority');
+  const [taskSortDirection, setTaskSortDirection] = useState<SortDirection>('desc');
 
   const { pending, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
     if (!project?.subtasks) return { pending: [], completed: [], overdue: [], highPriority: [], suggestedNext: null };
@@ -543,31 +553,47 @@ export function ProjectDetailPage() {
     if (taskUrgencyFilter) list = list.filter((task) => task.urgency === taskUrgencyFilter);
 
     list.sort((a, b) => {
+      let comparison = 0;
+
       switch (taskSortBy) {
         case 'dueDate':
-          return (a.dueDate || '9999-12-31').localeCompare(b.dueDate || '9999-12-31');
+          comparison = compareDate(a.dueDate, b.dueDate);
+          break;
+        case 'title':
+          comparison = compareText(a.title, b.title);
+          break;
         case 'newest':
-          return (b.createdAt || '').localeCompare(a.createdAt || '');
+          comparison = compareText(a.createdAt, b.createdAt);
+          break;
         case 'oldest':
-          return (a.createdAt || '').localeCompare(b.createdAt || '');
+          comparison = compareText(a.createdAt, b.createdAt);
+          break;
+        case 'updated':
+          comparison = compareText(a.updatedAt, b.updatedAt);
+          break;
         case 'phase':
-          return (a.phaseName || 'Unassigned').localeCompare(b.phaseName || 'Unassigned');
+          comparison = compareText(a.phaseName || 'Unassigned', b.phaseName || 'Unassigned');
+          break;
         case 'milestone':
-          return (a.milestoneName || 'Unassigned').localeCompare(b.milestoneName || 'Unassigned');
+          comparison = compareText(a.milestoneName || 'Unassigned', b.milestoneName || 'Unassigned');
+          break;
         case 'maslow':
-          return MASLOW_LEVELS.indexOf(inferMaslowLevel(a)) - MASLOW_LEVELS.indexOf(inferMaslowLevel(b))
+          comparison = MASLOW_LEVELS.indexOf(inferMaslowLevel(a)) - MASLOW_LEVELS.indexOf(inferMaslowLevel(b))
             || getTaskPriorityScore(b) - getTaskPriorityScore(a);
+          break;
         case 'priority':
         default:
-          return getTaskPriorityScore(b) - getTaskPriorityScore(a);
+          comparison = getTaskPriorityScore(a) - getTaskPriorityScore(b);
       }
+
+      return taskSortDirection === 'asc' ? comparison : -comparison;
     });
 
     return list;
-  }, [milestones, phases, projectTasks, taskMilestoneFilter, taskPhaseFilter, taskSearchQuery, taskSortBy, taskStatusFilter, taskUrgencyFilter]);
+  }, [milestones, phases, projectTasks, taskMilestoneFilter, taskPhaseFilter, taskSearchQuery, taskSortBy, taskSortDirection, taskStatusFilter, taskUrgencyFilter]);
   const visiblePending = filteredProjectTasks.filter((task) => task.status !== 'Done');
   const visibleCompleted = filteredProjectTasks.filter((task) => task.status === 'Done');
-  const hasTaskFilters = Boolean(taskSearchQuery || taskStatusFilter !== 'all' || taskPhaseFilter || taskMilestoneFilter || taskUrgencyFilter || taskSortBy !== 'priority');
+  const hasTaskFilters = Boolean(taskSearchQuery || taskStatusFilter !== 'all' || taskPhaseFilter || taskMilestoneFilter || taskUrgencyFilter || taskSortBy !== 'priority' || taskSortDirection !== 'desc');
   const taskCountsByPhase = useMemo(() => {
     const counts = new Map<string, { total: number; done: number }>();
 
@@ -810,6 +836,7 @@ export function ProjectDetailPage() {
     setTaskMilestoneFilter('');
     setTaskUrgencyFilter('');
     setTaskSortBy('priority');
+    setTaskSortDirection('desc');
   };
 
   const printTaskList = (tasksToPrint: Task[], titleSuffix: string, emptyMessage: string) => {
@@ -1206,6 +1233,9 @@ export function ProjectDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+              <span className="shrink-0 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+                Sort
+              </span>
               <select
                 value={taskSortBy}
                 onChange={(e) => setTaskSortBy(e.target.value as ProjectTaskSort)}
@@ -1214,12 +1244,22 @@ export function ProjectDetailPage() {
               >
                 <option value="priority">Priority</option>
                 <option value="dueDate">Due Date</option>
-                <option value="newest">Newest</option>
-                <option value="oldest">Oldest</option>
+                <option value="title">Title</option>
+                <option value="newest">Created Date</option>
+                <option value="updated">Updated Date</option>
                 <option value="phase">Phase</option>
                 <option value="milestone">Milestone</option>
                 <option value="maslow">Maslow</option>
               </select>
+              <button
+                type="button"
+                onClick={() => setTaskSortDirection((current) => current === 'asc' ? 'desc' : 'asc')}
+                className="shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium"
+                style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                title={taskSortDirection === 'asc' ? 'Ascending order' : 'Descending order'}
+              >
+                {taskSortDirection === 'asc' ? 'Asc' : 'Desc'}
+              </button>
               <select
                 value={taskStatusFilter}
                 onChange={(e) => setTaskStatusFilter(e.target.value as ProjectTaskStatusFilter)}
