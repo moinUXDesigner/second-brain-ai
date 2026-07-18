@@ -8,6 +8,7 @@ import { PRIORITY_COLORS } from '@/constants';
 import type { Task, TaskStatus } from '@/types';
 import { cn } from '@/utils/cn';
 import { formatDate, parseLocalDate } from '@/utils/dateFormat';
+import toast from 'react-hot-toast';
 
 function getPriorityVariant(priority?: number) {
   if (!priority) return PRIORITY_COLORS.normal;
@@ -67,6 +68,48 @@ export function TodayTable({
   );
 
   const handleDeleteClick = (id: string) => setConfirmId(id);
+
+  const showUndoToast = (task: Task, previousStatus: TaskStatus, nextStatus: TaskStatus) => {
+    const label = nextStatus === 'Done' ? 'marked done' : 'restored to pending';
+    const undoLabel = nextStatus === 'Done' ? 'Undo' : 'Undo';
+
+    toast.custom(
+      (t) => (
+        <div
+          className="flex items-center gap-3 rounded-lg border px-4 py-3 shadow-lg"
+          style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
+        >
+          <div className="min-w-0">
+            <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+              Task {label}
+            </p>
+            <p className="truncate text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              {task.title}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={async () => {
+              toast.dismiss(t.id);
+              await onStatusChange(task.id, previousStatus);
+            }}
+            className="text-sm font-medium"
+            style={{ color: 'var(--primary-600)' }}
+          >
+            {undoLabel}
+          </button>
+        </div>
+      ),
+      { duration: 4000 },
+    );
+  };
+
+  const toggleTaskStatus = async (task: Task) => {
+    const currentStatus = getStatus(task);
+    const nextStatus: TaskStatus = currentStatus === 'Done' ? 'Pending' : 'Done';
+    await onStatusChange(task.id, nextStatus);
+    showUndoToast(task, currentStatus, nextStatus);
+  };
 
   const handleConfirm = () => {
     if (confirmId && onDeleteTask) {
@@ -147,7 +190,7 @@ export function TodayTable({
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
-                    onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done');
+                    void toggleTaskStatus(task);
                   }}
                   className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                   style={{ color: status === 'Done' ? 'var(--primary-600)' : 'var(--color-text-secondary)' }}
@@ -299,7 +342,7 @@ export function TodayTable({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done');
+                            void toggleTaskStatus(task);
                           }}
                           className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
                           style={{ color: status === 'Done' ? 'var(--primary-600)' : 'var(--color-text-secondary)' }}
