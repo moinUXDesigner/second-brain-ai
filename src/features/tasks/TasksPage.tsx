@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
 import { AdvancedTaskTable } from './components/AdvancedTaskTable';
@@ -9,6 +9,7 @@ import { taskService } from '@/services/endpoints/taskService';
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/constants';
 import { parseLocalDate } from '@/utils/dateFormat';
+import { isTaskOverdue } from './utils/taskStatus';
 import toast from 'react-hot-toast';
 
 type SortField = 'newest' | 'oldest' | 'priority' | 'impact';
@@ -17,6 +18,7 @@ const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
 
 export function TasksPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: tasks, isLoading } = useTasks();
   const deleteTask = useDeleteTask();
   const completeTask = useUpdateTaskStatus();
@@ -31,6 +33,7 @@ export function TasksPage() {
   const [pageSize, setPageSize] = useState(10);
   const [assigningDates, setAssigningDates] = useState(false);
   const queryClient = useQueryClient();
+  const isOverdueView = location.pathname === '/tasks/overdue';
 
   const missingDueDateCount = useMemo(
     () => tasks?.filter((t) => t.status === 'Pending' && !t.dueDate).length ?? 0,
@@ -63,6 +66,10 @@ export function TasksPage() {
     if (!tasks) return [];
 
     let list = [...tasks.filter((t) => t.status === 'Pending')];
+
+    if (isOverdueView) {
+      list = list.filter((t) => isTaskOverdue(t));
+    }
 
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -129,7 +136,7 @@ export function TasksPage() {
     });
 
     return list;
-  }, [tasks, sortBy, filterArea, filterUrgency, searchQuery, dateFrom, dateTo]);
+  }, [tasks, sortBy, filterArea, filterUrgency, searchQuery, dateFrom, dateTo, isOverdueView]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -145,7 +152,9 @@ export function TasksPage() {
       {/* Header */}
       <div className="shrink-0 flex items-center justify-between">
         <div className="flex items-baseline gap-2">
-          <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Tasks</h1>
+          <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>
+            {isOverdueView ? 'Overdue Tasks' : 'Tasks'}
+          </h1>
           <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
             {filtered.length} of {pendingCount} pending
           </span>
@@ -236,6 +245,23 @@ export function TasksPage() {
             ))}
           </select>
 
+          <select
+            value={isOverdueView ? 'overdue' : 'all'}
+            onChange={(e) => {
+              setPage(1);
+              navigate(e.target.value === 'overdue' ? '/tasks/overdue' : '/tasks');
+            }}
+            className="shrink-0 text-xs rounded-full py-1 pl-2.5 pr-6 border outline-none"
+            style={{
+              borderColor: isOverdueView ? 'var(--warning-500, #f59e0b)' : 'var(--color-border)',
+              backgroundColor: isOverdueView ? 'var(--warning-50, #fffbeb)' : 'var(--color-surface)',
+              color: isOverdueView ? 'var(--warning-700, #b45309)' : 'var(--color-text)',
+            }}
+          >
+            <option value="all">All Tasks</option>
+            <option value="overdue">Overdue Only</option>
+          </select>
+
           <div className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full border" style={{ borderColor: (dateFrom || dateTo) ? 'var(--primary-500)' : 'var(--color-border)', backgroundColor: (dateFrom || dateTo) ? 'var(--primary-50)' : 'var(--color-surface)' }}>
             <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ color: (dateFrom || dateTo) ? 'var(--primary-700)' : 'var(--color-text-secondary)' }}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -259,9 +285,17 @@ export function TasksPage() {
             />
           </div>
 
-          {(filterArea || filterUrgency || searchQuery || dateFrom || dateTo) && (
+          {(filterArea || filterUrgency || searchQuery || dateFrom || dateTo || isOverdueView) && (
             <button
-              onClick={() => { setFilterArea(''); setFilterUrgency(''); setSearchQuery(''); setDateFrom(''); setDateTo(''); setPage(1); }}
+              onClick={() => {
+                setFilterArea('');
+                setFilterUrgency('');
+                setSearchQuery('');
+                setDateFrom('');
+                setDateTo('');
+                setPage(1);
+                if (isOverdueView) navigate('/tasks');
+              }}
               className="shrink-0 text-xs font-medium px-2 py-1 rounded-full"
               style={{ color: 'var(--primary-600)' }}
             >

@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import { useAuthStore } from '@/app/store/authStore';
 import { useUiStore } from '@/app/store/uiStore';
@@ -6,10 +6,18 @@ import { useAuth } from '@/hooks/useAuth';
 import { APP_NAME } from '@/constants';
 import { hasPermission } from '@/utils/permissions';
 
-const navItems = [
+type NavItem = {
+  to: string;
+  label: string;
+  icon: string;
+  end?: boolean;
+};
+
+const navItems: NavItem[] = [
   { to: '/', label: 'Dashboard', icon: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z' },
   { to: '/today', label: 'Today', icon: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-  { to: '/tasks', label: 'Tasks', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4' },
+  { to: '/tasks', label: 'Tasks', icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4', end: true },
+  { to: '/tasks/overdue', label: 'Overdue', icon: 'M12 9v3.75l2.25 2.25M12 21a9 9 0 100-18 9 9 0 000 18z', end: true },
   { to: '/completed', label: 'Completed', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z' },
   { to: '/notes-ideas', label: 'Notes & Ideas', icon: 'M12 6.5c-2.5 0-4.5 2-4.5 4.5S9.5 15.5 12 15.5 16.5 13.5 16.5 11 14.5 6.5 12 6.5z M21 18v2H3v-2c0-1.1.9-2 2-2h14c1.1 0 2 .9 2 2z' },
   { to: '/recurring', label: 'Recurring Tasks', icon: 'M10 18a8 8 0 100-16 8 8 0 000 16zm1-8h-2v5h2V10zm0-4h-2v2h2V6z' },
@@ -23,7 +31,7 @@ const navItems = [
   { to: '/bulk-upload', label: 'Bulk Upload', icon: 'M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5' },
 ];
 
-const adminItem = {
+const adminItem: NavItem = {
   to: '/admin',
   label: 'Admin',
   icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z',
@@ -32,10 +40,11 @@ const adminItem = {
 export function Sidebar() {
   const role = useAuthStore((s) => s.role);
   const { isSidebarOpen, isSidebarCollapsed, toggleSidebar } = useUiStore();
+  const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
 
-  const allItems = role && hasPermission(role, 'admin:access')
+  const allItems: NavItem[] = role && hasPermission(role, 'admin:access')
     ? [...navItems, adminItem]
     : role === 'super_admin' || role === 'admin'
       ? [...navItems, adminItem]
@@ -102,19 +111,29 @@ export function Sidebar() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end={item.end ?? item.to === '/'}
               onClick={() => { if (window.innerWidth < 1024) toggleSidebar(); }}
               className={({ isActive }) =>
                 cn(
                   'flex items-center gap-3 rounded-md px-3 py-2 text-body transition-colors',
-                  isActive ? 'font-medium' : 'hover:opacity-80',
+                  ((item.to === '/tasks' && location.pathname === '/tasks')
+                    || (item.to === '/tasks/overdue' && location.pathname === '/tasks/overdue')
+                    || (item.to !== '/tasks' && item.to !== '/tasks/overdue' && isActive))
+                    ? 'font-medium'
+                    : 'hover:opacity-80',
                   isSidebarCollapsed && 'justify-center'
                 )
               }
-              style={({ isActive }) => ({
-                backgroundColor: isActive ? 'var(--sidebar-active-bg)' : undefined,
-                color: isActive ? 'var(--sidebar-active-fg)' : 'var(--color-text-secondary)',
-              })}
+              style={({ isActive }) => {
+                const active = (item.to === '/tasks' && location.pathname === '/tasks')
+                  || (item.to === '/tasks/overdue' && location.pathname === '/tasks/overdue')
+                  || (item.to !== '/tasks' && item.to !== '/tasks/overdue' && isActive);
+
+                return {
+                  backgroundColor: active ? 'var(--sidebar-active-bg)' : undefined,
+                  color: active ? 'var(--sidebar-active-fg)' : 'var(--color-text-secondary)',
+                };
+              }}
               title={isSidebarCollapsed ? item.label : undefined}
             >
               <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>

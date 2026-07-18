@@ -56,6 +56,7 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'today', element: <TodayPage /> },
       { path: 'tasks', element: <TasksPage /> },
+      { path: 'tasks/overdue', element: <TasksPage /> },
       { path: 'completed', element: <CompletedTasksPage /> },
       { path: 'projects-dashboard', element: <ProjectsDashboardPage /> },
       { path: 'projects', element: <ProjectsPage /> },

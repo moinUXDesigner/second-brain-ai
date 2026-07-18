@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useTasks } from '@/hooks/useTasks';
 import { useTodayTasks } from '@/hooks/useTasks';
+import { isTaskOverdue } from '@/features/tasks/utils/taskStatus';
 
 const container = {
   hidden: { opacity: 0 },
@@ -9,6 +11,7 @@ const container = {
 const item = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0 } };
 
 export function SummaryCards() {
+  const navigate = useNavigate();
   const { data: tasks = [], isLoading: loadingTasks } = useTasks();
   const { data: todayTasksRes, isLoading: loadingToday } = useTodayTasks();
 
@@ -17,13 +20,7 @@ export function SummaryCards() {
   const pendingTasks = tasks.filter((t) => t.status === 'Pending').length;
 
   // Calculate overdue tasks (pending tasks with due date in the past)
-  const overdueTasks = tasks.filter((t) => {
-    if (t.status !== 'Pending' || !t.dueDate) return false;
-    const dueDate = new Date(t.dueDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return dueDate < today;
-  }).length;
+  const overdueTasks = tasks.filter((t) => isTaskOverdue(t)).length;
 
   const cards = [
     { 
@@ -41,10 +38,11 @@ export function SummaryCards() {
       value: pendingTasks, 
       color: 'var(--warning-600, #d97706)'
     },
-    { 
-      label: 'Overdue', 
-      value: overdueTasks, 
-      color: 'var(--color-danger, #ef4444)'
+    {
+      label: 'Overdue',
+      value: overdueTasks,
+      color: 'var(--color-danger, #ef4444)',
+      to: '/tasks/overdue',
     },
   ];
 
@@ -67,14 +65,19 @@ export function SummaryCards() {
     <motion.div variants={container} initial="hidden" animate="show" className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
       {cards.map((c) => (
         <motion.div key={c.label} variants={item}>
-          <div className="rounded-lg p-2.5 md:p-3 text-center" style={{ backgroundColor: 'var(--color-muted)' }}>
+          <button
+            type="button"
+            onClick={() => c.to && navigate(c.to)}
+            className="w-full rounded-lg p-2.5 text-center md:p-3 transition-colors"
+            style={{ backgroundColor: 'var(--color-muted)' }}
+          >
             <div className="text-lg md:text-2xl font-bold" style={{ color: c.color }}>
               {c.value}
             </div>
             <div className="text-[10px] md:text-xs" style={{ color: 'var(--color-text-secondary)' }}>
               {c.label}
             </div>
-          </div>
+          </button>
         </motion.div>
       ))}
     </motion.div>
