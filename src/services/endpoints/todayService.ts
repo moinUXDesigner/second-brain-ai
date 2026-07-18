@@ -9,6 +9,13 @@ export const todayService = {
     return data;
   },
 
+  async getSmartTodayTasks(date?: string): Promise<ApiResponse<Task[]>> {
+    const { data } = await apiClient.get('/tasks/today/smart', {
+      params: date ? { date } : undefined,
+    });
+    return data;
+  },
+
   async generateTodayView(date?: string): Promise<ApiResponse<Task[]>> {
     const { data } = await apiClient.post('/pipeline/today', date ? { date } : undefined);
     return data;

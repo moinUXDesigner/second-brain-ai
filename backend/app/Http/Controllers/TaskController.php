@@ -35,26 +35,8 @@ class TaskController extends Controller
             'date' => 'nullable|date',
         ])['date'] ?? now()->toDateString();
 
-        $todayViewTasks = TodayView::with('task.project')
-            ->whereDate('date', $date)
-            ->get()
-            ->map(function ($tv) use ($date) {
-                $t = $tv->task;
-                if (!$t) return null;
-                if (!$this->isTaskEligibleForToday($t, $date)) return null;
-
-                $data = $this->format($t);
-                $data['priority']  = $tv->priority;
-                $data['fit_score'] = $tv->fit_score;
-                $data['category']  = $tv->category;
-                $data['status']    = $tv->status;
-                return $data;
-            })
-            ->filter()
-            ->keyBy('id');
-
         $scheduledTasks = Task::with('project')
-            ->whereNotIn('status', ['Deleted'])
+            ->whereNotIn('status', ['Done', 'Deleted', 'Note', 'Idea'])
             ->where(function ($query) use ($date) {
                 $query
                     ->whereDate('due_date', $date)
@@ -64,13 +46,48 @@ class TaskController extends Controller
             ->filter(fn(Task $task) => $this->isScheduledForToday($task, $date))
             ->map(fn($task) => $this->format($task));
 
-        foreach ($scheduledTasks as $task) {
-            if (!$todayViewTasks->has($task['id'])) {
-                $todayViewTasks->put($task['id'], $task);
-            }
-        }
+        $tasks = $scheduledTasks->values()->all();
 
-        $tasks = $todayViewTasks->values()->all();
+        usort($tasks, fn(array $a, array $b) => $this->compareTodayTasks($a, $b, $date));
+
+        return response()->json(['success' => true, 'data' => $tasks]);
+    }
+
+    public function smartToday(Request $request): JsonResponse
+    {
+        $date = $request->validate([
+            'date' => 'nullable|date',
+        ])['date'] ?? now()->toDateString();
+
+        $tasks = TodayView::with('task.project')
+            ->whereDate('date', $date)
+            ->get()
+            ->map(function ($tv) use ($date) {
+                $task = $tv->task;
+
+                if (!$task) {
+                    return null;
+                }
+
+                if (in_array($task->status, ['Done', 'Deleted', 'Note', 'Idea'], true)) {
+                    return null;
+                }
+
+                if (!$this->isTaskEligibleForToday($task, $date)) {
+                    return null;
+                }
+
+                $data = $this->format($task);
+                $data['priority'] = $tv->priority;
+                $data['fitScore'] = $tv->fit_score;
+                $data['category'] = $tv->category;
+                $data['status'] = $tv->status;
+
+                return $data;
+            })
+            ->filter()
+            ->values()
+            ->all();
 
         usort($tasks, fn(array $a, array $b) => $this->compareTodayTasks($a, $b, $date));
 

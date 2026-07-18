@@ -44,6 +44,23 @@ export function useTodayTasks() {
   });
 }
 
+export function useSmartTodayTasks() {
+  const currentDate = today();
+
+  return useQuery({
+    queryKey: [...QUERY_KEYS.smartTodayTasks, currentDate],
+    queryFn: async () => {
+      const res = await todayService.getSmartTodayTasks(currentDate);
+      return res.data;
+    },
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
+    retry: 1,
+  });
+}
+
 export function useUpdateTaskStatus() {
   const queryClient = useQueryClient();
   const { updateTaskInStore } = useTaskStore();
@@ -62,6 +79,7 @@ export function useUpdateTaskStatus() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.smartTodayTasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
     },
   });
@@ -77,6 +95,7 @@ export function useCreateTask() {
       log('CREATE_TASK', 'task', res.data.id, { title: res.data.title });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.smartTodayTasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
     },
   });
@@ -100,6 +119,7 @@ export function useUpdateTask() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.smartTodayTasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
     },
   });
@@ -122,6 +142,7 @@ export function useDeleteTask() {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.smartTodayTasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
     },
   });
@@ -146,7 +167,7 @@ export function useGenerateTodayView() {
     mutationFn: () => todayService.generateTodayView(),
     onSuccess: () => {
       log('RUN_PIPELINE', 'system');
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.smartTodayTasks });
     },
   });
 }
@@ -161,6 +182,7 @@ export function useScheduleToday() {
       log('SCHEDULE_TODAY', 'task', id);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.smartTodayTasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
     },
   });

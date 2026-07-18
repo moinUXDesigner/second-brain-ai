@@ -46,6 +46,7 @@ export const PRIORITY_COLORS = {
 export const QUERY_KEYS = {
   tasks: ['tasks'] as const,
   todayTasks: ['tasks', 'today'] as const,
+  smartTodayTasks: ['tasks', 'today', 'smart'] as const,
   projects: ['projects'] as const,
   deletedProjects: ['projects', 'deleted'] as const,
   project: (id: string) => ['projects', id] as const,

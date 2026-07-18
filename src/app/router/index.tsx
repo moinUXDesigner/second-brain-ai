@@ -6,6 +6,7 @@ import { LoginPage } from '@/features/auth/LoginPage';
 import { ForgotPasswordPage } from '@/features/auth/ForgotPasswordPage';
 import { ResetPasswordPage } from '@/features/auth/ResetPasswordPage';
 import { TodayPage } from '@/features/today/TodayPage';
+import { SmartViewPage } from '@/features/today/SmartViewPage';
 import { DashboardPage } from '@/features/dashboard/DashboardPage';
 import { TasksPage } from '@/features/tasks/TasksPage';
 import { ProjectsPage } from '@/features/projects/ProjectsPage';
@@ -55,6 +56,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'today', element: <TodayPage /> },
+      { path: 'today/smart', element: <SmartViewPage /> },
       { path: 'tasks', element: <TasksPage /> },
       { path: 'tasks/overdue', element: <TasksPage /> },
       { path: 'completed', element: <CompletedTasksPage /> },
