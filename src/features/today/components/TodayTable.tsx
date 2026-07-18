@@ -1,15 +1,13 @@
-import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
-import type { Task, TaskStatus } from '@/types';
-import { Badge } from '@/components/ui/Badge';
-import { TaskTimer } from '@/components/task/TaskTimer';
+import { useNavigate } from 'react-router-dom';
 import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
 import { TaskViewModal } from '@/components/task/TaskViewModal';
-import { TASK_CATEGORIES, PRIORITY_COLORS } from '@/constants';
+import { Badge } from '@/components/ui/Badge';
+import { PRIORITY_COLORS } from '@/constants';
+import type { Task, TaskStatus } from '@/types';
 import { cn } from '@/utils/cn';
-import { parseLocalDate } from '@/utils/dateFormat';
-import { formatAiTime, formatDuration } from '@/utils/time';
+import { formatDate, parseLocalDate } from '@/utils/dateFormat';
 
 function getPriorityVariant(priority?: number) {
   if (!priority) return PRIORITY_COLORS.normal;
@@ -18,8 +16,10 @@ function getPriorityVariant(priority?: number) {
   return PRIORITY_COLORS.normal;
 }
 
-function getCategoryStyle(category?: string) {
-  return TASK_CATEGORIES.find((c) => c.value === category)?.color ?? 'bg-neutral-100 text-neutral-600';
+function getUrgencyVariant(urgency?: string) {
+  if (urgency === 'High') return 'danger';
+  if (urgency === 'Medium') return 'warning';
+  return 'default';
 }
 
 function getLocalDueDate(task: Task) {
@@ -33,26 +33,6 @@ function isTaskOverdue(task: Task, status: TaskStatus) {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   return dueDate < today;
-}
-
-function formatTaskDueDate(task: Task) {
-  const dueDate = getLocalDueDate(task);
-  if (!dueDate) return '—';
-
-  return dueDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-}
-
-function TimePair({ task }: { task: Task }) {
-  return (
-    <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-caption">
-      <span style={{ color: 'var(--color-text-secondary)' }}>
-        AI: <span className="font-medium" style={{ color: 'var(--color-text)' }}>{formatAiTime(task.timeEstimate)}</span>
-      </span>
-      <span style={{ color: 'var(--color-text-secondary)' }}>
-        Actual: <span className="font-mono" style={{ color: 'var(--color-text)' }}>{formatDuration(task.timeSpent)}</span>
-      </span>
-    </div>
-  );
 }
 
 interface TodayTableProps {
@@ -87,6 +67,7 @@ export function TodayTable({
   );
 
   const handleDeleteClick = (id: string) => setConfirmId(id);
+
   const handleConfirm = () => {
     if (confirmId && onDeleteTask) {
       onDeleteTask(confirmId);
@@ -100,31 +81,11 @@ export function TodayTable({
         <svg className="mx-auto h-12 w-12 text-neutral-300 dark:text-neutral-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
         </svg>
-        <p className="text-body text-neutral-500 mt-4">{emptyTitle}</p>
+        <p className="mt-4 text-body text-neutral-500">{emptyTitle}</p>
         <p className="text-caption text-neutral-400">{emptyDescription}</p>
       </div>
     );
   }
-
-  const StatusSelect = ({ task }: { task: Task }) => {
-    const status = getStatus(task);
-    return (
-      <select
-        value={status}
-        onClick={(e) => e.stopPropagation()}
-        onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
-        className={cn(
-          'rounded-md border px-2 py-1 text-caption font-medium transition-colors cursor-pointer',
-          status === 'Done'
-            ? 'bg-success-50 text-success-700 border-success-200'
-            : 'bg-warning-50 text-warning-700 border-warning-200',
-        )}
-      >
-        <option value="Pending">Pending</option>
-        <option value="Done">Done</option>
-      </select>
-    );
-  };
 
   return (
     <>
@@ -132,72 +93,72 @@ export function TodayTable({
         {tasks.map((task) => {
           const status = getStatus(task);
           const priorityStyle = getPriorityVariant(task.priority);
+
           return (
             <div
               key={task.id}
               onClick={() => setViewTask(task)}
-              className={cn('card cursor-pointer p-4 space-y-2 transition-colors hover:bg-black/[.015] dark:hover:bg-white/[.015]', status === 'Done' && 'opacity-60')}
+              className={cn('card cursor-pointer p-4 transition-colors hover:bg-black/[.015] dark:hover:bg-white/[.015]', status === 'Done' && 'opacity-60')}
             >
-              <div className="flex items-start justify-between gap-2">
+              <p className={cn('truncate text-body font-medium text-neutral-900 dark:text-neutral-50', status === 'Done' && 'line-through')} title={task.title}>
+                {task.title}
+              </p>
+
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {task.priority != null ? (
+                  <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium', priorityStyle.bg, priorityStyle.text)}>
+                    {task.priority}
+                  </span>
+                ) : (
+                  <span className="text-caption text-neutral-400">No priority</span>
+                )}
+
+                {task.urgency ? (
+                  <Badge variant={getUrgencyVariant(task.urgency)} className="font-medium">
+                    {task.urgency}
+                  </Badge>
+                ) : (
+                  <span className="text-caption text-neutral-400">No urgency</span>
+                )}
+              </div>
+
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-caption text-neutral-400">
+                <span className={cn(isTaskOverdue(task, status) && 'font-medium text-danger-500')}>
+                  Due {task.dueDate ? formatDate(task.dueDate) : '-'}
+                </span>
+                <span>Deadline {task.deadlineDate ? formatDate(task.deadlineDate) : '-'}</span>
+              </div>
+
+              {task.projectName && (
+                <button
+                  type="button"
+                  className="mt-1 text-caption hover:underline"
+                  style={{ color: 'var(--primary-600)' }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (task.projectId) navigate(`/projects/${task.projectId}`);
+                  }}
+                >
+                  {task.projectName}
+                </button>
+              )}
+
+              <div className="mt-2 flex items-center justify-between gap-2">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done');
                   }}
-                  className="shrink-0 mt-1 flex items-center justify-center h-[22px] w-[22px] rounded-full border-[1.5px] transition-all duration-200"
-                  style={{
-                    borderColor: status === 'Done' ? 'var(--primary-500)' : 'var(--color-border)',
-                    backgroundColor: status === 'Done' ? 'var(--primary-500)' : 'transparent',
-                  }}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                  style={{ color: status === 'Done' ? 'var(--primary-600)' : 'var(--color-text-secondary)' }}
+                  title={status === 'Done' ? 'Mark as pending' : 'Mark as done'}
                 >
-                  {status === 'Done' && (
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
                 </button>
-                <div className="min-w-0 flex-1">
-                  <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50 truncate', status === 'Done' && 'line-through')}>
-                    {task.title}
-                  </p>
-                  <div className="flex items-center gap-1 mt-0.5">
-                    {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
-                    {task.area && task.projectName && <span className="text-caption text-neutral-300">·</span>}
-                    {task.projectName && (
-                      <p
-                        className="text-caption cursor-pointer hover:underline"
-                        style={{ color: 'var(--primary-600)' }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (task.projectId) navigate(`/projects/${task.projectId}`);
-                        }}
-                      >
-                        {task.projectName}
-                      </p>
-                    )}
-                    {(task.area || task.projectName) && task.dueDate && <span className="text-caption text-neutral-300">·</span>}
-                    {task.dueDate && (
-                      <p className={cn('text-caption', isTaskOverdue(task, status) ? 'text-danger-500' : 'text-neutral-400')}>
-                        Due {formatTaskDueDate(task)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <StatusSelect task={task} />
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-wrap text-caption">
-                  <TaskTimer task={task} compact />
-                  {task.category && <Badge className={getCategoryStyle(task.category)}>{task.category}</Badge>}
-                  {task.priority != null && (
-                    <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 font-medium', priorityStyle.bg, priorityStyle.text)}>
-                      P: {task.priority}
-                    </span>
-                  )}
-                  {task.fitScore != null && <span className="text-neutral-500">Fit: {task.fitScore}%</span>}
-                  <TimePair task={task} />
-                </div>
-                <div className="flex gap-1">
+
+                <div className="flex items-center gap-1">
                   {onEditTask && (
                     <button
                       onClick={(e) => {
@@ -213,6 +174,7 @@ export function TodayTable({
                       </svg>
                     </button>
                   )}
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -226,6 +188,7 @@ export function TodayTable({
                       <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                     </svg>
                   </button>
+
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -239,6 +202,7 @@ export function TodayTable({
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-7-7l7 7-7 7" />
                     </svg>
                   </button>
+
                   {onDeleteTask && (
                     <button
                       onClick={(e) => {
@@ -261,119 +225,91 @@ export function TodayTable({
         })}
       </div>
 
-      <div className="card overflow-hidden hidden md:block">
+      <div className="card hidden overflow-hidden md:block">
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-semantic-border bg-neutral-50 dark:bg-neutral-800/50">
-                <th className="w-10 px-3 py-3"></th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Task</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Category</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Priority</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Fit Score</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">AI Time</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Actual Time</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden xl:table-cell">Timer</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Due Date</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider hidden lg:table-cell">Project</th>
-                <th className="px-4 py-3 text-left text-caption font-medium text-neutral-500 uppercase tracking-wider">Status</th>
-                <th className="px-4 py-3 text-right text-caption font-medium text-neutral-500 uppercase tracking-wider">Actions</th>
+          <table className="w-full table-fixed">
+            <thead className="sticky top-0 z-20">
+              <tr style={{ borderBottom: '1px solid var(--color-border)', backgroundColor: 'var(--color-muted)' }}>
+                <th className="w-[42%] px-4 py-3 text-left text-caption font-medium uppercase tracking-wider text-neutral-500">Title</th>
+                <th className="w-[10%] px-4 py-3 text-left text-caption font-medium uppercase tracking-wider text-neutral-500">Priority</th>
+                <th className="w-[12%] px-4 py-3 text-left text-caption font-medium uppercase tracking-wider text-neutral-500">Urgency</th>
+                <th className="w-[12%] px-4 py-3 text-left text-caption font-medium uppercase tracking-wider text-neutral-500">Due Date</th>
+                <th className="w-[12%] px-4 py-3 text-left text-caption font-medium uppercase tracking-wider text-neutral-500">Deadline</th>
+                <th className="w-[12%] px-4 py-3 text-right text-caption font-medium uppercase tracking-wider text-neutral-500">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-semantic-border">
               {tasks.map((task) => {
                 const status = getStatus(task);
                 const priorityStyle = getPriorityVariant(task.priority);
+
                 return (
                   <tr
                     key={task.id}
                     onClick={() => setViewTask(task)}
                     className={cn('cursor-pointer transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-800/30', status === 'Done' && 'opacity-60')}
                   >
-                    <td className="px-3 py-3">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done');
-                        }}
-                        className="flex items-center justify-center h-5 w-5 rounded-full border-[1.5px] transition-all duration-200"
-                        style={{
-                          borderColor: status === 'Done' ? 'var(--primary-500)' : 'var(--color-border)',
-                          backgroundColor: status === 'Done' ? 'var(--primary-500)' : 'transparent',
-                        }}
-                      >
-                        {status === 'Done' && (
-                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                      </button>
-                    </td>
                     <td className="px-4 py-3">
-                      <p className={cn('text-body font-medium text-neutral-900 dark:text-neutral-50', status === 'Done' && 'line-through')}>
-                        {task.title}
-                      </p>
-                      {task.area && <p className="text-caption text-neutral-400">{task.area}</p>}
-                      {task.dueDate && (
-                        <p className={cn('text-caption lg:hidden', isTaskOverdue(task, status) ? 'text-danger-500' : 'text-neutral-400')}>
-                          Due {formatTaskDueDate(task)}
+                      <div className="min-w-0">
+                        <p className={cn('truncate text-body font-medium text-neutral-900 dark:text-neutral-50', status === 'Done' && 'line-through')} title={task.title}>
+                          {task.title}
                         </p>
-                      )}
+                        {task.projectName && (
+                          <p className="truncate text-caption text-neutral-400" title={task.projectName}>
+                            {task.projectName}
+                          </p>
+                        )}
+                      </div>
                     </td>
+
                     <td className="px-4 py-3">
-                      {task.category && <Badge className={getCategoryStyle(task.category)}>{task.category}</Badge>}
-                    </td>
-                    <td className="px-4 py-3">
-                      {task.priority != null && (
+                      {task.priority != null ? (
                         <span className={cn('inline-flex items-center rounded-full px-2 py-0.5 text-caption font-medium', priorityStyle.bg, priorityStyle.text)}>
                           {task.priority}
                         </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      {task.fitScore != null && <span className="text-body text-neutral-700 dark:text-neutral-300">{task.fitScore}%</span>}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-caption text-neutral-500">{formatAiTime(task.timeEstimate)}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-caption font-mono text-neutral-500">{formatDuration(task.timeSpent)}</span>
-                    </td>
-                    <td className="px-4 py-3 hidden xl:table-cell">
-                      <TaskTimer task={task} compact />
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      {task.dueDate ? (
-                        <span className={cn('text-caption', isTaskOverdue(task, getStatus(task)) ? 'text-danger-500 font-medium' : 'text-neutral-500')}>
-                          {formatTaskDueDate(task)}
-                        </span>
                       ) : (
-                        <span className="text-caption text-neutral-400">—</span>
+                        <span className="text-caption text-neutral-400">-</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      {task.projectName ? (
-                        <span
-                          className="text-caption cursor-pointer hover:underline"
-                          style={{ color: 'var(--primary-600)' }}
+
+                    <td className="px-4 py-3">
+                      {task.urgency ? (
+                        <Badge variant={getUrgencyVariant(task.urgency)} className="font-medium">
+                          {task.urgency}
+                        </Badge>
+                      ) : (
+                        <span className="text-caption text-neutral-400">-</span>
+                      )}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span className={cn('text-caption', isTaskOverdue(task, status) ? 'font-medium text-danger-500' : 'text-neutral-500')}>
+                        {task.dueDate ? formatDate(task.dueDate) : '-'}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span className="text-caption text-neutral-500">
+                        {task.deadlineDate ? formatDate(task.deadlineDate) : '-'}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3 text-right">
+                      <div className="inline-flex items-center gap-1">
+                        <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (task.projectId) navigate(`/projects/${task.projectId}`);
+                            onStatusChange(task.id, status === 'Done' ? 'Pending' : 'Done');
                           }}
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg transition-colors hover:bg-black/5 dark:hover:bg-white/5"
+                          style={{ color: status === 'Done' ? 'var(--primary-600)' : 'var(--color-text-secondary)' }}
+                          title={status === 'Done' ? 'Mark as pending' : 'Mark as done'}
                         >
-                          {task.projectName}
-                        </span>
-                      ) : (
-                        <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-                          —
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusSelect task={task} />
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="inline-flex gap-1">
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+
                         {onEditTask && (
                           <button
                             onClick={(e) => {
@@ -389,6 +325,7 @@ export function TodayTable({
                             </svg>
                           </button>
                         )}
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -402,6 +339,7 @@ export function TodayTable({
                             <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
                           </svg>
                         </button>
+
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -415,6 +353,7 @@ export function TodayTable({
                             <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m-7-7l7 7-7 7" />
                           </svg>
                         </button>
+
                         {onDeleteTask && (
                           <button
                             onClick={(e) => {
@@ -452,7 +391,7 @@ export function TodayTable({
       {linkTask && <LinkToProjectModal task={linkTask} onClose={() => setLinkTask(null)} />}
       {confirmId && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <div className="card p-6 max-w-sm w-full space-y-4">
+          <div className="card max-w-sm w-full space-y-4 p-6">
             <h3 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>
               Delete Task?
             </h3>
@@ -462,14 +401,14 @@ export function TodayTable({
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setConfirmId(null)}
-                className="px-4 py-2 rounded-md text-caption font-medium transition-colors"
+                className="rounded-md px-4 py-2 text-caption font-medium transition-colors"
                 style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirm}
-                className="px-4 py-2 rounded-md text-caption font-medium transition-colors !text-white"
+                className="rounded-md px-4 py-2 text-caption font-medium transition-colors !text-white"
                 style={{ backgroundColor: 'var(--color-danger, #ef4444)' }}
               >
                 Delete
