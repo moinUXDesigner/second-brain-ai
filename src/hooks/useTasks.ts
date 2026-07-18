@@ -7,6 +7,23 @@ import { QUERY_KEYS } from '@/constants';
 import { today } from '@/utils/date';
 import type { Task } from '@/types';
 
+function updateProjectTaskStatusCache<T>(data: T, id: string, status: Task['status']) {
+  if (!data || typeof data !== 'object' || Array.isArray(data)) return data;
+  if (!('subtasks' in data)) return data;
+
+  const project = data as { subtasks?: Task[] };
+  if (!project.subtasks) return data;
+
+  return {
+    ...(data as Record<string, unknown>),
+    subtasks: project.subtasks.map((task) =>
+      task.id === id
+        ? { ...task, status, completedAt: status === 'Done' || status === 'Deleted' ? new Date().toISOString() : undefined }
+        : task,
+    ),
+  } as T;
+}
+
 export function useTasks() {
   const { setTasks } = useTaskStore();
 
@@ -71,7 +88,40 @@ export function useUpdateTaskStatus() {
       taskService.updateTaskStatus(id, status),
     onMutate: async ({ id, status }) => {
       await queryClient.cancelQueries({ queryKey: QUERY_KEYS.todayTasks });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.tasks });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.projects });
       updateTaskInStore(id, { status, completedAt: status === 'Done' || status === 'Deleted' ? new Date().toISOString() : undefined });
+
+      queryClient.setQueryData<Task[]>(QUERY_KEYS.tasks, (old) => {
+        if (!old) return old;
+        return old.map((task) =>
+          task.id === id
+            ? { ...task, status, completedAt: status === 'Done' || status === 'Deleted' ? new Date().toISOString() : undefined }
+            : task,
+        );
+      });
+
+      queryClient.setQueryData<Task[]>([...QUERY_KEYS.todayTasks, today()], (old) => {
+        if (!old) return old;
+        return old.map((task) =>
+          task.id === id
+            ? { ...task, status, completedAt: status === 'Done' || status === 'Deleted' ? new Date().toISOString() : undefined }
+            : task,
+        );
+      });
+
+      queryClient.setQueryData<Task[]>([...QUERY_KEYS.smartTodayTasks, today()], (old) => {
+        if (!old) return old;
+        return old.map((task) =>
+          task.id === id
+            ? { ...task, status, completedAt: status === 'Done' || status === 'Deleted' ? new Date().toISOString() : undefined }
+            : task,
+        );
+      });
+
+      queryClient.setQueriesData({ queryKey: QUERY_KEYS.projects }, (old) =>
+        updateProjectTaskStatusCache(old, id, status),
+      );
     },
     onSuccess: (_, { id, status }) => {
       log('UPDATE_TASK', 'task', id, { status });
@@ -134,7 +184,35 @@ export function useDeleteTask() {
     mutationFn: (id: string) => taskService.deleteTask(id),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: QUERY_KEYS.tasks });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.todayTasks });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.smartTodayTasks });
+      await queryClient.cancelQueries({ queryKey: QUERY_KEYS.projects });
       updateTaskInStore(id, { status: 'Deleted', completedAt: new Date().toISOString() });
+
+      queryClient.setQueryData<Task[]>(QUERY_KEYS.tasks, (old) => {
+        if (!old) return old;
+        return old.filter((task) => task.id !== id);
+      });
+
+      queryClient.setQueryData<Task[]>([...QUERY_KEYS.todayTasks, today()], (old) => {
+        if (!old) return old;
+        return old.filter((task) => task.id !== id);
+      });
+
+      queryClient.setQueryData<Task[]>([...QUERY_KEYS.smartTodayTasks, today()], (old) => {
+        if (!old) return old;
+        return old.filter((task) => task.id !== id);
+      });
+
+      queryClient.setQueriesData({ queryKey: QUERY_KEYS.projects }, (old) => {
+        if (!old || typeof old !== 'object' || Array.isArray(old) || !('subtasks' in old)) return old;
+        const project = old as { subtasks?: Task[] };
+        if (!project.subtasks) return old;
+        return {
+          ...(old as Record<string, unknown>),
+          subtasks: project.subtasks.filter((task) => task.id !== id),
+        };
+      });
     },
     onSuccess: (_, id) => {
       log('DELETE_TASK', 'task', id);

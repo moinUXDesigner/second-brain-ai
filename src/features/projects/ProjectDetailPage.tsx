@@ -248,6 +248,17 @@ function TaskRow({ task, variant, phases, milestones, onToggle, onDelete, onEdit
   const isDone = variant === 'done';
   const phaseMilestones = milestones.filter((m) => !m.phaseId || m.phaseId === task.phaseId);
   const isUpdatingStructure = updatingStructureId === task.id;
+  const [isCompleting, setIsCompleting] = useState(false);
+
+  const handleToggle = () => {
+    if (isCompleting) return;
+    setIsCompleting(true);
+    window.setTimeout(() => {
+      onToggle(task.id);
+      window.setTimeout(() => setIsCompleting(false), 220);
+    }, 220);
+  };
+
   return (
     <div
       onClick={() => onView(task)}
@@ -256,18 +267,38 @@ function TaskRow({ task, variant, phases, milestones, onToggle, onDelete, onEdit
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onToggle(task.id);
+          handleToggle();
         }}
-        className="shrink-0 flex items-center justify-center h-[20px] w-[20px] rounded-full border-[1.5px] transition-all"
+        disabled={isCompleting}
+        className="group relative shrink-0 flex h-[20px] w-[20px] items-center justify-center rounded-full border-[1.5px] transition-all disabled:cursor-default"
         style={{
-          borderColor: isDone ? 'var(--success-500, #22c55e)' : 'var(--color-border)',
-          backgroundColor: isDone ? 'var(--success-500, #22c55e)' : 'transparent',
+          borderColor: isCompleting || isDone ? 'var(--success-500, #22c55e)' : 'var(--color-border)',
+          backgroundColor: isCompleting || isDone ? 'var(--success-500, #22c55e)' : 'transparent',
         }}
       >
-        {isDone && (
-          <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="#fff" strokeWidth={3}>
+        <motion.span
+          key={isCompleting ? 'animating' : isDone ? 'done' : 'idle'}
+          initial={false}
+          animate={isCompleting ? { scale: [1, 1.18, 1], rotate: [0, 8, 0] } : { scale: 1, rotate: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="absolute inset-0 rounded-full"
+          style={{
+            boxShadow: isCompleting ? '0 0 0 3px rgba(34,197,94,0.14)' : 'none',
+          }}
+        />
+        {(isDone || isCompleting) && (
+          <motion.svg
+            className="relative h-2.5 w-2.5 text-white"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={3}
+            initial={{ scale: 0.2, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+          >
             <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
+          </motion.svg>
         )}
       </button>
 
