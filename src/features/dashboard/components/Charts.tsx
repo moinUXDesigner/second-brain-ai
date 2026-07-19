@@ -13,6 +13,7 @@ import {
   Area,
 } from 'recharts';
 import type { PieLabelRenderProps } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
@@ -167,6 +168,7 @@ function renderCategoryLabel({
 }
 
 export function Charts() {
+  const navigate = useNavigate();
   const { data: tasks = [], isLoading } = useTasks();
   const { data: projects = [], isLoading: loadingProjects } = useProjects();
 
@@ -269,7 +271,13 @@ export function Charts() {
               const initial = project.title.trim().charAt(0).toUpperCase() || 'P';
 
               return (
-                <div key={project.id} className="flex items-center gap-4 px-5 py-3">
+                <button
+                  key={project.id}
+                  type="button"
+                  className="flex w-full items-center gap-4 px-5 py-3 text-left transition-colors hover:bg-[var(--color-muted)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--primary-600)]"
+                  onClick={() => navigate(`/projects/${project.id}`)}
+                  aria-label={`Open project ${project.title}`}
+                >
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold"
                     style={{ backgroundColor: accent.bg, color: accent.text }}
@@ -300,7 +308,7 @@ export function Charts() {
                       />
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
