@@ -13,6 +13,7 @@ import {
   Area,
 } from 'recharts';
 import type { PieLabelRenderProps } from 'recharts';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { useTasks } from '@/hooks/useTasks';
@@ -33,6 +34,8 @@ type CompletionRateDatum = {
   completed: number;
   total: number;
 };
+
+type RunningProjectMetric = 'completion' | 'priority';
 
 const PROJECT_ACCENTS = [
   { bg: '#dbeafe', text: '#2563eb' },
@@ -169,6 +172,7 @@ function renderCategoryLabel({
 
 export function Charts() {
   const navigate = useNavigate();
+  const [runningProjectMetric, setRunningProjectMetric] = useState<RunningProjectMetric>('completion');
   const { data: tasks = [], isLoading } = useTasks();
   const { data: projects = [], isLoading: loadingProjects } = useProjects();
 
@@ -214,7 +218,11 @@ export function Charts() {
       stats: getProjectTaskStats(project),
     }))
     .filter((project) => project.stats.rate < 100)
-    .sort((a, b) => b.stats.rate - a.stats.rate)
+    .sort((a, b) => (
+      runningProjectMetric === 'priority'
+        ? (b.priority ?? 0) - (a.priority ?? 0)
+        : b.stats.rate - a.stats.rate
+    ))
     .slice(0, 5);
 
   const monthlyCompletionRateData: CompletionRateDatum[] = Array.from({ length: 12 }, (_, i) => {
@@ -254,13 +262,14 @@ export function Charts() {
         <div className="flex items-center justify-between px-5 py-4">
           <CardTitle>Running Projects</CardTitle>
           <select
-            value="completion"
+            value={runningProjectMetric}
             aria-label="Project analytics metric"
             className="h-9 rounded-md border px-3 text-sm outline-none"
             style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
-            onChange={() => undefined}
+            onChange={(event) => setRunningProjectMetric(event.target.value as RunningProjectMetric)}
           >
             <option value="completion">Completion Rate</option>
+            <option value="priority">Priority</option>
           </select>
         </div>
 
@@ -269,6 +278,13 @@ export function Charts() {
             {runningProjects.map((project, index) => {
               const accent = PROJECT_ACCENTS[index % PROJECT_ACCENTS.length];
               const initial = project.title.trim().charAt(0).toUpperCase() || 'P';
+              const priority = project.priority ?? 0;
+              const metricValue = runningProjectMetric === 'priority' ? priority : project.stats.rate;
+              const metricBarWidth = runningProjectMetric === 'priority' ? priority * 10 : project.stats.rate;
+              const metricLabel = runningProjectMetric === 'priority' ? `P${priority}` : `${project.stats.rate}%`;
+              const detailText = runningProjectMetric === 'priority'
+                ? `${project.maslowLevel || 'Self-Actualization'} · ${project.priorityMode === 'manual' ? 'Manual' : 'Auto'} priority`
+                : `${project.stats.completed}/${project.stats.total} tasks completed`;
 
               return (
                 <button
@@ -293,18 +309,19 @@ export function Charts() {
                         className="rounded-full px-2 py-0.5 text-[10px] font-bold"
                         style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-700)' }}
                       >
-                        {project.stats.rate}%
+                        {metricLabel}
                       </span>
                     </div>
                     <div className="mt-1 text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
-                      {project.stats.completed}/{project.stats.total} tasks completed
+                      {detailText}
                     </div>
                   </div>
                   <div className="hidden w-28 shrink-0 sm:block">
                     <div className="h-1.5 rounded-full" style={{ backgroundColor: 'var(--color-muted)' }}>
                       <div
                         className="h-full rounded-full"
-                        style={{ width: `${project.stats.rate}%`, backgroundColor: 'var(--primary-600)' }}
+                        style={{ width: `${Math.min(metricBarWidth, 100)}%`, backgroundColor: 'var(--primary-600)' }}
+                        title={runningProjectMetric === 'priority' ? `Priority ${metricValue}/10` : `${metricValue}% complete`}
                       />
                     </div>
                   </div>
