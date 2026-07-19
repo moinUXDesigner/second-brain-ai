@@ -1,4 +1,4 @@
-import { useState, useMemo, type ChangeEvent } from 'react';
+import { useEffect, useState, useMemo, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -13,7 +13,7 @@ import { TaskViewModal } from '@/components/task/TaskViewModal';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { formatDate, formatDateRelative } from '@/utils/dateFormat';
 import { formatAiTime, formatDuration } from '@/utils/time';
-import type { ProjectMilestone, ProjectPhase, Task } from '@/types';
+import type { ProjectMilestone, ProjectPhase, Task, TaskImage } from '@/types';
 import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 
 type ProjectTaskSort = 'priority' | 'dueDate' | 'title' | 'newest' | 'oldest' | 'updated' | 'phase' | 'milestone' | 'maslow';
@@ -167,19 +167,35 @@ function formatImageAttachment(file: File | null) {
   return `Image: ${file.name} (${sizeKb} KB)`;
 }
 
-function combineNotesWithImage(notes: string, image: File | null) {
-  const imageNote = formatImageAttachment(image);
-  return [notes.trim(), imageNote].filter(Boolean).join('\n\n');
+function fileToDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read image'));
+    reader.readAsDataURL(file);
+  });
+}
+
+async function createTaskImages(files: File[]): Promise<TaskImage[]> {
+  return Promise.all(
+    files.map(async (file) => ({
+      id: `image_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      url: await fileToDataUrl(file),
+    })),
+  );
 }
 
 function ImageInput({
   id,
-  image,
+  images,
   onChange,
   onClear,
 }: {
   id: string;
-  image: File | null;
+  images: File[];
   onChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onClear: () => void;
 }) {
@@ -192,24 +208,58 @@ function ImageInput({
         id={id}
         type="file"
         accept="image/*"
+        multiple
         onChange={onChange}
         className="input-base text-sm"
       />
-      {image && (
-        <div className="flex items-center justify-between gap-3 rounded-md px-3 py-2" style={{ backgroundColor: 'var(--color-muted)' }}>
-          <span className="min-w-0 truncate text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            {formatImageAttachment(image)}
-          </span>
-          <button
-            type="button"
-            onClick={onClear}
-            className="shrink-0 text-caption font-medium"
-            style={{ color: 'var(--primary-600)' }}
-          >
-            Remove
-          </button>
+      {images.length > 0 && (
+        <div className="space-y-2 rounded-md px-3 py-2" style={{ backgroundColor: 'var(--color-muted)' }}>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-caption font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+              {images.length} image{images.length === 1 ? '' : 's'} selected
+            </span>
+            <button
+              type="button"
+              onClick={onClear}
+              className="shrink-0 text-caption font-medium"
+              style={{ color: 'var(--primary-600)' }}
+            >
+              Remove
+            </button>
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {images.map((image) => (
+              <ImagePreview
+                key={`${image.name}-${image.lastModified}`}
+                image={image}
+              />
+            ))}
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function ImagePreview({ image }: { image: File }) {
+  const [previewUrl, setPreviewUrl] = useState('');
+
+  useEffect(() => {
+    const url = URL.createObjectURL(image);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [image]);
+
+  return (
+    <div
+      className="flex w-28 shrink-0 flex-col overflow-hidden rounded border"
+      style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+      title={formatImageAttachment(image)}
+    >
+      {previewUrl && <img src={previewUrl} alt={image.name} className="h-16 w-full object-cover" />}
+      <span className="truncate px-2 py-1 text-[10px]" style={{ color: 'var(--color-text-secondary)' }}>
+        {image.name}
+      </span>
     </div>
   );
 }
@@ -499,10 +549,10 @@ export function ProjectDetailPage() {
   const [showViewTask, setShowViewTask] = useState<Task | null>(null);
   const [showEditTask, setShowEditTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [newTaskImage, setNewTaskImage] = useState<File | null>(null);
+  const [newTaskImages, setNewTaskImages] = useState<File[]>([]);
   const [newNoteTitle, setNewNoteTitle] = useState('');
   const [newNoteContent, setNewNoteContent] = useState('');
-  const [newNoteImage, setNewNoteImage] = useState<File | null>(null);
+  const [newNoteImages, setNewNoteImages] = useState<File[]>([]);
   const [newPhaseTitle, setNewPhaseTitle] = useState('');
   const [newPhaseDescription, setNewPhaseDescription] = useState('');
   const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
@@ -646,28 +696,31 @@ export function ProjectDetailPage() {
 
   const handleAddTask = async () => {
     if (!newTaskTitle.trim()) return;
+    const images = await createTaskImages(newTaskImages);
     await createTask.mutateAsync({
       title: newTaskTitle.trim(),
       status: 'Pending',
-      notes: combineNotesWithImage('', newTaskImage) || undefined,
+      images,
       projectId: id,
     });
     setNewTaskTitle('');
-    setNewTaskImage(null);
+    setNewTaskImages([]);
     setShowAddTask(false);
   };
 
   const handleAddNote = async () => {
     if (!newNoteTitle.trim()) return;
+    const images = await createTaskImages(newNoteImages);
     await createTask.mutateAsync({
       title: newNoteTitle.trim(),
       status: 'Note',
-      notes: combineNotesWithImage(newNoteContent, newNoteImage) || undefined,
+      notes: newNoteContent.trim() || undefined,
+      images,
       projectId: id,
     });
     setNewNoteTitle('');
     setNewNoteContent('');
-    setNewNoteImage(null);
+    setNewNoteImages([]);
     setShowAddNote(false);
   };
 
@@ -1556,12 +1609,12 @@ export function ProjectDetailPage() {
             />
             <ImageInput
               id="taskImage"
-              image={newTaskImage}
-              onChange={(event) => setNewTaskImage(event.target.files?.[0] ?? null)}
-              onClear={() => setNewTaskImage(null)}
+              images={newTaskImages}
+              onChange={(event) => setNewTaskImages(Array.from(event.target.files ?? []))}
+              onClear={() => setNewTaskImages([])}
             />
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => { setShowAddTask(false); setNewTaskTitle(''); setNewTaskImage(null); }}>
+              <Button variant="secondary" onClick={() => { setShowAddTask(false); setNewTaskTitle(''); setNewTaskImages([]); }}>
                 Cancel
               </Button>
               <Button onClick={handleAddTask} isLoading={createTask.isPending} disabled={!newTaskTitle.trim()}>
@@ -1601,12 +1654,12 @@ export function ProjectDetailPage() {
             </div>
             <ImageInput
               id="noteImage"
-              image={newNoteImage}
-              onChange={(event) => setNewNoteImage(event.target.files?.[0] ?? null)}
-              onClear={() => setNewNoteImage(null)}
+              images={newNoteImages}
+              onChange={(event) => setNewNoteImages(Array.from(event.target.files ?? []))}
+              onClear={() => setNewNoteImages([])}
             />
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => { setShowAddNote(false); setNewNoteTitle(''); setNewNoteContent(''); setNewNoteImage(null); }}>
+              <Button variant="secondary" onClick={() => { setShowAddNote(false); setNewNoteTitle(''); setNewNoteContent(''); setNewNoteImages([]); }}>
                 Cancel
               </Button>
               <Button onClick={handleAddNote} isLoading={createTask.isPending} disabled={!newNoteTitle.trim()}>

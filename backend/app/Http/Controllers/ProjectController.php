@@ -175,6 +175,7 @@ class ProjectController extends Controller
             'source'         => $t->source ?? '',
             'recurrence'     => $t->recurrence ?? '',
             'tags'           => $t->tags ?? [],
+            'images'         => $t->images ?? [],
             'completedAt'    => $t->completed_at?->toISOString() ?? '',
             'createdAt'      => $t->created_at?->toISOString() ?? '',
             'updatedAt'      => $t->updated_at?->toISOString() ?? '',

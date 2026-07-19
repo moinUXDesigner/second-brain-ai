@@ -112,6 +112,7 @@ class TaskController extends Controller
             'time_estimate' => 'nullable|string',
             'status'        => 'nullable|in:Pending,Done,Deleted,Idea,Note',
             'tags'          => 'nullable|array',
+            'images'        => 'nullable|array',
         ]);
 
         $rule = $this->classifier->classify($data['title'], $data['type'] ?? '');
@@ -153,6 +154,7 @@ class TaskController extends Controller
             'priority'      => 'nullable|integer',
             'urgency'       => 'nullable|string',
             'tags'          => 'nullable|array',
+            'images'        => 'nullable|array',
         ]);
 
         $task->update($data);
@@ -403,6 +405,7 @@ class TaskController extends Controller
             'reminderAt'   => $task->reminder_at?->toISOString() ?? '',
             'reminderEnabled' => (bool) $task->reminder_enabled,
             'tags'         => $task->tags ?? [],
+            'images'       => $task->images ?? [],
             'completedAt'  => $task->completed_at?->toISOString() ?? '',
             'createdAt'    => $task->created_at?->toISOString() ?? '',
             'updatedAt'    => $task->updated_at?->toISOString() ?? '',

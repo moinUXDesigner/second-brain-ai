@@ -13,10 +13,12 @@ class Task extends Model
         'confidence', 'priority', 'fit_score', 'status', 'source',
         'recurrence', 'due_date', 'deadline_date', 'tags', 'completed_at',
         'reminder_at', 'reminder_enabled', 'time_spent', 'timer_started_at', 'timer_running',
+        'images',
     ];
 
     protected $casts = [
         'tags'             => 'array',
+        'images'           => 'array',
         'due_date'         => 'date',
         'deadline_date'    => 'date',
         'reminder_at'      => 'datetime',

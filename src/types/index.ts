@@ -79,6 +79,15 @@ export interface Task {
   timeSpent?: number;
   timerRunning?: boolean;
   timerStartedAt?: string;
+  images?: TaskImage[];
+}
+
+export interface TaskImage {
+  id: string;
+  name: string;
+  url: string;
+  type?: string;
+  size?: number;
 }
 
 export interface TaskRevisionSuggestion {

@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
-import type { Task } from '@/types';
+import type { Task, TaskImage } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { formatDate, formatDateRelative } from '@/utils/dateFormat';
 import { formatAiTime, formatDuration } from '@/utils/time';
@@ -63,7 +63,198 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
+type CarouselImage = {
+  id: string;
+  name: string;
+  url?: string;
+  size?: number;
+  type?: string;
+  legacy?: boolean;
+};
+
+const IMAGE_URL_PATTERN = /(https?:\/\/[^\s)]+?\.(?:png|jpe?g|gif|webp|bmp|svg)(?:\?[^\s)]*)?|data:image\/[a-zA-Z0-9.+-]+;base64,[^\s)]+)/gi;
+const LEGACY_IMAGE_NOTE_PATTERN = /^Image:\s*(.+)$/gim;
+
+function isImageRecord(value: unknown): value is TaskImage {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      'url' in value &&
+      typeof (value as TaskImage).url === 'string' &&
+      (value as TaskImage).url.trim(),
+  );
+}
+
+function formatImageSize(size?: number) {
+  if (!size) return '';
+  if (size < 1024 * 1024) return `${Math.max(1, Math.round(size / 1024))} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function getTaskImages(task: Task): CarouselImage[] {
+  const images: CarouselImage[] = [];
+  const seen = new Set<string>();
+
+  (task.images ?? []).forEach((image, index) => {
+    if (isImageRecord(image)) {
+      const key = image.url;
+      if (seen.has(key)) return;
+      seen.add(key);
+      images.push({
+        id: image.id || `${task.id}-image-${index}`,
+        name: image.name || `Image ${index + 1}`,
+        url: image.url,
+        size: image.size,
+        type: image.type,
+      });
+    }
+  });
+
+  Array.from(task.notes?.matchAll(IMAGE_URL_PATTERN) ?? []).forEach((match, index) => {
+    const url = match[0];
+    if (seen.has(url)) return;
+    seen.add(url);
+    images.push({
+      id: `${task.id}-note-url-${index}`,
+      name: `Image ${images.length + 1}`,
+      url,
+    });
+  });
+
+  Array.from(task.notes?.matchAll(LEGACY_IMAGE_NOTE_PATTERN) ?? []).forEach((match, index) => {
+    const label = match[1]?.trim();
+    if (!label || seen.has(label)) return;
+    seen.add(label);
+    images.push({
+      id: `${task.id}-legacy-image-${index}`,
+      name: label,
+      legacy: true,
+    });
+  });
+
+  return images;
+}
+
+function ImageCarousel({ images }: { images: CarouselImage[] }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeImage = images[activeIndex];
+  const hasMultipleImages = images.length > 1;
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [images.length]);
+
+  if (!activeImage) return null;
+
+  const showPrevious = () => setActiveIndex((index) => (index - 1 + images.length) % images.length);
+  const showNext = () => setActiveIndex((index) => (index + 1) % images.length);
+
+  return (
+    <Section title="Images">
+      <div className="overflow-hidden rounded-md border" style={{ borderColor: 'var(--color-border)' }}>
+        <div className="relative flex min-h-[260px] items-center justify-center" style={{ backgroundColor: 'var(--color-muted)' }}>
+          {activeImage.url ? (
+            <img
+              src={activeImage.url}
+              alt={activeImage.name}
+              className="max-h-[420px] w-full object-contain"
+            />
+          ) : (
+            <div className="flex min-h-[260px] w-full flex-col items-center justify-center gap-2 px-6 text-center">
+              <div
+                className="flex h-14 w-14 items-center justify-center rounded-full"
+                style={{ backgroundColor: 'var(--color-surface)', color: 'var(--primary-600)' }}
+                aria-hidden="true"
+              >
+                <svg className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5l4.5-4.5 3.75 3.75L15 12l6 6M5 5h14a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2zm3 4h.01" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                {activeImage.name}
+              </p>
+              <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                This older attachment only has a saved filename.
+              </p>
+            </div>
+          )}
+
+          {hasMultipleImages && (
+            <>
+              <button
+                type="button"
+                onClick={showPrevious}
+                className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full shadow-sm transition-colors hover:opacity-90"
+                style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                aria-label="Previous image"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                onClick={showNext}
+                className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full shadow-sm transition-colors hover:opacity-90"
+                style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+                aria-label="Next image"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between gap-3 px-3 py-2" style={{ backgroundColor: 'var(--color-surface)' }}>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+              {activeImage.name}
+            </p>
+            <p className="text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+              {activeImage.legacy ? 'Filename only' : formatImageSize(activeImage.size) || activeImage.type || 'Image'}
+            </p>
+          </div>
+          {hasMultipleImages && (
+            <span className="shrink-0 text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+              {activeIndex + 1}/{images.length}
+            </span>
+          )}
+        </div>
+
+        {hasMultipleImages && (
+          <div className="flex gap-2 overflow-x-auto px-3 py-2" style={{ borderTop: '1px solid var(--color-border)' }}>
+            {images.map((image, index) => (
+              <button
+                key={image.id}
+                type="button"
+                onClick={() => setActiveIndex(index)}
+                className="h-12 w-16 shrink-0 overflow-hidden rounded border text-[10px] font-medium"
+                style={{
+                  borderColor: index === activeIndex ? 'var(--primary-600)' : 'var(--color-border)',
+                  color: 'var(--color-text-secondary)',
+                  backgroundColor: 'var(--color-muted)',
+                }}
+                aria-label={`Show image ${index + 1}`}
+              >
+                {image.url ? (
+                  <img src={image.url} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="flex h-full items-center justify-center px-1">Image</span>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </Section>
+  );
+}
+
 export function TaskViewModal({ task, onClose }: TaskViewModalProps) {
+  const taskImages = useMemo(() => getTaskImages(task), [task]);
+
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -167,6 +358,8 @@ export function TaskViewModal({ task, onClose }: TaskViewModalProps) {
               </p>
             </div>
           </Section>
+
+          {taskImages.length > 0 && <ImageCarousel images={taskImages} />}
 
           <Section title="Metadata">
             <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
