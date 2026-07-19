@@ -13,7 +13,7 @@ export function ProjectsPage() {
   const { data: projects, isLoading, isError } = useProjects();
   const deleteProject = useDeleteProject();
   const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'Active' | 'Completed' | 'Archived'>('all');
+  const [filter, setFilter] = useState<'all' | 'Active' | 'Completed' | 'Archived'>('Active');
   const [domainFilter, setDomainFilter] = useState<string>('');
   const [sortBy, setSortBy] = useState<'progress' | 'created' | 'updated' | 'title'>('progress');
   const [searchQuery, setSearchQuery] = useState('');
