@@ -11,12 +11,16 @@ class Project extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'title', 'description', 'domain', 'status', 'priority', 'due_date',
+        'title', 'description', 'domain', 'status', 'priority', 'priority_mode',
+        'manual_priority', 'auto_priority', 'maslow_level', 'due_date',
         'phases', 'milestones',
     ];
 
     protected $casts = [
         'due_date' => 'date',
+        'priority' => 'integer',
+        'manual_priority' => 'integer',
+        'auto_priority' => 'integer',
         'phases' => 'array',
         'milestones' => 'array',
     ];

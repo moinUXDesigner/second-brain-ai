@@ -15,7 +15,7 @@ export function ProjectsPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'Active' | 'Completed' | 'Archived'>('Active');
   const [domainFilter, setDomainFilter] = useState<string>('');
-  const [sortBy, setSortBy] = useState<'progress' | 'created' | 'updated' | 'title'>('progress');
+  const [sortBy, setSortBy] = useState<'priority' | 'progress' | 'created' | 'updated' | 'title'>('priority');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewTask, setViewTask] = useState<Task | null>(null);
 
@@ -93,6 +93,8 @@ export function ProjectsPage() {
     
     list.sort((a, b) => {
       switch (sortBy) {
+        case 'priority':
+          return (b.priority ?? 0) - (a.priority ?? 0);
         case 'progress':
           return b.progress - a.progress;
         case 'created':
@@ -241,6 +243,7 @@ export function ProjectsPage() {
             <span className="text-xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Sort by:</span>
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               {[
+                { value: 'priority', label: 'Priority', icon: 'P' },
                 { value: 'progress', label: 'Completion %', icon: '📊' },
                 { value: 'created', label: 'Newest', icon: '🆕' },
                 { value: 'updated', label: 'Recently Updated', icon: '🔄' },

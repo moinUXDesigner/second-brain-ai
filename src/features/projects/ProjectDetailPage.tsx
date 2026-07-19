@@ -561,6 +561,8 @@ export function ProjectDetailPage() {
   const [editProjectTitle, setEditProjectTitle] = useState('');
   const [editProjectDescription, setEditProjectDescription] = useState('');
   const [editProjectDomain, setEditProjectDomain] = useState('');
+  const [editPriorityMode, setEditPriorityMode] = useState<'auto' | 'manual'>('auto');
+  const [editManualPriority, setEditManualPriority] = useState(5);
   const [isSequencing, setIsSequencing] = useState(false);
   const [taskSearchQuery, setTaskSearchQuery] = useState('');
   const [taskStatusFilter, setTaskStatusFilter] = useState<ProjectTaskStatusFilter>('all');
@@ -732,6 +734,8 @@ export function ProjectDetailPage() {
         title: editProjectTitle.trim(),
         description: editProjectDescription.trim() || undefined,
         domain: editProjectDomain.trim(),
+        priorityMode: editPriorityMode,
+        manualPriority: editPriorityMode === 'manual' ? editManualPriority : null,
       },
     });
     setShowEditProject(false);
@@ -1051,6 +1055,8 @@ export function ProjectDetailPage() {
                 setEditProjectTitle(project.title);
                 setEditProjectDescription(project.description || '');
                 setEditProjectDomain(project.domain || '');
+                setEditPriorityMode(project.priorityMode === 'manual' ? 'manual' : 'auto');
+                setEditManualPriority(project.manualPriority ?? project.priority ?? project.autoPriority ?? 5);
                 setShowEditProject(true);
               }}
               className="p-1.5 rounded-md transition-colors hover:bg-black/5 dark:hover:bg-white/5"
@@ -1071,9 +1077,15 @@ export function ProjectDetailPage() {
             </Badge>
             {priorityLabel && (
               <Badge variant={priorityLabel === 'High' ? 'danger' : priorityLabel === 'Medium' ? 'warning' : 'success'}>
-                {priorityLabel}
+                P{project.priority} {priorityLabel}
               </Badge>
             )}
+            <Badge variant="default">
+              {project.maslowLevel || 'Self-Actualization'}
+            </Badge>
+            <Badge variant="default">
+              {project.priorityMode === 'manual' ? 'Manual' : 'Auto'}
+            </Badge>
           </div>
         </div>
 
@@ -1797,6 +1809,76 @@ export function ProjectDetailPage() {
                 rows={3}
                 className="input-base w-full resize-none"
               />
+            </div>
+            <div className="space-y-3 rounded-md border p-3" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    Prioritization
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold" style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}>
+                  {project.maslowLevel || 'Self-Actualization'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditPriorityMode('auto')}
+                  className="rounded-md px-3 py-2 text-sm font-medium transition-colors"
+                  style={{
+                    backgroundColor: editPriorityMode === 'auto' ? 'var(--primary-600)' : 'var(--color-muted)',
+                    color: editPriorityMode === 'auto' ? '#fff' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  Auto
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditPriorityMode('manual')}
+                  className="rounded-md px-3 py-2 text-sm font-medium transition-colors"
+                  style={{
+                    backgroundColor: editPriorityMode === 'manual' ? 'var(--primary-600)' : 'var(--color-muted)',
+                    color: editPriorityMode === 'manual' ? '#fff' : 'var(--color-text-secondary)',
+                  }}
+                >
+                  Manual
+                </button>
+              </div>
+
+              {editPriorityMode === 'auto' ? (
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div className="rounded-md px-3 py-2" style={{ backgroundColor: 'var(--color-muted)' }}>
+                    <div className="text-[11px] uppercase" style={{ color: 'var(--color-text-secondary)' }}>Auto Score</div>
+                    <div className="font-semibold" style={{ color: 'var(--color-text)' }}>P{project.autoPriority ?? project.priority ?? 1}</div>
+                  </div>
+                  <div className="rounded-md px-3 py-2" style={{ backgroundColor: 'var(--color-muted)' }}>
+                    <div className="text-[11px] uppercase" style={{ color: 'var(--color-text-secondary)' }}>Effective</div>
+                    <div className="font-semibold" style={{ color: 'var(--color-text)' }}>P{project.priority ?? 1}</div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label htmlFor="manualPriority" className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
+                    Manual Priority
+                  </label>
+                  <input
+                    id="manualPriority"
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={editManualPriority}
+                    onChange={(event) => setEditManualPriority(Number(event.target.value))}
+                    className="w-full"
+                  />
+                  <div className="mt-1 flex items-center justify-between text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+                    <span>Low</span>
+                    <span className="font-semibold" style={{ color: 'var(--color-text)' }}>P{editManualPriority}</span>
+                    <span>High</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="secondary" onClick={() => setShowEditProject(false)}>

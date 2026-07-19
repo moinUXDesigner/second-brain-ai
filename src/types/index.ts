@@ -150,6 +150,10 @@ export interface Project {
   domain?: string;
   status: 'Active' | 'Completed' | 'Archived' | 'Deleted';
   priority?: number;
+  priorityMode?: 'auto' | 'manual';
+  manualPriority?: number | null;
+  autoPriority?: number;
+  maslowLevel?: MaslowLevel | string;
   dueDate?: string;
   phases?: ProjectPhase[];
   milestones?: ProjectMilestone[];

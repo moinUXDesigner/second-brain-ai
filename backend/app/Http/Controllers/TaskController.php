@@ -7,6 +7,7 @@ use App\Models\Project;
 use App\Models\TodayView;
 use App\Services\ClassificationService;
 use App\Services\AIService;
+use App\Services\ProjectPriorityService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -15,7 +16,8 @@ class TaskController extends Controller
 {
     public function __construct(
         private ClassificationService $classifier,
-        private AIService $ai
+        private AIService $ai,
+        private ProjectPriorityService $projectPriority
     ) {}
 
     public function index(): JsonResponse
@@ -130,6 +132,8 @@ class TaskController extends Controller
             'status'        => $data['status'] ?? 'Pending',
         ]));
 
+        $this->projectPriority->syncById($task->project_id);
+
         return response()->json(['success' => true, 'data' => $this->format($task->load('project'))], 201);
     }
 
@@ -157,7 +161,11 @@ class TaskController extends Controller
             'images'        => 'nullable|array',
         ]);
 
+        $oldProjectId = $task->project_id;
         $task->update($data);
+        $this->projectPriority->syncById($oldProjectId);
+        $this->projectPriority->syncById($task->project_id);
+
         return response()->json(['success' => true, 'data' => $this->format($task->load('project'))]);
     }
 
@@ -223,6 +231,7 @@ class TaskController extends Controller
         $task->status       = $data['status'];
         $task->completed_at = $data['status'] === 'Done' ? now() : null;
         $task->save();
+        $this->projectPriority->syncById($task->project_id);
 
         \App\Models\TodayView::where('task_id', $task->id)
             ->whereDate('date', today())
@@ -249,6 +258,7 @@ class TaskController extends Controller
             'completed_at' => null,
             'due_date'     => $nextDue,
         ]);
+        $this->projectPriority->syncById($task->project_id);
 
         return response()->json(['success' => true, 'data' => $this->format($task)]);
     }
@@ -256,7 +266,11 @@ class TaskController extends Controller
     public function linkToProject(Request $request, Task $task): JsonResponse
     {
         $data = $request->validate(['project_id' => 'nullable|exists:projects,id']);
+        $oldProjectId = $task->project_id;
         $task->update(['project_id' => $data['project_id']]);
+        $this->projectPriority->syncById($oldProjectId);
+        $this->projectPriority->syncById($task->project_id);
+
         return response()->json(['success' => true, 'data' => ['taskId' => $task->id, 'projectId' => $task->project_id, 'linked' => true]]);
     }
 
@@ -319,12 +333,16 @@ class TaskController extends Controller
     public function scheduleToday(Task $task): JsonResponse
     {
         $task->update(['due_date' => now()->toDateString()]);
+        $this->projectPriority->syncById($task->project_id);
+
         return response()->json(['success' => true, 'data' => $this->format($task)]);
     }
 
     public function destroy(Task $task): JsonResponse
     {
         $task->update(['status' => 'Deleted', 'completed_at' => now()]);
+        $this->projectPriority->syncById($task->project_id);
+
         return response()->json(['success' => true, 'data' => ['deleted' => true, 'taskId' => $task->id]]);
     }
 
@@ -355,15 +373,24 @@ class TaskController extends Controller
         // Process in chunks of 50 to stay within token limits
         $chunks  = array_chunk($payload, 50);
         $updated = 0;
+        $updatedProjectIds = [];
 
         foreach ($chunks as $chunk) {
             $results = $this->ai->assignDueDates($chunk);
             foreach ($results as $result) {
                 if (!empty($result['id']) && !empty($result['due_date'])) {
+                    $projectId = Task::where('id', $result['id'])->value('project_id');
                     Task::where('id', $result['id'])->update(['due_date' => $result['due_date']]);
+                    if ($projectId) {
+                        $updatedProjectIds[] = $projectId;
+                    }
                     $updated++;
                 }
             }
+        }
+
+        foreach (array_unique($updatedProjectIds) as $projectId) {
+            $this->projectPriority->syncById($projectId);
         }
 
         return response()->json(['success' => true, 'data' => ['updated' => $updated, 'total' => $tasks->count()]]);

@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Services\ClassificationService;
 use App\Services\AIService;
+use App\Services\ProjectPriorityService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
@@ -13,7 +14,8 @@ class ProjectController extends Controller
 {
     public function __construct(
         private ClassificationService $classifier,
-        private AIService $ai
+        private AIService $ai,
+        private ProjectPriorityService $projectPriority
     ) {}
 
     public function show(Project $project): JsonResponse
@@ -21,7 +23,7 @@ class ProjectController extends Controller
       if ($project->status === 'Deleted') {
           return response()->json(['success' => false, 'message' => 'Project not found'], 404);
       }
-      return response()->json(['success' => true, 'data' => $this->format($project->load('tasks'))]);
+      return response()->json(['success' => true, 'data' => $this->format($this->projectPriority->sync($project->load('tasks')))]);
   }
 
   public function index(): JsonResponse
@@ -30,7 +32,7 @@ class ProjectController extends Controller
             ->whereNotIn('status', ['Deleted'])
             ->orderByDesc('created_at')
             ->get()
-            ->map(fn($p) => $this->format($p));
+            ->map(fn($p) => $this->format($this->projectPriority->sync($p)));
 
         return response()->json(['success' => true, 'data' => $projects]);
     }
@@ -41,7 +43,7 @@ class ProjectController extends Controller
             ->where('status', 'Deleted')
             ->orderByDesc('updated_at')
             ->get()
-            ->map(fn($p) => $this->format($p));
+            ->map(fn($p) => $this->format($this->projectPriority->sync($p)));
 
         return response()->json(['success' => true, 'data' => $projects]);
     }
@@ -53,6 +55,8 @@ class ProjectController extends Controller
             'description' => 'nullable|string',
             'area'        => 'nullable|string',
             'priority'    => 'nullable|integer',
+            'priority_mode' => 'nullable|in:auto,manual',
+            'manual_priority' => 'nullable|integer|min:1|max:10',
             'due_date'    => 'nullable|date',
             'subtasks'    => 'nullable|array',
             'phases'      => 'nullable|array',
@@ -73,6 +77,8 @@ class ProjectController extends Controller
             'description' => $userInput, // Store original input as description
             'status'      => 'Active',
             'priority'    => $data['priority'] ?? 0,
+            'priority_mode' => $data['priority_mode'] ?? 'auto',
+            'manual_priority' => $data['manual_priority'] ?? null,
             'due_date'    => $data['due_date'] ?? null,
             'domain'      => $data['area'] ?? '',
             'phases'      => $data['phases'] ?? [],
@@ -92,6 +98,7 @@ class ProjectController extends Controller
             $title = is_string($title) ? $title : ($title['subtask'] ?? $title['title'] ?? json_encode($title));
             if (!$title) continue;
             $rule = $this->classifier->classify($title);
+            $urgency = $this->classifier->deriveUrgency($title);
             Task::create([
                 'project_id'    => $project->id,
                 'title'         => $title,
@@ -102,12 +109,13 @@ class ProjectController extends Controller
                 'impact'        => $rule['impact'],
                 'effort'        => $rule['effort'],
                 'time_estimate' => $this->classifier->deriveTime($title),
-                'urgency'       => $this->classifier->deriveUrgency($title),
+                'urgency'       => $urgency,
+                'priority'      => $this->classifier->calculatePriority($rule['maslow'], $rule['impact'], $rule['effort'], $urgency),
                 'source'        => 'RULE',
             ]);
         }
 
-        return response()->json(['success' => true, 'data' => $this->format($project->load('tasks'))], 201);
+        return response()->json(['success' => true, 'data' => $this->format($this->projectPriority->sync($project->load('tasks')))], 201);
     }
 
     public function update(Request $request, Project $project): JsonResponse
@@ -118,13 +126,19 @@ class ProjectController extends Controller
             'domain'      => 'nullable|string',
             'status'      => 'nullable|in:Active,Completed,Archived,Deleted',
             'priority'    => 'nullable|integer',
+            'priority_mode' => 'nullable|in:auto,manual',
+            'manual_priority' => 'nullable|integer|min:1|max:10',
             'due_date'    => 'nullable|date',
             'phases'      => 'nullable|array',
             'milestones'  => 'nullable|array',
         ]);
 
+        if (($data['priority_mode'] ?? $project->priority_mode) === 'auto') {
+            $data['manual_priority'] = null;
+        }
+
         $project->update($data);
-        return response()->json(['success' => true, 'data' => $this->format($project->load('tasks'))]);
+        return response()->json(['success' => true, 'data' => $this->format($this->projectPriority->sync($project->load('tasks')))]);
     }
 
     public function destroy(Project $project): JsonResponse
@@ -136,7 +150,7 @@ class ProjectController extends Controller
     public function restore(Project $project): JsonResponse
     {
         $project->update(['status' => 'Active']);
-        return response()->json(['success' => true, 'data' => $this->format($project->load('tasks'))]);
+        return response()->json(['success' => true, 'data' => $this->format($this->projectPriority->sync($project->load('tasks')))]);
     }
 
     private function format(Project $project): array
@@ -194,6 +208,10 @@ class ProjectController extends Controller
             'description' => $project->description ?? '',
             'status'      => $project->status,
             'priority'    => $project->priority ?? 0,
+            'priorityMode' => $project->priority_mode ?? 'auto',
+            'manualPriority' => $project->manual_priority,
+            'autoPriority' => $project->auto_priority ?? 1,
+            'maslowLevel' => $project->maslow_level ?? '',
             'progress'    => $progress,
             'phases'      => $phases,
             'milestones'  => $milestones,

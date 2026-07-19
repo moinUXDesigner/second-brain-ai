@@ -29,6 +29,9 @@ export function ProjectCard({ project, onDelete, onViewTask, deleting }: {
 
   const statusVariant = effectiveStatus === 'Completed' ? 'success' : effectiveStatus === 'Active' ? 'primary' : 'default';
   const domains = splitDomains(project.domain);
+  const priority = project.priority ?? 0;
+  const priorityLabel = priority >= 8 ? 'High' : priority >= 5 ? 'Medium' : 'Low';
+  const priorityVariant = priority >= 8 ? 'danger' : priority >= 5 ? 'warning' : 'success';
 
   return (
     <div
@@ -72,6 +75,9 @@ export function ProjectCard({ project, onDelete, onViewTask, deleting }: {
           <Badge variant={statusVariant} className="!text-[10px] !px-1.5 !py-0">
             {effectiveStatus}
           </Badge>
+          <Badge variant={priorityVariant} className="!text-[10px] !px-1.5 !py-0">
+            P{priority} {priorityLabel}
+          </Badge>
           {onDelete && (
             <button
               onClick={(e) => { e.stopPropagation(); onDelete(project.id); }}
@@ -97,6 +103,14 @@ export function ProjectCard({ project, onDelete, onViewTask, deleting }: {
 
       {/* Progress bar */}
       <div className="px-4 pt-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <span className="truncate text-[11px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>
+            {project.maslowLevel || 'Self-Actualization'}
+          </span>
+          <span className="shrink-0 text-[11px]" style={{ color: 'var(--color-muted-fg)' }}>
+            {project.priorityMode === 'manual' ? 'Manual' : 'Auto'}
+          </span>
+        </div>
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-[11px] font-medium" style={{ color: 'var(--color-text-secondary)' }}>
             {doneCount}/{totalCount} done
