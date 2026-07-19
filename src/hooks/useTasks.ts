@@ -265,3 +265,19 @@ export function useScheduleToday() {
     },
   });
 }
+
+export function useCategorizeUncategorizedTasks() {
+  const queryClient = useQueryClient();
+  const { log } = useAudit();
+
+  return useMutation({
+    mutationFn: () => taskService.categorizeUncategorized(),
+    onSuccess: (res) => {
+      log('RUN_PIPELINE', 'task', undefined, { action: 'categorize_uncategorized', updated: res.data.updated, source: res.data.source });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.smartTodayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+    },
+  });
+}

@@ -59,6 +59,11 @@ export const taskService = {
     return data;
   },
 
+  async categorizeUncategorized(): Promise<ApiResponse<{ updated: number; total: number; source: 'AI' | 'RULE' | 'NONE' }>> {
+    const { data } = await apiClient.post('/tasks/categorize-uncategorized');
+    return data;
+  },
+
   async scheduleToday(id: string): Promise<ApiResponse<Task>> {
     const { data } = await apiClient.post(`/tasks/${id}/schedule-today`);
     return data;

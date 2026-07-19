@@ -396,6 +396,75 @@ class TaskController extends Controller
         return response()->json(['success' => true, 'data' => ['updated' => $updated, 'total' => $tasks->count()]]);
     }
 
+    public function categorizeUncategorized(): JsonResponse
+    {
+        $tasks = Task::where('status', 'Pending')
+            ->where(function ($query) {
+                $query
+                    ->whereNull('category')
+                    ->orWhere('category', '')
+                    ->orWhere('category', 'Uncategorized');
+            })
+            ->orderBy('id')
+            ->get();
+
+        if ($tasks->isEmpty()) {
+            return response()->json(['success' => true, 'data' => ['updated' => 0, 'total' => 0, 'source' => 'NONE']]);
+        }
+
+        $updated = 0;
+        $source = 'RULE';
+        $updatedProjectIds = [];
+
+        foreach ($tasks->chunk(25) as $chunk) {
+            $payload = $chunk->map(fn(Task $task) => [
+                'id' => $task->id,
+                'title' => $task->title,
+                'area' => $task->area ?? '',
+                'notes' => $task->notes ?? '',
+                'type' => $task->type ?? '',
+            ])->values()->toArray();
+
+            $aiResults = collect($this->ai->classifyBatch($payload))
+                ->keyBy(fn($item) => (string) ($item['id'] ?? ''));
+
+            if ($aiResults->isNotEmpty()) {
+                $source = 'AI';
+            }
+
+            foreach ($chunk as $task) {
+                $result = $aiResults->get((string) $task->id);
+                $rule = $this->classifier->classify($task->title, $task->type ?? '');
+                $urgency = $task->urgency ?: $this->classifier->deriveUrgency($task->title);
+                $priority = $task->priority ?: $this->classifier->calculatePriority($rule['maslow'], $rule['impact'], $rule['effort'], $urgency);
+                $category = $this->normalizeCategory($result['category'] ?? null)
+                    ?? $this->classifier->getCategory($priority, $task->fit_score ?? 5, 'Medium');
+
+                $task->update([
+                    'category' => $category,
+                    'maslow' => $result['maslow'] ?? $task->maslow ?? $rule['maslow'],
+                    'impact' => (int) ($result['impact'] ?? $task->impact ?? $rule['impact']),
+                    'effort' => (int) ($result['effort'] ?? $task->effort ?? $rule['effort']),
+                    'urgency' => $urgency,
+                    'priority' => $priority,
+                    'source' => $result ? 'AI' : 'RULE',
+                ]);
+
+                if ($task->project_id) {
+                    $updatedProjectIds[] = $task->project_id;
+                }
+
+                $updated++;
+            }
+        }
+
+        foreach (array_unique($updatedProjectIds) as $projectId) {
+            $this->projectPriority->syncById($projectId);
+        }
+
+        return response()->json(['success' => true, 'data' => ['updated' => $updated, 'total' => $tasks->count(), 'source' => $source]]);
+    }
+
     private function format(Task $task): array
     {
         $phases = $task->project?->phases ?? [];
@@ -503,6 +572,30 @@ class TaskController extends Controller
 
         $normalized = ucfirst(strtolower(trim($value)));
         return in_array($normalized, ['Low', 'Medium', 'High'], true) ? $normalized : null;
+    }
+
+    private function normalizeCategory(?string $value): ?string
+    {
+        if (!$value) return null;
+
+        $categories = [
+            'Deep Work',
+            'Light Work',
+            'Admin',
+            'Recovery',
+            'Critical',
+            'Must Do',
+            'Can Do Now',
+            'Optional',
+        ];
+
+        foreach ($categories as $category) {
+            if (strtolower($category) === strtolower(trim($value))) {
+                return $category;
+            }
+        }
+
+        return null;
     }
 
     private function isOverdueForDate(array $task, string $date): bool

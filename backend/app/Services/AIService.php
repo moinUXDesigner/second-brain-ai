@@ -94,7 +94,7 @@ class AIService
                     'messages'    => [
                         [
                             'role'    => 'system',
-                            'content' => "Classify each task. Return JSON array with: maslow, impact (1-10), effort (1-10). Return ONLY JSON array.",
+                            'content' => "Classify each productivity task. Return ONLY a JSON array in the same order with: id, maslow, impact (1-10), effort (1-10), category. category must be one of: Deep Work, Light Work, Admin, Recovery, Critical, Must Do, Can Do Now, Optional.",
                         ],
                         ['role' => 'user', 'content' => json_encode($tasks)],
                     ],

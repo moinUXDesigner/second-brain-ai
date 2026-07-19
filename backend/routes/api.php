@@ -44,6 +44,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/tasks/{task}',          [TaskController::class, 'destroy']);
     Route::post('/tasks/cleanup',           [TaskController::class, 'cleanup']);
     Route::post('/tasks/assign-due-dates',  [TaskController::class, 'assignDueDates']);
+    Route::post('/tasks/categorize-uncategorized', [TaskController::class, 'categorizeUncategorized']);
 
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);

@@ -15,8 +15,9 @@ import {
 import type { PieLabelRenderProps } from 'recharts';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
-import { useTasks } from '@/hooks/useTasks';
+import { useCategorizeUncategorizedTasks, useTasks } from '@/hooks/useTasks';
 import { useProjects } from '@/hooks/useProjects';
 import type { Project, Task } from '@/types';
 
@@ -175,6 +176,7 @@ export function Charts() {
   const [runningProjectMetric, setRunningProjectMetric] = useState<RunningProjectMetric>('completion');
   const { data: tasks = [], isLoading } = useTasks();
   const { data: projects = [], isLoading: loadingProjects } = useProjects();
+  const categorizeUncategorized = useCategorizeUncategorizedTasks();
 
   const pendingTasks = tasks.filter((t) => t.status === 'Pending');
   const categoryMap = pendingTasks.reduce<Record<string, number>>((acc, t) => {
@@ -184,6 +186,7 @@ export function Charts() {
   }, {});
 
   const pendingTotal = pendingTasks.length;
+  const uncategorizedPendingCount = categoryMap.Uncategorized ?? 0;
   const categoryData = Object.entries(categoryMap)
     .map(([name, value]) => ({
       name,
@@ -242,6 +245,18 @@ export function Charts() {
       total: monthTasks.length,
     };
   });
+
+  const handleCategorizeUncategorized = async () => {
+    const toastId = toast.loading('AI is categorizing tasks...');
+
+    try {
+      const res = await categorizeUncategorized.mutateAsync();
+      const sourceLabel = res.data.source === 'AI' ? 'AI' : res.data.source === 'RULE' ? 'rule fallback' : 'no update';
+      toast.success(`Categorized ${res.data.updated} task${res.data.updated === 1 ? '' : 's'} with ${sourceLabel}.`, { id: toastId });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to categorize tasks', { id: toastId });
+    }
+  };
 
   if (isLoading || loadingProjects) {
     return (
@@ -408,12 +423,26 @@ export function Charts() {
             </p>
           </div>
           <span
-            className="rounded-full px-2.5 py-1 text-xs font-semibold"
+            className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
             style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
           >
             {pendingTotal} pending
           </span>
         </CardHeader>
+
+        {uncategorizedPendingCount > 0 && (
+          <div className="px-5 pb-3">
+            <button
+              type="button"
+              onClick={handleCategorizeUncategorized}
+              disabled={categorizeUncategorized.isPending}
+              className="flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-semibold transition-colors disabled:opacity-60 sm:w-auto"
+              style={{ backgroundColor: 'var(--primary-600)', color: '#fff' }}
+            >
+              {categorizeUncategorized.isPending ? 'Categorizing...' : `AI Categorize ${uncategorizedPendingCount}`}
+            </button>
+          </div>
+        )}
 
         {categoryData.length > 0 ? (
           <>
