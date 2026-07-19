@@ -60,7 +60,7 @@ export const taskService = {
   },
 
   async categorizeUncategorized(): Promise<ApiResponse<{ updated: number; total: number; source: 'AI' | 'RULE' | 'NONE' }>> {
-    const { data } = await apiClient.post('/tasks/categorize-uncategorized');
+    const { data } = await apiClient.post('/tasks/categorize-uncategorized', undefined, { timeout: 300000 });
     return data;
   },
 

@@ -398,6 +398,8 @@ class TaskController extends Controller
 
     public function categorizeUncategorized(): JsonResponse
     {
+        @set_time_limit(300);
+
         $tasks = Task::where('status', 'Pending')
             ->where(function ($query) {
                 $query

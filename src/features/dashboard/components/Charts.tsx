@@ -13,7 +13,7 @@ import {
   Area,
 } from 'recharts';
 import type { PieLabelRenderProps } from 'recharts';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
@@ -174,6 +174,7 @@ function renderCategoryLabel({
 export function Charts() {
   const navigate = useNavigate();
   const [runningProjectMetric, setRunningProjectMetric] = useState<RunningProjectMetric>('completion');
+  const [categorizationProgress, setCategorizationProgress] = useState(0);
   const { data: tasks = [], isLoading } = useTasks();
   const { data: projects = [], isLoading: loadingProjects } = useProjects();
   const categorizeUncategorized = useCategorizeUncategorizedTasks();
@@ -246,15 +247,35 @@ export function Charts() {
     };
   });
 
+  useEffect(() => {
+    if (!categorizeUncategorized.isPending) return undefined;
+
+    setCategorizationProgress((current) => Math.max(current, 8));
+
+    const intervalId = window.setInterval(() => {
+      setCategorizationProgress((current) => {
+        if (current >= 95) return current;
+        const nextStep = current < 55 ? 7 : current < 80 ? 4 : 2;
+        return Math.min(current + nextStep, 95);
+      });
+    }, 900);
+
+    return () => window.clearInterval(intervalId);
+  }, [categorizeUncategorized.isPending]);
+
   const handleCategorizeUncategorized = async () => {
+    setCategorizationProgress(8);
     const toastId = toast.loading('AI is categorizing tasks...');
 
     try {
       const res = await categorizeUncategorized.mutateAsync();
+      setCategorizationProgress(100);
       const sourceLabel = res.data.source === 'AI' ? 'AI' : res.data.source === 'RULE' ? 'rule fallback' : 'no update';
       toast.success(`Categorized ${res.data.updated} task${res.data.updated === 1 ? '' : 's'} with ${sourceLabel}.`, { id: toastId });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to categorize tasks', { id: toastId });
+    } finally {
+      window.setTimeout(() => setCategorizationProgress(0), 700);
     }
   };
 
@@ -436,10 +457,18 @@ export function Charts() {
               type="button"
               onClick={handleCategorizeUncategorized}
               disabled={categorizeUncategorized.isPending}
-              className="flex w-full items-center justify-center rounded-md px-3 py-2 text-sm font-semibold transition-colors disabled:opacity-60 sm:w-auto"
+              className="relative flex h-9 w-full items-center justify-center overflow-hidden rounded-md px-3 py-2 text-sm font-semibold transition-colors disabled:opacity-80 sm:w-44"
               style={{ backgroundColor: 'var(--primary-600)', color: '#fff' }}
+              aria-label={categorizeUncategorized.isPending ? `Categorizing tasks, ${categorizationProgress}% complete` : `AI Categorize ${uncategorizedPendingCount}`}
             >
-              {categorizeUncategorized.isPending ? 'Categorizing...' : `AI Categorize ${uncategorizedPendingCount}`}
+              {categorizeUncategorized.isPending ? (
+                <span
+                  className="absolute inset-y-0 left-0 transition-all duration-500"
+                  style={{ width: `${categorizationProgress}%`, backgroundColor: 'rgba(255, 255, 255, 0.35)' }}
+                />
+              ) : (
+                `AI Categorize ${uncategorizedPendingCount}`
+              )}
             </button>
           </div>
         )}
