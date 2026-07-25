@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
+import toast from 'react-hot-toast';
 import type { Task, TaskImage } from '@/types';
 import { Badge } from '@/components/ui/Badge';
 import { formatDate, formatDateRelative } from '@/utils/dateFormat';
 import { formatAiTime, formatDuration } from '@/utils/time';
+import { useUpdateTask } from '@/hooks/useTasks';
+
+const MAX_IMAGES = 5;
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
 interface TaskViewModalProps {
   task: Task;
@@ -135,10 +140,19 @@ function getTaskImages(task: Task): CarouselImage[] {
   return images;
 }
 
-function ImageCarousel({ images }: { images: CarouselImage[] }) {
+function ImageCarousel({
+  images,
+  removableIds,
+  onRemove,
+}: {
+  images: CarouselImage[];
+  removableIds?: Set<string>;
+  onRemove?: (id: string) => void;
+}) {
   const [activeIndex, setActiveIndex] = useState(0);
   const activeImage = images[activeIndex];
   const hasMultipleImages = images.length > 1;
+  const canRemoveActive = Boolean(onRemove && activeImage && removableIds?.has(activeImage.id));
 
   useEffect(() => {
     setActiveIndex(0);
@@ -177,6 +191,20 @@ function ImageCarousel({ images }: { images: CarouselImage[] }) {
                 This older attachment only has a saved filename.
               </p>
             </div>
+          )}
+
+          {canRemoveActive && (
+            <button
+              type="button"
+              onClick={() => onRemove?.(activeImage.id)}
+              className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full shadow-sm transition-colors hover:opacity-90"
+              style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)' }}
+              aria-label="Remove image"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           )}
 
           {hasMultipleImages && (
@@ -253,7 +281,19 @@ function ImageCarousel({ images }: { images: CarouselImage[] }) {
 }
 
 export function TaskViewModal({ task, onClose }: TaskViewModalProps) {
-  const taskImages = useMemo(() => getTaskImages(task), [task]);
+  const [localImages, setLocalImages] = useState<TaskImage[]>(task.images || []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const mutation = useUpdateTask();
+
+  useEffect(() => {
+    setLocalImages(task.images || []);
+  }, [task]);
+
+  const taskImages = useMemo(
+    () => getTaskImages({ ...task, images: localImages }),
+    [task, localImages],
+  );
 
   useEffect(() => {
     const handler = (event: KeyboardEvent) => {
@@ -263,6 +303,59 @@ export function TaskViewModal({ task, onClose }: TaskViewModalProps) {
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
   }, [onClose]);
+
+  const saveImages = (images: TaskImage[]) => {
+    setLocalImages(images);
+    mutation.mutate(
+      { id: task.id, updates: { images } },
+      { onError: () => toast.error('Could not save image') },
+    );
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (!files.length) return;
+
+    if (localImages.length + files.length > MAX_IMAGES) {
+      toast.error(`You can attach up to ${MAX_IMAGES} images.`);
+      return;
+    }
+
+    const validFiles = files.filter((file) => {
+      if (file.size > MAX_IMAGE_SIZE) {
+        toast.error(`"${file.name}" is too large (max 10MB).`);
+        return false;
+      }
+      return true;
+    });
+    if (!validFiles.length) return;
+
+    const newImages = await Promise.all(
+      validFiles.map(
+        (file) =>
+          new Promise<TaskImage>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+              resolve({
+                id: crypto.randomUUID(),
+                name: file.name,
+                url: ev.target?.result as string,
+                type: file.type,
+                size: file.size,
+              });
+            };
+            reader.readAsDataURL(file);
+          }),
+      ),
+    );
+
+    saveImages([...localImages, ...newImages]);
+  };
+
+  const handleRemoveImage = (id: string) => {
+    saveImages(localImages.filter((img) => img.id !== id));
+  };
 
   return createPortal(
     <div
@@ -359,7 +452,53 @@ export function TaskViewModal({ task, onClose }: TaskViewModalProps) {
             </div>
           </Section>
 
-          {taskImages.length > 0 && <ImageCarousel images={taskImages} />}
+          <Section title="Images">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={handleImageSelect}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              onChange={handleImageSelect}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Upload image
+              </button>
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Take screenshot
+              </button>
+            </div>
+          </Section>
+
+          {taskImages.length > 0 && (
+            <ImageCarousel images={taskImages} removableIds={new Set(localImages.map((img) => img.id))} onRemove={handleRemoveImage} />
+          )}
 
           <Section title="Metadata">
             <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
