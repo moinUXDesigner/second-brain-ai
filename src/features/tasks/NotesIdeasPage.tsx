@@ -1,11 +1,15 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
+import toast from 'react-hot-toast';
 import { TaskList } from './components/TaskList';
 import { useTasks, useUpdateTaskStatus, useCreateTask } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import type { Task } from '@/types';
+import type { Task, TaskImage } from '@/types';
+
+const MAX_IMAGES = 5;
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const PAGE_SIZE = 10;
 
@@ -22,6 +26,9 @@ export function NotesIdeasPage() {
   const [newItemTitle, setNewItemTitle] = useState('');
   const [newItemArea, setNewItemArea] = useState('');
   const [newItemNotes, setNewItemNotes] = useState('');
+  const [newItemImages, setNewItemImages] = useState<TaskImage[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const areas = useMemo(() => {
     if (!tasks) return [];
@@ -70,12 +77,45 @@ export function NotesIdeasPage() {
       status: newItemType,
       area: newItemArea.trim() || undefined,
       notes: newItemNotes.trim() || undefined,
+      images: newItemImages.length ? newItemImages : undefined,
     });
 
     setNewItemTitle('');
     setNewItemArea('');
     setNewItemNotes('');
+    setNewItemImages([]);
     setShowAddForm(false);
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (!files.length) return;
+
+    if (newItemImages.length + files.length > MAX_IMAGES) {
+      toast.error(`You can attach up to ${MAX_IMAGES} images.`);
+      return;
+    }
+
+    files.forEach((file) => {
+      if (file.size > MAX_IMAGE_SIZE) {
+        toast.error(`"${file.name}" is too large (max 10MB).`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const url = ev.target?.result as string;
+        setNewItemImages((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), name: file.name, url, type: file.type, size: file.size },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveImage = (id: string) => {
+    setNewItemImages((prev) => prev.filter((img) => img.id !== id));
   };
 
   return (
@@ -158,6 +198,77 @@ export function NotesIdeasPage() {
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
+              Images (optional)
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={handleImageSelect}
+            />
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              onChange={handleImageSelect}
+            />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                Upload image
+              </button>
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Take screenshot
+              </button>
+            </div>
+
+            {newItemImages.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {newItemImages.map((img) => (
+                  <div key={img.id} className="relative">
+                    <img
+                      src={img.url}
+                      alt={img.name}
+                      className="h-16 w-16 object-cover rounded-md border"
+                      style={{ borderColor: 'var(--color-border)' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveImage(img.id)}
+                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full flex items-center justify-center text-xs"
+                      style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                      aria-label={`Remove ${img.name}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-2">
             <Button
               onClick={handleAddItem}
@@ -173,6 +284,7 @@ export function NotesIdeasPage() {
                 setNewItemTitle('');
                 setNewItemArea('');
                 setNewItemNotes('');
+                setNewItemImages([]);
               }}
             >
               Cancel
