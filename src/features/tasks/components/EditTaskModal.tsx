@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
-import type { Task, TaskRevisionSuggestion, TaskStatus } from '@/types';
+import type { Task, TaskImage, TaskRevisionSuggestion, TaskStatus } from '@/types';
 import { useUpdateTask } from '@/hooks/useTasks';
 import { taskService } from '@/services/endpoints/taskService';
 import { TASK_CATEGORIES } from '@/constants';
@@ -9,6 +9,9 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
+
+const MAX_IMAGES = 5;
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const STATUS_OPTIONS = [
   { value: 'Pending', label: 'Pending' },
@@ -56,6 +59,9 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
   const [reminderAt, setReminderAt] = useState(toDateTimeLocalValue(task.reminderAt));
   const [revisionSuggestion, setRevisionSuggestion] = useState<TaskRevisionSuggestion | null>(null);
   const [analyzingRevision, setAnalyzingRevision] = useState(false);
+  const [images, setImages] = useState<TaskImage[]>(task.images || []);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const mutation = useUpdateTask();
 
@@ -75,6 +81,7 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
     setReminderEnabled(Boolean(task.reminderEnabled));
     setReminderAt(toDateTimeLocalValue(task.reminderAt));
     setRevisionSuggestion(null);
+    setImages(task.images || []);
   }, [task]);
 
   useEffect(() => {
@@ -109,6 +116,7 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
           deadlineDate: deadlineDate || undefined,
           reminderEnabled,
           reminderAt: reminderEnabled && reminderAt ? reminderAt : null,
+          images,
         },
       },
       {
@@ -121,6 +129,37 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
         },
       },
     );
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (!files.length) return;
+
+    if (images.length + files.length > MAX_IMAGES) {
+      toast.error(`You can attach up to ${MAX_IMAGES} images.`);
+      return;
+    }
+
+    files.forEach((file) => {
+      if (file.size > MAX_IMAGE_SIZE) {
+        toast.error(`"${file.name}" is too large (max 10MB).`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const url = ev.target?.result as string;
+        setImages((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), name: file.name, url, type: file.type, size: file.size },
+        ]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleRemoveImage = (id: string) => {
+    setImages((prev) => prev.filter((img) => img.id !== id));
   };
 
   const handleAnalyzeNotes = async () => {
@@ -211,6 +250,77 @@ export function EditTaskModal({ task, onClose }: EditTaskModalProps) {
               onChange={(e) => setNotes(e.target.value)}
               className="min-h-[80px]"
             />
+
+            <div>
+              <label className="block text-sm font-medium mb-1 text-neutral-700 dark:text-neutral-200">
+                Images
+              </label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                multiple
+                hidden
+                onChange={handleImageSelect}
+              />
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={handleImageSelect}
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                  style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14M14 8h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Upload image
+                </button>
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-colors"
+                  style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text-secondary)' }}
+                >
+                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Take screenshot
+                </button>
+              </div>
+
+              {images.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {images.map((img) => (
+                    <div key={img.id} className="relative">
+                      <img
+                        src={img.url}
+                        alt={img.name}
+                        className="h-16 w-16 object-cover rounded-md border"
+                        style={{ borderColor: 'var(--color-border)' }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveImage(img.id)}
+                        className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full flex items-center justify-center text-xs"
+                        style={{ backgroundColor: 'var(--color-surface)', color: 'var(--color-text)', border: '1px solid var(--color-border)' }}
+                        aria-label={`Remove ${img.name}`}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
             <div className="rounded-lg border p-3 space-y-3" style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
