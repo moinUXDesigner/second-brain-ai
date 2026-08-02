@@ -173,6 +173,7 @@ export interface DailyState {
   availableTime?: number;
   activityPreference?: 'Any' | 'Indoor' | 'Outdoor';
   notes?: string;
+  updatedAt?: string;
   userId?: string;
 }
 

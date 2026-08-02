@@ -22,8 +22,7 @@ class DailyStateController extends Controller
     public function show(Request $request): JsonResponse
     {
         $date  = $request->query('date', today()->toDateString());
-        $state = DailyState::whereDate('date', $date)->first()
-            ?? DailyState::orderByDesc('date')->first();
+        $state = DailyState::whereDate('date', $date)->first();
 
         if (!$state) {
             return response()->json(['success' => true, 'data' => null]);
@@ -70,6 +69,7 @@ class DailyStateController extends Controller
             'availableTime' => $state->available_time,
             'activityPreference' => $state->activity_preference ?? 'Any',
             'notes'         => $state->notes ?? '',
+            'updatedAt'     => $state->updated_at?->toISOString() ?? '',
         ];
     }
 }

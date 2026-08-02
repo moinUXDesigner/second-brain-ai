@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { dailyStateService } from '@/services/endpoints/dailyStateService';
-import { today } from '@/utils/date';
+import { formatDateTime, today } from '@/utils/date';
 import { getEnergyEmoji, getFocusEmoji, getMoodEmoji } from '@/utils/wellbeing';
 
 type Snapshot = {
   energy: number;
   mood: number;
   focus: number;
+  updatedAt: string;
+};
+
+const DEFAULT_SNAPSHOT: Snapshot = {
+  energy: 5,
+  mood: 5,
+  focus: 5,
+  updatedAt: '',
 };
 
 function MetricCard({
@@ -35,28 +43,50 @@ function MetricCard({
 }
 
 export function WellbeingSnapshot() {
-  const [state, setState] = useState<Snapshot | null>(null);
+  const [currentDate, setCurrentDate] = useState(today());
+  const [state, setState] = useState<Snapshot>(DEFAULT_SNAPSHOT);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const interval = window.setInterval(() => {
+      const nextDate = today();
+      setCurrentDate((prev) => (prev === nextDate ? prev : nextDate));
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+
     dailyStateService
-      .get(today())
+      .get(currentDate)
       .then((res) => {
+        if (!active) return;
+
         if (res.data) {
           setState({
             energy: res.data.energy || 5,
             mood: res.data.mood || 5,
             focus: res.data.focus || 5,
+            updatedAt: res.data.updatedAt || '',
           });
         } else {
-          setState({ energy: 5, mood: 5, focus: 5 });
+          setState(DEFAULT_SNAPSHOT);
         }
       })
       .catch(() => {
-        setState({ energy: 5, mood: 5, focus: 5 });
+        if (active) setState(DEFAULT_SNAPSHOT);
       })
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentDate]);
 
   return (
     <Card>
@@ -65,6 +95,9 @@ export function WellbeingSnapshot() {
           <CardTitle>Today&apos;s State</CardTitle>
           <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
             Your current mood, energy, and focus levels
+          </p>
+          <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+            {state.updatedAt ? `Last updated ${formatDateTime(state.updatedAt)}` : 'Not updated today'}
           </p>
         </div>
       </CardHeader>
@@ -79,7 +112,7 @@ export function WellbeingSnapshot() {
             </div>
           ))}
         </div>
-      ) : state ? (
+      ) : (
         <div className="grid grid-cols-3 gap-3 md:gap-4 px-4 pb-4">
           <MetricCard
             label="Mood"
@@ -99,10 +132,6 @@ export function WellbeingSnapshot() {
             emoji={getFocusEmoji(state.focus)}
             accent="var(--primary-600)"
           />
-        </div>
-      ) : (
-        <div className="px-4 pb-4 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
-          No daily state found yet.
         </div>
       )}
     </Card>

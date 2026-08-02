@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { dailyStateService } from '@/services/endpoints/dailyStateService';
-import { today } from '@/utils/date';
+import { formatDateTime, today } from '@/utils/date';
 import { getEnergyEmoji, getFocusEmoji, getMoodEmoji } from '@/utils/wellbeing';
 import toast from 'react-hot-toast';
 
@@ -33,20 +33,48 @@ function formatTime(mins: number) {
   return `${h}h ${m}m`;
 }
 
+function getDefaultState() {
+  return {
+    energy: 5,
+    mood: 5,
+    focus: 5,
+    availableTime: 120,
+    activityPreference: 'Any' as ActivityPreference,
+    notes: '',
+    updatedAt: '',
+  };
+}
+
 export function DailyStatePage() {
+  const [currentDate, setCurrentDate] = useState(today());
   const [energy, setEnergy] = useState(5);
   const [mood, setMood] = useState(5);
   const [focus, setFocus] = useState(5);
   const [availableTime, setAvailableTime] = useState(120);
   const [activityPreference, setActivityPreference] = useState<ActivityPreference>('Any');
   const [notes, setNotes] = useState('');
+  const [updatedAt, setUpdatedAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
+    const interval = window.setInterval(() => {
+      const nextDate = today();
+      setCurrentDate((prev) => (prev === nextDate ? prev : nextDate));
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    setLoaded(false);
+
     dailyStateService
-      .get(today())
+      .get(currentDate)
       .then((res) => {
+        if (!active) return;
+
         if (res.data) {
           setEnergy(res.data.energy || 5);
           setMood(res.data.mood || 5);
@@ -54,17 +82,45 @@ export function DailyStatePage() {
           setAvailableTime(res.data.availableTime || 120);
           setActivityPreference(res.data.activityPreference || 'Any');
           setNotes(res.data.notes || '');
+          setUpdatedAt(res.data.updatedAt || '');
+          return;
         }
+
+        const defaults = getDefaultState();
+        setEnergy(defaults.energy);
+        setMood(defaults.mood);
+        setFocus(defaults.focus);
+        setAvailableTime(defaults.availableTime);
+        setActivityPreference(defaults.activityPreference);
+        setNotes(defaults.notes);
+        setUpdatedAt(defaults.updatedAt);
       })
-      .catch(() => {})
-      .finally(() => setLoaded(true));
-  }, []);
+      .catch(() => {
+        if (!active) return;
+
+        const defaults = getDefaultState();
+        setEnergy(defaults.energy);
+        setMood(defaults.mood);
+        setFocus(defaults.focus);
+        setAvailableTime(defaults.availableTime);
+        setActivityPreference(defaults.activityPreference);
+        setNotes(defaults.notes);
+        setUpdatedAt(defaults.updatedAt);
+      })
+      .finally(() => {
+        if (active) setLoaded(true);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentDate]);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      await dailyStateService.save({
-        date: today(),
+      const res = await dailyStateService.save({
+        date: currentDate,
         energy,
         mood,
         focus,
@@ -72,6 +128,7 @@ export function DailyStatePage() {
         activityPreference,
         notes: notes || undefined,
       });
+      setUpdatedAt(res.data.updatedAt || '');
       toast.success('Daily state saved');
     } catch {
       toast.error('Failed to save. Backend may not be connected.');
@@ -106,6 +163,9 @@ export function DailyStatePage() {
         </h1>
         <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
           How are you feeling today?
+        </p>
+        <p className="text-caption mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+          {updatedAt ? `Last updated ${formatDateTime(updatedAt)}` : 'Not updated today'}
         </p>
       </div>
 
