@@ -3,7 +3,7 @@ import { useMemo, useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  LineChart, Line, BarChart, Bar, Legend,
+  LineChart, Line, BarChart, Bar,
 } from 'recharts';
 import { useTaskStore } from '@/app/store/taskStore';
 import { dailyStateService } from '@/services/endpoints/dailyStateService';
@@ -133,25 +133,11 @@ export function AnalyticsPage() {
       </div>
 
       {wellbeingData.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Mood · Energy · Focus (last 14 days)</CardTitle>
-          </CardHeader>
-          <div className="h-64 px-4 pb-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={wellbeingData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
-                <XAxis dataKey="day" fontSize={11} tick={{ fill: 'var(--color-text-secondary)' }} />
-                <YAxis domain={[1, 10]} ticks={[1, 3, 5, 7, 10]} fontSize={11} tick={{ fill: 'var(--color-text-secondary)' }} />
-                <Tooltip contentStyle={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }} />
-                <Legend />
-                <Line type="monotone" dataKey="mood" stroke="#f59e0b" strokeWidth={2} dot={false} name="Mood" />
-                <Line type="monotone" dataKey="energy" stroke="#22c55e" strokeWidth={2} dot={false} name="Energy" />
-                <Line type="monotone" dataKey="focus" stroke="#6172f3" strokeWidth={2} dot={false} name="Focus" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <WellbeingTrendChart title="Mood Trend" dataKey="mood" color="#f59e0b" data={wellbeingData} />
+          <WellbeingTrendChart title="Energy Trend" dataKey="energy" color="#22c55e" data={wellbeingData} />
+          <WellbeingTrendChart title="Focus Trend" dataKey="focus" color="#6172f3" data={wellbeingData} />
+        </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -259,5 +245,39 @@ function StatCard({ label, value, color }: { label: string; value: string | numb
       <p className="text-xs font-medium mb-1" style={{ color: 'var(--color-text-secondary)' }}>{label}</p>
       <p className="text-2xl font-bold" style={{ color }}>{value}</p>
     </div>
+  );
+}
+
+function WellbeingTrendChart({
+  title,
+  dataKey,
+  color,
+  data,
+}: {
+  title: string;
+  dataKey: 'mood' | 'energy' | 'focus';
+  color: string;
+  data: { day: string; mood: number; energy: number; focus: number }[];
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <p className="mt-1 text-xs" style={{ color: 'var(--color-text-secondary)' }}>
+          Last 14 days
+        </p>
+      </CardHeader>
+      <div className="h-56 px-2 pb-4 sm:px-4">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" />
+            <XAxis dataKey="day" fontSize={10} tick={{ fill: 'var(--color-text-secondary)' }} />
+            <YAxis domain={[1, 10]} ticks={[1, 5, 10]} fontSize={10} tick={{ fill: 'var(--color-text-secondary)' }} />
+            <Tooltip contentStyle={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }} />
+            <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={2} dot={false} name={title.replace(' Trend', '')} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    </Card>
   );
 }
