@@ -109,7 +109,7 @@ export function Header() {
 
               {/* Avatar for mobile — navigates to profile */}
               <button
-                onClick={() => navigate('/profile')}
+                onClick={() => navigate('/profile/basic')}
                 className="md:hidden flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-primary-700 font-bold text-caption"
                 aria-label="Go to profile"
               >

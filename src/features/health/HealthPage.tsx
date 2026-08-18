@@ -123,7 +123,7 @@ export function HealthPage() {
             A read-only health overview from profile, daily state, projects, and tasks.
           </p>
         </div>
-        <Button variant="secondary" onClick={() => navigate('/profile')}>
+        <Button variant="secondary" onClick={() => navigate('/profile/health')}>
           Update Profile Health
         </Button>
       </div>

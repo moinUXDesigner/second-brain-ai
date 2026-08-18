@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { Navigate, createBrowserRouter } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from './ProtectedRoute';
 import { RoleGuard } from './RoleGuard';
@@ -17,7 +17,7 @@ import { AdminPage } from '@/features/admin/AdminPage';
 import { CreateFlowPage } from '@/features/create/CreateFlowPage';
 import { CompletedTasksPage } from '@/features/tasks/CompletedTasksPage';
 import { NotesIdeasPage } from '@/features/tasks/NotesIdeasPage';
-import { ProfilePage } from '@/features/profile/ProfilePage';
+import { ProfileModulesPage } from '@/features/profile/ProfileModulesPage';
 import { HealthPage } from '@/features/health/HealthPage';
 import { FinancePage } from '@/features/finance/FinancePage';
 import { ActivityPage } from '@/features/activity/ActivityPage';
@@ -70,7 +70,8 @@ export const router = createBrowserRouter([
       { path: 'daily-state', element: <DailyStatePage /> },
       { path: 'health', element: <HealthPage /> },
       { path: 'finance', element: <FinancePage /> },
-      { path: 'profile', element: <ProfilePage /> },
+      { path: 'profile', element: <Navigate to="/profile/basic" replace /> },
+      { path: 'profile/:section', element: <ProfileModulesPage /> },
       { path: 'activity', element: <ActivityPage /> },
       { path: 'bulk-upload', element: <BulkUploadPage /> },
       { path: 'notes-ideas', element: <NotesIdeasPage /> },

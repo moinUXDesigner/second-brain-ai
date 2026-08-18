@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -69,6 +70,7 @@ function normalizePayload(form: FinanceEntryPayload): FinanceEntryPayload {
 }
 
 export function FinancePage() {
+  const navigate = useNavigate();
   const [entries, setEntries] = useState<FinanceEntry[]>([]);
   const [summary, setSummary] = useState<FinanceSummary>(EMPTY_SUMMARY);
   const [activeBucket, setActiveBucket] = useState<BucketFilter>('all');
@@ -181,13 +183,18 @@ export function FinancePage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <div>
-        <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>
-          Finance
-        </h1>
-        <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
-          Track assets, loans, receivables, handloans, and an estimated Zakat summary in one single-currency ledger.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>
+            Finance
+          </h1>
+          <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
+            Track assets, loans, receivables, handloans, and an estimated Zakat summary in one single-currency ledger.
+          </p>
+        </div>
+        <Button variant="secondary" onClick={() => navigate('/profile/finance')}>
+          Update Finance Profile
+        </Button>
       </div>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">

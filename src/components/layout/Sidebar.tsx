@@ -29,7 +29,7 @@ const navItems: NavItem[] = [
   { to: '/daily-state', label: 'Daily State', icon: 'M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z' },
   { to: '/health', label: 'Health', icon: 'M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 20.364l-7.682-7.682a4.5 4.5 0 010-6.364z' },
   { to: '/finance', label: 'Finance', icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V6m0 10v2m0-12a9 9 0 110 18 9 9 0 010-18z' },
-  { to: '/profile', label: 'Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
+  { to: '/profile/basic', label: 'Profile', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z' },
   { to: '/activity', label: 'Activity', icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
   { to: '/bulk-upload', label: 'Bulk Upload', icon: 'M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5' },
 ];
@@ -123,6 +123,7 @@ export function Sidebar() {
                     || (item.to === '/today/smart' && location.pathname === '/today/smart')
                     || (item.to === '/tasks' && location.pathname === '/tasks')
                     || (item.to === '/tasks/overdue' && location.pathname === '/tasks/overdue')
+                    || (item.to === '/profile/basic' && location.pathname.startsWith('/profile'))
                     || (item.to !== '/today' && item.to !== '/today/smart' && item.to !== '/tasks' && item.to !== '/tasks/overdue' && isActive))
                     ? 'font-medium'
                     : 'hover:opacity-80',
@@ -134,6 +135,7 @@ export function Sidebar() {
                   || (item.to === '/today/smart' && location.pathname === '/today/smart')
                   || (item.to === '/tasks' && location.pathname === '/tasks')
                   || (item.to === '/tasks/overdue' && location.pathname === '/tasks/overdue')
+                  || (item.to === '/profile/basic' && location.pathname.startsWith('/profile'))
                   || (item.to !== '/today' && item.to !== '/today/smart' && item.to !== '/tasks' && item.to !== '/tasks/overdue' && isActive);
 
                 return {
