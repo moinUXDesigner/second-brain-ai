@@ -43,6 +43,22 @@ class ReminderService
         return $created;
     }
 
+    public function notifyScheduledToday(User $user, Task $task, ?Carbon $now = null): bool
+    {
+        $now ??= now();
+        $today = $now->toDateString();
+
+        return $this->notifyOnce(
+            $user,
+            $task,
+            'scheduled_today',
+            $today,
+            'Task Scheduled today',
+            "\"{$task->title}\" is scheduled for today.",
+            $now
+        );
+    }
+
     private function eventsForTask(Task $task, Carbon $now): array
     {
         $events = [];

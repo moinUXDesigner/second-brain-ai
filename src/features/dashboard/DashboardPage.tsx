@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { SummaryCards } from './components/SummaryCards';
 import { Charts } from './components/Charts';
 import { WellbeingSnapshot } from './components/WellbeingSnapshot';
+import { HealthShortcut } from './components/HealthShortcut';
 
 export function DashboardPage() {
   return (
@@ -13,6 +14,7 @@ export function DashboardPage() {
 
       <SummaryCards />
       <WellbeingSnapshot />
+      <HealthShortcut />
       <Charts />
     </motion.div>
   );

@@ -1,8 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { TaskList } from './components/TaskList';
 import { AdvancedTaskTable } from './components/AdvancedTaskTable';
+import { EditTaskModal } from './components/EditTaskModal';
 import { useTasks, useDeleteTask, useUpdateTaskStatus } from '@/hooks/useTasks';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 import { taskService } from '@/services/endpoints/taskService';
@@ -34,6 +35,15 @@ export function TasksPage() {
   const [assigningDates, setAssigningDates] = useState(false);
   const queryClient = useQueryClient();
   const isOverdueView = location.pathname === '/tasks/overdue';
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const queryCategory = queryParams.get('category') ?? '';
+  const editTaskId = queryParams.get('edit') ?? '';
+  const [filterCategory, setFilterCategory] = useState(queryCategory);
+
+  useEffect(() => {
+    setFilterCategory(queryCategory);
+    setPage(1);
+  }, [queryCategory]);
 
   const missingDueDateCount = useMemo(
     () => tasks?.filter((t) => t.status === 'Pending' && !t.dueDate).length ?? 0,
@@ -60,7 +70,43 @@ export function TasksPage() {
     return Array.from(set).sort();
   }, [tasks]);
 
+  const categories = useMemo(() => {
+    if (!tasks) return [];
+    const set = new Set(tasks.map((t) => t.category?.trim() || 'Uncategorized'));
+    return Array.from(set).sort();
+  }, [tasks]);
+
   const urgencies = ['High', 'Medium', 'Low'];
+
+  const updateCategoryFilter = (category: string) => {
+    setFilterCategory(category);
+    setPage(1);
+
+    const nextParams = new URLSearchParams(location.search);
+    if (category) {
+      nextParams.set('category', category);
+    } else {
+      nextParams.delete('category');
+    }
+
+    navigate({
+      pathname: location.pathname,
+      search: nextParams.toString() ? `?${nextParams.toString()}` : '',
+    });
+  };
+
+  const closeQueryEditModal = () => {
+    const nextParams = new URLSearchParams(location.search);
+    nextParams.delete('edit');
+
+    navigate(
+      {
+        pathname: location.pathname,
+        search: nextParams.toString() ? `?${nextParams.toString()}` : '',
+      },
+      { replace: true },
+    );
+  };
 
   const filtered = useMemo(() => {
     if (!tasks) return [];
@@ -83,6 +129,10 @@ export function TasksPage() {
 
     if (filterArea) {
       list = list.filter((t) => t.area === filterArea);
+    }
+
+    if (filterCategory) {
+      list = list.filter((t) => (t.category?.trim() || 'Uncategorized') === filterCategory);
     }
 
     if (filterUrgency) {
@@ -136,12 +186,16 @@ export function TasksPage() {
     });
 
     return list;
-  }, [tasks, sortBy, filterArea, filterUrgency, searchQuery, dateFrom, dateTo, isOverdueView]);
+  }, [tasks, sortBy, filterArea, filterCategory, filterUrgency, searchQuery, dateFrom, dateTo, isOverdueView]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
   const pendingCount = tasks?.filter((t) => t.status === 'Pending').length ?? 0;
+  const taskToEditFromQuery = useMemo(
+    () => tasks?.find((task) => task.id === editTaskId) ?? null,
+    [tasks, editTaskId],
+  );
 
   return (
     <motion.div
@@ -234,6 +288,18 @@ export function TasksPage() {
           </select>
 
           <select
+            value={filterCategory}
+            onChange={(e) => updateCategoryFilter(e.target.value)}
+            className="shrink-0 text-xs rounded-full py-1 pl-2.5 pr-6 border outline-none"
+            style={{ borderColor: filterCategory ? 'var(--primary-500)' : 'var(--color-border)', backgroundColor: filterCategory ? 'var(--primary-50)' : 'var(--color-surface)', color: filterCategory ? 'var(--primary-700)' : 'var(--color-text)' }}
+          >
+            <option value="">All Categories</option>
+            {categories.map((category) => (
+              <option key={category} value={category}>{category}</option>
+            ))}
+          </select>
+
+          <select
             value={filterUrgency}
             onChange={(e) => { setFilterUrgency(e.target.value); setPage(1); }}
             className="shrink-0 text-xs rounded-full py-1 pl-2.5 pr-6 border outline-none"
@@ -249,7 +315,11 @@ export function TasksPage() {
             value={isOverdueView ? 'overdue' : 'all'}
             onChange={(e) => {
               setPage(1);
-              navigate(e.target.value === 'overdue' ? '/tasks/overdue' : '/tasks');
+              const nextParams = new URLSearchParams(location.search);
+              navigate({
+                pathname: e.target.value === 'overdue' ? '/tasks/overdue' : '/tasks',
+                search: nextParams.toString() ? `?${nextParams.toString()}` : '',
+              });
             }}
             className="shrink-0 text-xs rounded-full py-1 pl-2.5 pr-6 border outline-none"
             style={{
@@ -285,16 +355,22 @@ export function TasksPage() {
             />
           </div>
 
-          {(filterArea || filterUrgency || searchQuery || dateFrom || dateTo || isOverdueView) && (
+          {(filterArea || filterCategory || filterUrgency || searchQuery || dateFrom || dateTo || isOverdueView) && (
             <button
               onClick={() => {
                 setFilterArea('');
+                setFilterCategory('');
                 setFilterUrgency('');
                 setSearchQuery('');
                 setDateFrom('');
                 setDateTo('');
                 setPage(1);
-                if (isOverdueView) navigate('/tasks');
+                const nextParams = new URLSearchParams(location.search);
+                nextParams.delete('category');
+                navigate({
+                  pathname: isOverdueView ? '/tasks' : location.pathname,
+                  search: nextParams.toString() ? `?${nextParams.toString()}` : '',
+                });
               }}
               className="shrink-0 text-xs font-medium px-2 py-1 rounded-full"
               style={{ color: 'var(--primary-600)' }}
@@ -407,6 +483,7 @@ export function TasksPage() {
           </div>
         </div>
       )}
+      {taskToEditFromQuery && <EditTaskModal task={taskToEditFromQuery} onClose={closeQueryEditModal} />}
     </motion.div>
   );
 }

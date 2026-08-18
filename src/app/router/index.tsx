@@ -18,6 +18,8 @@ import { CreateFlowPage } from '@/features/create/CreateFlowPage';
 import { CompletedTasksPage } from '@/features/tasks/CompletedTasksPage';
 import { NotesIdeasPage } from '@/features/tasks/NotesIdeasPage';
 import { ProfilePage } from '@/features/profile/ProfilePage';
+import { HealthPage } from '@/features/health/HealthPage';
+import { FinancePage } from '@/features/finance/FinancePage';
 import { ActivityPage } from '@/features/activity/ActivityPage';
 import { RecurringTasksPage } from '@/features/recurring/RecurringTasksPage';
 import { ProjectDetailPage } from '@/features/projects/ProjectDetailPage';
@@ -66,6 +68,8 @@ export const router = createBrowserRouter([
       { path: 'projects/:id', element: <ProjectDetailPage /> },
       { path: 'analytics', element: <AnalyticsPage /> },
       { path: 'daily-state', element: <DailyStatePage /> },
+      { path: 'health', element: <HealthPage /> },
+      { path: 'finance', element: <FinancePage /> },
       { path: 'profile', element: <ProfilePage /> },
       { path: 'activity', element: <ActivityPage /> },
       { path: 'bulk-upload', element: <BulkUploadPage /> },

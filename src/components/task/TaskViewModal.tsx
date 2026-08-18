@@ -164,7 +164,7 @@ function ImageCarousel({
   const showNext = () => setActiveIndex((index) => (index + 1) % images.length);
 
   return (
-    <Section title="Images">
+    <div className="space-y-2">
       <div className="overflow-hidden rounded-md border" style={{ borderColor: 'var(--color-border)' }}>
         <div className="relative flex min-h-[260px] items-center justify-center" style={{ backgroundColor: 'var(--color-muted)' }}>
           {activeImage.url ? (
@@ -276,7 +276,7 @@ function ImageCarousel({
           </div>
         )}
       </div>
-    </Section>
+    </div>
   );
 }
 

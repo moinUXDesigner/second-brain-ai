@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { dailyStateService } from '@/services/endpoints/dailyStateService';
-import { formatDateTime, today } from '@/utils/date';
+import { formatDateTime } from '@/utils/date';
+import { useTodayRollover } from '@/hooks/useTodayRollover';
 import { getEnergyEmoji, getFocusEmoji, getMoodEmoji } from '@/utils/wellbeing';
 import { useNavigate } from 'react-router-dom';
 
@@ -46,20 +47,11 @@ function MetricCard({
 
 export function WellbeingSnapshot() {
   const navigate = useNavigate();
-  const [currentDate, setCurrentDate] = useState(today());
+  const currentDate = useTodayRollover();
   const [state, setState] = useState<Snapshot>(DEFAULT_SNAPSHOT);
   const [hasTodayState, setHasTodayState] = useState(false);
   const [lastUpdatedAt, setLastUpdatedAt] = useState('');
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      const nextDate = today();
-      setCurrentDate((prev) => (prev === nextDate ? prev : nextDate));
-    }, 60000);
-
-    return () => window.clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     let active = true;

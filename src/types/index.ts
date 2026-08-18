@@ -177,6 +177,38 @@ export interface DailyState {
   userId?: string;
 }
 
+export type FinanceBucket = 'asset' | 'loan' | 'receivable' | 'handloan';
+
+export interface FinanceEntry {
+  id: string;
+  bucket: FinanceBucket;
+  title: string;
+  amount: number;
+  counterparty?: string;
+  dueDate?: string;
+  status: string;
+  notes?: string;
+  zakatEligible: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface FinanceSummary {
+  totals: Record<FinanceBucket, number>;
+  counts: Record<FinanceBucket, number>;
+  netPosition: number;
+  zakatBase: number;
+  zakatEstimate: number;
+  activeEntryCount: number;
+  entryCount: number;
+}
+
+export type FinanceEntryPayload = Omit<FinanceEntry, 'id' | 'createdAt' | 'updatedAt'>;
+
+export type FinanceListResponse = ApiResponse<FinanceEntry[]> & {
+  total: number;
+};
+
 export type AuditAction =
   | 'CREATE_TASK'
   | 'UPDATE_TASK'

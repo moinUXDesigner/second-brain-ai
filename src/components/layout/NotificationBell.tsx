@@ -40,12 +40,25 @@ export function NotificationBell() {
   const items = data?.items ?? [];
   const unreadCount = data?.unreadCount ?? 0;
 
-  const openTask = (notification: AppNotification) => {
+  const markNotificationRead = (notification: AppNotification) => {
     if (!notification.readAt) {
       markRead.mutate(notification.id);
     }
+  };
+
+  const openTask = (notification: AppNotification) => {
+    markNotificationRead(notification);
     setOpen(false);
     navigate('/tasks');
+  };
+
+  const rescheduleTask = (notification: AppNotification) => {
+    const taskId = notification.data.taskId;
+    if (!taskId) return;
+
+    markNotificationRead(notification);
+    setOpen(false);
+    navigate(`/tasks?edit=${encodeURIComponent(taskId)}`);
   };
 
   return (
@@ -100,10 +113,9 @@ export function NotificationBell() {
               </div>
             ) : (
               items.map((notification) => (
-                <button
+                <div
                   key={notification.id}
-                  onClick={() => openTask(notification)}
-                  className="block w-full border-b px-4 py-3 text-left transition-colors hover:bg-black/[.025] dark:hover:bg-white/[.035]"
+                  className="border-b px-4 py-3 transition-colors hover:bg-black/[.025] dark:hover:bg-white/[.035]"
                   style={{ borderColor: 'var(--color-border)' }}
                 >
                   <div className="flex items-start gap-3">
@@ -112,18 +124,35 @@ export function NotificationBell() {
                       style={{ backgroundColor: notification.readAt ? 'transparent' : 'var(--primary-600)' }}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                      <button
+                        type="button"
+                        onClick={() => openTask(notification)}
+                        className="block w-full text-left text-sm font-medium"
+                        style={{ color: 'var(--color-text)' }}
+                      >
                         {notification.data.title || 'Reminder'}
-                      </span>
+                      </button>
                       <span className="mt-1 block text-xs leading-5" style={{ color: 'var(--color-text-secondary)' }}>
                         {notification.data.message || notification.data.taskTitle || 'Task reminder'}
                       </span>
-                      <span className="mt-1 block text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
-                        {formatNotificationTime(notification.createdAt)}
+                      <span className="mt-2 flex items-center justify-between gap-2">
+                        <span className="block text-[11px]" style={{ color: 'var(--color-text-secondary)' }}>
+                          {formatNotificationTime(notification.createdAt)}
+                        </span>
+                        {notification.data.kind === 'scheduled_today' && notification.data.taskId && (
+                          <button
+                            type="button"
+                            onClick={() => rescheduleTask(notification)}
+                            className="rounded-full px-2 py-1 text-[11px] font-semibold transition-colors"
+                            style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-700)' }}
+                          >
+                            Reschedule
+                          </button>
+                        )}
                       </span>
                     </span>
                   </div>
-                </button>
+                </div>
               ))
             )}
           </div>

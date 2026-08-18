@@ -3,7 +3,8 @@ import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { dailyStateService } from '@/services/endpoints/dailyStateService';
-import { formatDateTime, today } from '@/utils/date';
+import { formatDateTime } from '@/utils/date';
+import { useTodayRollover } from '@/hooks/useTodayRollover';
 import { getEnergyEmoji, getFocusEmoji, getMoodEmoji } from '@/utils/wellbeing';
 import toast from 'react-hot-toast';
 
@@ -46,7 +47,7 @@ function getDefaultState() {
 }
 
 export function DailyStatePage() {
-  const [currentDate, setCurrentDate] = useState(today());
+  const currentDate = useTodayRollover();
   const [energy, setEnergy] = useState(5);
   const [mood, setMood] = useState(5);
   const [focus, setFocus] = useState(5);
@@ -56,15 +57,6 @@ export function DailyStatePage() {
   const [updatedAt, setUpdatedAt] = useState('');
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    const interval = window.setInterval(() => {
-      const nextDate = today();
-      setCurrentDate((prev) => (prev === nextDate ? prev : nextDate));
-    }, 60000);
-
-    return () => window.clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     let active = true;

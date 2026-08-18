@@ -501,10 +501,13 @@ export function Charts() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2">
               {categoryData.map((item, index) => (
-                <div
+                <button
                   key={item.name}
-                  className="flex items-center justify-between rounded-lg px-3 py-2"
+                  type="button"
+                  onClick={() => navigate(`/tasks?category=${encodeURIComponent(item.name)}`)}
+                  className="flex items-center justify-between rounded-lg px-3 py-2 text-left transition-colors hover:bg-black/[.035] dark:hover:bg-white/[.045]"
                   style={{ backgroundColor: 'var(--color-muted)' }}
+                  aria-label={`View ${item.name} tasks`}
                 >
                   <div className="flex items-center gap-2 min-w-0">
                     <span
@@ -522,7 +525,7 @@ export function Charts() {
                   <span className="text-xs font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
                     {item.value} · {item.percent}%
                   </span>
-                </div>
+                </button>
               ))}
             </div>
           </>

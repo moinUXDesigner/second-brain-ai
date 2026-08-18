@@ -8,6 +8,7 @@ use App\Models\TodayView;
 use App\Services\ClassificationService;
 use App\Services\AIService;
 use App\Services\ProjectPriorityService;
+use App\Services\ReminderService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Carbon;
@@ -330,10 +331,12 @@ class TaskController extends Controller
         return response()->json(['success' => true, 'data' => $this->format($task)]);
     }
 
-    public function scheduleToday(Task $task): JsonResponse
+    public function scheduleToday(Request $request, Task $task, ReminderService $reminders): JsonResponse
     {
         $task->update(['due_date' => now()->toDateString()]);
         $this->projectPriority->syncById($task->project_id);
+        $task->refresh();
+        $reminders->notifyScheduledToday($request->user(), $task);
 
         return response()->json(['success' => true, 'data' => $this->format($task)]);
     }

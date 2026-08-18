@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
@@ -15,4 +16,9 @@ class User extends Authenticatable
     protected $hidden = ['password', 'remember_token'];
 
     protected $casts = ['password' => 'hashed'];
+
+    public function financeEntries(): HasMany
+    {
+        return $this->hasMany(FinanceEntry::class);
+    }
 }

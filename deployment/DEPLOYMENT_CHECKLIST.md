@@ -58,6 +58,22 @@
 3. Grant all privileges
 4. Update backend .env with credentials
 
+## Hostinger Mailbox / SMTP Verification
+- [ ] Create or confirm the sender mailbox in Hostinger hPanel.
+- [ ] Confirm SMTP host, port, username, and password from hPanel.
+- [ ] Add or update GitHub Actions secrets used by `.github/workflows/deploy.yml`:
+  - `MAIL_HOST`
+  - `MAIL_PORT`
+  - `MAIL_USERNAME`
+  - `MAIL_PASSWORD`
+  - `MAIL_FROM_ADDRESS`
+- [ ] Verify deployed backend `.env` contains:
+  - `MAIL_MAILER=smtp`
+  - `MAIL_ENCRYPTION=tls`
+  - `MAIL_FROM_NAME="Second Brain AI"`
+- [ ] Send a forgot-password email in production and confirm delivery to inbox, spam, and Laravel logs.
+- [ ] If delivery fails, verify Hostinger mailbox quota, SMTP password, SPF/DKIM records, and `storage/logs/laravel.log`.
+
 ## 🧪 Testing
 - Frontend: https://secondbrain.khajamynuddin.com
 - API Health: https://api-secondbrain.khajamynuddin.com/api/health

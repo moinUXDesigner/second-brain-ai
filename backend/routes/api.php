@@ -10,6 +10,7 @@ use App\Http\Controllers\InputController;
 use App\Http\Controllers\AuditController;
 use App\Http\Controllers\ImportController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\FinanceEntryController;
 
 // Auth (public)
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -69,6 +70,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // Profile
     Route::get('/profile',  [ProfileController::class, 'show']);
     Route::post('/profile', [ProfileController::class, 'save']);
+
+    // Finance
+    Route::get('/finance/summary', [FinanceEntryController::class, 'summary']);
+    Route::get('/finance', [FinanceEntryController::class, 'index']);
+    Route::post('/finance', [FinanceEntryController::class, 'store']);
+    Route::put('/finance/{financeEntry}', [FinanceEntryController::class, 'update']);
+    Route::delete('/finance/{financeEntry}', [FinanceEntryController::class, 'destroy']);
 
     // AI / Input
     Route::post('/ai/analyze',     [InputController::class, 'analyze']);
