@@ -17,6 +17,11 @@ export const authService = {
     return data;
   },
 
+  async updateAvatar(avatarUrl: string): Promise<ApiResponse<User>> {
+    const { data } = await apiClient.post('/auth/profile/avatar', { avatarUrl });
+    return data;
+  },
+
   async logout(): Promise<void> {
     await apiClient.post('/auth/logout');
   },

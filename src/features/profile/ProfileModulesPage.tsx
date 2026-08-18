@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { authService } from '@/services/endpoints/authService';
 import { profileService } from '@/services/endpoints/profileService';
 import { useAuthStore } from '@/app/store/authStore';
 import type { Profile } from '@/types';
@@ -52,6 +53,8 @@ const WORK_TYPES = ['Full-Time', 'Part-Time', 'Freelance', 'Student', 'Unemploye
 const ROUTINE_TYPES = ['Morning Person', 'Night Owl', 'Flexible', 'Shift-Based'];
 const FINANCIAL_STATUSES = ['Stable', 'Growing', 'Tight', 'Critical'];
 const HEALTH_STATUSES = ['Excellent', 'Good', 'Fair', 'Poor'];
+const MAX_PROFILE_PHOTO_BYTES = 4 * 1024 * 1024;
+const AVATAR_IMAGE_SIZE = 360;
 
 function isProfileSection(section?: string): section is ProfileSection {
   return PROFILE_SECTIONS.includes(section as ProfileSection);
@@ -68,6 +71,44 @@ function formatYear(value?: string) {
   if (Number.isNaN(date.getTime())) return 'Not available';
 
   return date.getFullYear().toString();
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(new Error('Could not read the selected image.'));
+    reader.readAsDataURL(file);
+  });
+}
+
+function loadImage(source: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Could not load the selected image.'));
+    image.src = source;
+  });
+}
+
+async function prepareAvatarDataUrl(file: File): Promise<string> {
+  const source = await readFileAsDataUrl(file);
+  const image = await loadImage(source);
+  const canvas = document.createElement('canvas');
+  const size = Math.min(image.naturalWidth || image.width, image.naturalHeight || image.height);
+  const sourceX = ((image.naturalWidth || image.width) - size) / 2;
+  const sourceY = ((image.naturalHeight || image.height) - size) / 2;
+  const context = canvas.getContext('2d');
+
+  if (!context) {
+    throw new Error('Could not prepare the selected image.');
+  }
+
+  canvas.width = AVATAR_IMAGE_SIZE;
+  canvas.height = AVATAR_IMAGE_SIZE;
+  context.drawImage(image, sourceX, sourceY, size, size, 0, 0, AVATAR_IMAGE_SIZE, AVATAR_IMAGE_SIZE);
+
+  return canvas.toDataURL('image/jpeg', 0.86);
 }
 
 function SectionCard({
@@ -211,14 +252,22 @@ function ProfileTabs({ activeSection }: { activeSection: ProfileSection }) {
 function ProfileHero({
   name,
   initials,
+  avatarUrl,
   workType,
   roleLabel,
+  uploadingPhoto,
+  onPhotoSelected,
 }: {
   name: string;
   initials: string;
+  avatarUrl?: string;
   workType: string;
   roleLabel: string;
+  uploadingPhoto: boolean;
+  onPhotoSelected: (event: ChangeEvent<HTMLInputElement>) => void;
 }) {
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
   return (
     <Card className="overflow-hidden p-0">
       <div
@@ -239,12 +288,44 @@ function ProfileHero({
 
         <div className="relative shrink-0">
           <div
-            className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white text-4xl font-black text-white shadow-xl sm:h-36 sm:w-36"
+            className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full border-4 border-white text-4xl font-black text-white shadow-xl sm:h-36 sm:w-36"
             style={{ backgroundColor: 'var(--primary-600)' }}
           >
-            {initials}
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={`${name || 'Profile'} avatar`} className="h-full w-full object-cover" />
+            ) : (
+              initials
+            )}
           </div>
-          <span className="absolute bottom-4 right-1 h-5 w-5 rounded-full border-4 border-white bg-green-500" />
+          <span className="absolute right-1 top-4 h-5 w-5 rounded-full border-4 border-white bg-green-500" />
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            className="sr-only"
+            onChange={onPhotoSelected}
+          />
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploadingPhoto}
+            className="absolute bottom-2 right-1 flex h-10 w-10 items-center justify-center rounded-full border-4 border-white shadow-lg transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-70"
+            style={{ backgroundColor: 'var(--primary-600)', color: '#fff' }}
+            aria-label="Upload profile photo"
+            title="Upload profile photo"
+          >
+            {uploadingPhoto ? (
+              <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+            ) : (
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h2.2a1 1 0 00.8-.4l1.2-1.6A1 1 0 0110 4h4a1 1 0 01.8.4L16 6a1 1 0 00.8.4H19a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            )}
+          </button>
         </div>
 
         <div className="relative min-w-0 flex-1">
@@ -549,10 +630,13 @@ export function ProfileModulesPage() {
   const { section } = useParams();
   const navigate = useNavigate();
   const authUser = useAuthStore((s) => s.user);
+  const authToken = useAuthStore((s) => s.token);
+  const setUser = useAuthStore((s) => s.setUser);
   const clearAuth = useAuthStore((s) => s.clearAuth);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [savedProfile, setSavedProfile] = useState<Profile | null>(null);
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
 
@@ -634,6 +718,36 @@ export function ProfileModulesPage() {
     }
   };
 
+  const handlePhotoSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please select an image file.');
+      return;
+    }
+
+    if (file.size > MAX_PROFILE_PHOTO_BYTES) {
+      toast.error('Profile photo must be 4 MB or smaller.');
+      return;
+    }
+
+    setUploadingPhoto(true);
+    try {
+      const avatarUrl = await prepareAvatarDataUrl(file);
+      const res = await authService.updateAvatar(avatarUrl);
+      setUser(res.data, authToken ?? localStorage.getItem('auth_token') ?? undefined);
+      toast.success('Profile photo updated');
+    } catch (err) {
+      console.error('Profile photo upload error:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to update profile photo');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   if (!activeSection) {
     return <Navigate to="/profile/basic" replace />;
   }
@@ -672,8 +786,11 @@ export function ProfileModulesPage() {
       <ProfileHero
         name={displayName}
         initials={initials}
+        avatarUrl={authUser?.avatarUrl}
         workType={profile.workType}
         roleLabel={roleLabel}
+        uploadingPhoto={uploadingPhoto}
+        onPhotoSelected={handlePhotoSelected}
       />
 
       <ProfileTabs activeSection={activeSection} />

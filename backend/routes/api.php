@@ -22,6 +22,7 @@ Route::post('/auth/reset-password', [AuthController::class, 'resetPassword']);
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/auth/profile', [AuthController::class, 'profile']);
+    Route::post('/auth/profile/avatar', [AuthController::class, 'updateAvatar']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     // Import from Google Sheets

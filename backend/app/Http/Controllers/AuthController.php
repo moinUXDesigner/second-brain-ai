@@ -59,6 +59,74 @@ class AuthController extends Controller
         ]);
     }
 
+    public function updateAvatar(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'avatar_url' => 'required|string|max:3000000',
+        ]);
+
+        if (! preg_match('/^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+\/=\r\n]+)$/', $data['avatar_url'], $matches)) {
+            throw ValidationException::withMessages([
+                'avatarUrl' => ['Please upload a PNG, JPG, or WebP image.'],
+            ]);
+        }
+
+        $imageBytes = base64_decode($matches[2], true);
+        if ($imageBytes === false) {
+            throw ValidationException::withMessages([
+                'avatarUrl' => ['The selected image could not be processed.'],
+            ]);
+        }
+
+        if (@getimagesizefromstring($imageBytes) === false) {
+            throw ValidationException::withMessages([
+                'avatarUrl' => ['The selected file is not a valid image.'],
+            ]);
+        }
+
+        if (strlen($imageBytes) > 1500000) {
+            throw ValidationException::withMessages([
+                'avatarUrl' => ['Profile photo is too large after processing.'],
+            ]);
+        }
+
+        $extension = strtolower($matches[1]) === 'jpeg' ? 'jpg' : strtolower($matches[1]);
+        $directory = public_path('uploads/profile-avatars');
+
+        if (! is_dir($directory) && ! mkdir($directory, 0755, true) && ! is_dir($directory)) {
+            throw ValidationException::withMessages([
+                'avatarUrl' => ['Profile photo storage is not available.'],
+            ]);
+        }
+
+        $user = $request->user();
+        $previousPath = parse_url($user->avatar_url ?? '', PHP_URL_PATH);
+        $filename = 'user-' . $user->id . '-' . Str::uuid() . '.' . $extension;
+        $path = $directory . DIRECTORY_SEPARATOR . $filename;
+
+        if (file_put_contents($path, $imageBytes) === false) {
+            throw ValidationException::withMessages([
+                'avatarUrl' => ['Profile photo could not be saved.'],
+            ]);
+        }
+
+        if ($previousPath && str_starts_with($previousPath, '/uploads/profile-avatars/')) {
+            $previousLocalPath = public_path(ltrim($previousPath, '/'));
+            if (is_file($previousLocalPath)) {
+                @unlink($previousLocalPath);
+            }
+        }
+
+        $user->avatar_url = url('uploads/profile-avatars/' . $filename);
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $this->formatUser($user),
+            'message' => 'Profile photo updated',
+        ]);
+    }
+
     public function logout(Request $request): JsonResponse
     {
         $request->user()->currentAccessToken()->delete();
