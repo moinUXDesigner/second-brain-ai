@@ -9,13 +9,27 @@ import { TableSkeleton } from '@/components/ui/Skeleton';
 import { taskService } from '@/services/endpoints/taskService';
 import { useQueryClient } from '@tanstack/react-query';
 import { QUERY_KEYS } from '@/constants';
-import { parseLocalDate } from '@/utils/dateFormat';
+import { formatDate, parseLocalDate } from '@/utils/dateFormat';
 import { isTaskOverdue } from './utils/taskStatus';
 import toast from 'react-hot-toast';
 
 type SortField = 'newest' | 'oldest' | 'priority' | 'impact';
 
 const PAGE_SIZE_OPTIONS = [5, 10, 25, 50, 100];
+
+function escapeHtml(value: string | number | null | undefined) {
+  return String(value ?? '-')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function printableValue(value: string | number | null | undefined) {
+  if (value === null || value === undefined || value === '') return '-';
+  return value;
+}
 
 export function TasksPage() {
   const navigate = useNavigate();
@@ -106,6 +120,117 @@ export function TasksPage() {
       },
       { replace: true },
     );
+  };
+
+  const handlePrintOverdueTasks = () => {
+    if (filtered.length === 0) {
+      toast.error('No overdue tasks to print.');
+      return;
+    }
+
+    const rows = filtered.map((task, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td>
+          <strong>${escapeHtml(task.title)}</strong>
+          ${task.notes ? `<div class="notes">${escapeHtml(task.notes)}</div>` : ''}
+        </td>
+        <td>${escapeHtml(printableValue(task.area))}</td>
+        <td>${escapeHtml(printableValue(task.category))}</td>
+        <td>${escapeHtml(printableValue(task.urgency))}</td>
+        <td>${escapeHtml(printableValue(task.priority))}</td>
+        <td>${escapeHtml(task.dueDate ? formatDate(task.dueDate) : '-')}</td>
+        <td>${escapeHtml(task.deadlineDate ? formatDate(task.deadlineDate) : '-')}</td>
+        <td>${escapeHtml(printableValue(task.projectName))}</td>
+      </tr>
+    `).join('');
+
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=1200,height=800');
+
+    if (!printWindow) {
+      toast.error('Please allow popups to print overdue tasks.');
+      return;
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Overdue Tasks</title>
+          <style>
+            * { box-sizing: border-box; }
+            body {
+              color: #111827;
+              font-family: Arial, sans-serif;
+              margin: 28px;
+            }
+            h1 {
+              font-size: 24px;
+              margin: 0 0 4px;
+            }
+            p {
+              color: #4b5563;
+              font-size: 12px;
+              margin: 0 0 18px;
+            }
+            table {
+              border-collapse: collapse;
+              width: 100%;
+            }
+            th,
+            td {
+              border: 1px solid #d1d5db;
+              font-size: 11px;
+              padding: 8px;
+              text-align: left;
+              vertical-align: top;
+            }
+            th {
+              background: #f3f4f6;
+              font-size: 10px;
+              letter-spacing: .04em;
+              text-transform: uppercase;
+            }
+            .notes {
+              color: #4b5563;
+              font-size: 10px;
+              margin-top: 4px;
+              white-space: pre-wrap;
+            }
+            @page { margin: 16mm; }
+            @media print {
+              body { margin: 0; }
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Overdue Tasks</h1>
+          <p>${filtered.length} task${filtered.length === 1 ? '' : 's'} exported on ${escapeHtml(formatDate(new Date()))}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Task</th>
+                <th>Area</th>
+                <th>Category</th>
+                <th>Urgency</th>
+                <th>Priority</th>
+                <th>Due Date</th>
+                <th>Deadline</th>
+                <th>Project</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+          <script>
+            window.addEventListener('load', () => {
+              window.print();
+            });
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const filtered = useMemo(() => {
@@ -214,6 +339,20 @@ export function TasksPage() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          {isOverdueView && (
+            <button
+              onClick={handlePrintOverdueTasks}
+              disabled={filtered.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+              style={{ backgroundColor: 'var(--warning-50, #fffbeb)', color: 'var(--warning-700, #b45309)' }}
+              title="Print overdue tasks"
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z" />
+              </svg>
+              Print Overdue
+            </button>
+          )}
           {missingDueDateCount > 0 && (
             <button
               onClick={handleAssignDueDates}
