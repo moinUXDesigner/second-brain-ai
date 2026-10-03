@@ -12,6 +12,9 @@
     <title>Second Brain AI</title>
     <!-- Kept inline so a missing JS/CSS bundle cannot leave an empty page. -->
     <style>
+      body { margin: 0; }
+      html:not(.app-ready), html:not(.app-ready) body { height: 100%; overflow: hidden; }
+      html:not(.app-ready) #root { visibility: hidden; max-height: 100vh; overflow: hidden; }
       #app-startup { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; background: #f9fafb; color: #111827; font-family: system-ui, sans-serif; }
       #app-startup[hidden] { display: none; }
       #app-startup .startup-card { width: 100%; max-width: 360px; text-align: center; }
@@ -65,7 +68,20 @@
             message.textContent = 'Starting the latest version. Almost ready…';
           }
         } catch (_) {}
+        var mounted = false;
+        var polling;
+        function revealWhenReady() {
+          var styled = window.getComputedStyle(document.documentElement).getPropertyValue('--app-css-ready').trim() === '1';
+          if (!mounted || !styled) return;
+          clearTimeout(timer);
+          clearInterval(polling);
+          document.documentElement.classList.add('app-ready');
+          screen.hidden = true;
+          screen.setAttribute('aria-busy', 'false');
+          try { sessionStorage.removeItem('pwa-updating'); } catch (_) {}
+        }
         var timer = setTimeout(function () {
+          clearInterval(polling);
           title.textContent = 'The app couldn’t finish loading';
           message.textContent = 'Check your connection and try again. Your saved data has not been cleared.';
           progress.hidden = true;
@@ -74,11 +90,16 @@
         }, 20000);
         retry.addEventListener('click', function () { window.location.reload(); });
         window.addEventListener('app-ready', function () {
-          clearTimeout(timer);
-          screen.hidden = true;
-          screen.setAttribute('aria-busy', 'false');
-          try { sessionStorage.removeItem('pwa-updating'); } catch (_) {}
+          mounted = true;
+          revealWhenReady();
         }, { once: true });
+        // React can mount even when a stale or missing stylesheet was returned as HTML.
+        // The CSS marker confirms the actual application styles have been applied.
+        polling = setInterval(revealWhenReady, 100);
+        window.addEventListener('load', revealWhenReady, { once: true });
+        document.querySelectorAll('link[rel="stylesheet"]').forEach(function (link) {
+          link.addEventListener('load', revealWhenReady, { once: true });
+        });
       })();
     </script>
     <script type="module" src="./src/main.tsx"></script>

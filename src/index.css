@@ -4,6 +4,7 @@
 
 @layer base {
   :root {
+    --app-css-ready: 1;
     /* Default: Blue theme */
     --primary-50: #eff6ff;
     --primary-100: #dbeafe;

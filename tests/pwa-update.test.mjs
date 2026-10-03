@@ -80,7 +80,7 @@ test('first installation does not prompt; later waiting update does; cleanup rem
   assert.equal(prompts, 1);
 });
 
-function startup(updating = false) {
+function startup(updating = false, cssReady = true) {
   const html = readFileSync('index.html', 'utf8');
   const source = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map((match) => match[1]).find((code) => code.includes("getElementById('app-startup')"));
   const nodes = new Map(['app-startup', 'startup-title', 'startup-message', 'startup-progress', 'startup-retry'].map((id) => [id, {
@@ -90,15 +90,26 @@ function startup(updating = false) {
   }]));
   const events = {};
   let timeout;
+  let interval;
+  const classes = new Set();
+  const stylesheet = { addEventListener: (key, fn) => { events["css-" + key] = fn; } };
   let reloads = 0;
   const storage = new Map(updating ? [['pwa-updating', 'true']] : []);
   vm.runInNewContext(source, {
-    document: { getElementById: (id) => nodes.get(id) },
+    document: {
+      getElementById: (id) => nodes.get(id),
+      documentElement: { classList: { add: (name) => classes.add(name) } },
+      querySelectorAll: () => [stylesheet],
+    },
     sessionStorage: { getItem: (key) => storage.get(key), removeItem: (key) => storage.delete(key) },
     setTimeout: (fn) => { timeout = fn; return 1; }, clearTimeout: () => { timeout = undefined; },
-    window: { addEventListener: (key, fn) => { events[key] = fn; }, location: { reload: () => { reloads++; } } },
+    setInterval: (fn) => { interval = fn; return 2; }, clearInterval: () => { interval = undefined; },
+    window: {
+      addEventListener: (key, fn) => { events[key] = fn; }, location: { reload: () => { reloads++; } },
+      getComputedStyle: () => ({ getPropertyValue: () => cssReady ? '1' : '' }),
+    },
   });
-  return { nodes, events, storage, triggerTimeout: () => timeout?.(), reloads: () => reloads };
+  return { nodes, events, storage, classes, setCssReady: () => { cssReady = true; }, tick: () => interval?.(), triggerTimeout: () => timeout?.(), reloads: () => reloads };
 }
 
 test('restart keeps updating UI until React signals readiness', () => {
@@ -125,4 +136,31 @@ test('missing bundle gives recovery action rather than a blank page or reload lo
   // Slow bundles may still load successfully after the timeout.
   app.events['app-ready']();
   assert.equal(app.nodes.get('app-startup').hidden, true);
+});
+
+
+test('React mounting without CSS never exposes giant unstyled icons', () => {
+  const app = startup(true, false);
+  app.events['app-ready']();
+  app.tick();
+  assert.equal(app.nodes.get('app-startup').hidden, false);
+  assert.equal(app.classes.has('app-ready'), false);
+  assert.equal(app.storage.has('pwa-updating'), true);
+  app.triggerTimeout();
+  assert.equal(app.nodes.get('startup-retry').hidden, false);
+  assert.equal(app.nodes.get('app-startup').hidden, false);
+  app.setCssReady();
+  app.events['css-load']();
+  assert.equal(app.nodes.get('app-startup').hidden, true);
+  assert.equal(app.classes.has('app-ready'), true);
+});
+
+test('late CSS reveals mounted app, while CSS alone cannot reveal an unmounted app', () => {
+  const app = startup(false, false);
+  app.setCssReady();
+  app.events['css-load']();
+  assert.equal(app.nodes.get('app-startup').hidden, false);
+  app.events['app-ready']();
+  assert.equal(app.nodes.get('app-startup').hidden, true);
+  assert.equal(app.classes.has('app-ready'), true);
 });

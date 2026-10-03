@@ -6,6 +6,11 @@ on:
       - master
   workflow_dispatch:
 
+# Serialize releases so one deployment cannot remove another release's files.
+concurrency:
+  group: secondbrain-production
+  cancel-in-progress: false
+
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -108,7 +113,15 @@ jobs:
       - name: Deploy Frontend via rsync
         run: |
           echo "🚀 Deploying frontend to secondbrain.khajamynuddin.com..."
-          rsync -avz --delete \
+          # Upload immutable assets first. Keep previous hashes for installed clients
+          # and older service workers that may still be loading a previous release.
+          rsync -avz \
+            -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no" \
+            ./dist/assets/ \
+            ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/u484303972/domains/khajamynuddin.com/public_html/secondbrain/assets/
+          rsync -avz --delete-delay --delay-updates \
+            --exclude='/assets/' \
+            --filter='P /workbox-*.js' \
             -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=no" \
             ./dist/ \
             ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }}:/home/u484303972/domains/khajamynuddin.com/public_html/secondbrain/
