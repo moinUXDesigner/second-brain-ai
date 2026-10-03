@@ -132,6 +132,11 @@ class ReminderService
             }
 
             $user->notify(new TaskReminderNotification($task, $kind, $title, $message));
+            app(PushService::class)->enqueue($user, [
+                'title' => $title, 'message' => $message,
+                'url' => '/tasks?edit='.urlencode((string) $task->id),
+                'tag' => 'reminder-'.$task->id.'-'.$kind.'-'.$key,
+            ]);
             return true;
         });
     }

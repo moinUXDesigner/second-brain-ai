@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { removeBrowserPush } from '@/lib/browserPush';
 import type { User, Role } from '@/types';
 
 interface AuthState {
@@ -26,6 +27,7 @@ export const useAuthStore = create<AuthState>()(
           token: token ?? null,
         }),
       clearAuth: () => {
+        void removeBrowserPush().catch(() => { /* Provider expiry cleanup will remove stale subscriptions. */ });
         localStorage.removeItem('auth_token');
         set({ user: null, role: null, isAuthenticated: false, token: null });
       },

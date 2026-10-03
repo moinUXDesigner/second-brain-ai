@@ -23,6 +23,8 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
-    await apiClient.post('/auth/logout');
+    const registration = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : undefined;
+    const subscription = await registration?.pushManager?.getSubscription();
+    await apiClient.post('/auth/logout', { push_endpoint: subscription?.endpoint });
   },
 };

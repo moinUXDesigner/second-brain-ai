@@ -6,6 +6,7 @@ import {
   useMarkNotificationRead,
   useNotifications,
 } from '@/hooks/useNotifications';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import type { AppNotification } from '@/types';
 
 function formatNotificationTime(value?: string) {
@@ -16,6 +17,7 @@ function formatNotificationTime(value?: string) {
 }
 
 export function NotificationBell() {
+  const push = usePushNotifications();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
@@ -68,6 +70,7 @@ export function NotificationBell() {
         className="relative rounded-md p-2 transition-colors hover:bg-black/5 dark:hover:bg-white/5"
         style={{ color: 'var(--color-text-secondary)' }}
         aria-label="Notifications"
+        aria-expanded={open}
         title="Notifications"
       >
         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -106,6 +109,22 @@ export function NotificationBell() {
             </div>
           </div>
 
+          <div className="border-b px-4 py-3 text-xs" style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-secondary)' }}>
+            <div className="flex items-center justify-between gap-2">
+              <span>Browser push {push.enabled ? 'enabled' : 'disabled'}</span>
+              {push.supported && push.configured && (
+                <button type="button" className="font-medium disabled:opacity-50" style={{ color: 'var(--primary-600)' }} disabled={push.busy} onClick={push.toggle}>
+                  {push.busy ? 'Please wait…' : push.enabled ? 'Disable' : 'Enable push'}
+                </button>
+              )}
+            </div>
+            {!push.supported && <p className="mt-2">Push needs a supported browser and HTTPS. On iPhone or iPad, install the app on your Home Screen first.</p>}
+            {push.supported && push.loading && !push.message && <p className="mt-2">Loading push settings…</p>}
+            {push.supported && push.configured === false && <p className="mt-2">Push notifications have not been configured on the server.</p>}
+            {push.permission === 'denied' && <p className="mt-2">Allow notifications in your browser site settings to enable push.</p>}
+            {push.enabled && <button type="button" className="mt-2 font-medium disabled:opacity-50" disabled={push.busy} onClick={push.test} style={{ color: 'var(--primary-600)' }}>Send test notification</button>}
+            {push.message && <p role="status" className="mt-2">{push.message}</p>}
+          </div>
           <div className="max-h-96 overflow-y-auto">
             {items.length === 0 ? (
               <div className="px-4 py-8 text-center text-sm" style={{ color: 'var(--color-text-secondary)' }}>

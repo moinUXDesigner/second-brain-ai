@@ -12,6 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands([
         __DIR__.'/../app/Console/Commands',
     ])
+    ->withSchedule(function (\Illuminate\Console\Scheduling\Schedule $schedule) {
+        $schedule->command('reminders:check')->everyMinute()->withoutOverlapping();
+        $schedule->command('push:send')->everyMinute()->withoutOverlapping();
+    })
     ->withMiddleware(function (Middleware $middleware) {
         // Pure token-based API — no CSRF, no sessions
         $middleware->api(remove: [

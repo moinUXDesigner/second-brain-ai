@@ -230,3 +230,48 @@ CORS_ALLOWED_ORIGINS=https://yourusername.github.io
 | POST | /api/pipeline/today | Generate today view |
 | GET  | /api/audit-logs | Get audit logs |
 | POST | /api/audit-logs | Create audit log |
+
+
+## Browser push notifications
+
+Task reminders support standard Web Push, alongside the existing in-app notifications.
+No Firebase configuration is needed. Open the notification bell and choose **Enable push**;
+the browser asks for permission. **Disable** removes this browser subscription, and
+**Send test notification** queues a test for this device. Logging out unsubscribes the
+current browser; other devices remain subscribed.
+
+### Server setup
+
+1. Install dependencies (`cd backend && composer install`) and run `php artisan migrate`.
+2. Generate VAPID keys once: `php -r 'require "vendor/autoload.php"; print_r(\Minishlink\WebPush\VAPID::createVapidKeys());'`.
+3. Put the generated `publicKey` and `privateKey` into `VAPID_PUBLIC_KEY` and
+   `VAPID_PRIVATE_KEY` in `backend/.env`. Set `VAPID_SUBJECT` to your contact email
+   with a `mailto:` prefix. Keep the private key secret and retain the same key pair
+   across deployments. Key rotation requires users to disable and re-enable push.
+4. Rebuild and start the API and scheduler:
+   `docker compose up -d --build app mariadb nginx scheduler`.
+   For a native deployment, run `php artisan schedule:work` under a process supervisor,
+   or invoke `php artisan schedule:run` from cron every minute. Use one scheduler per
+   deployment; the current file-cache locks are local to a container.
+5. Run `npm run dev` or build and deploy the frontend. The existing PWA worker loads
+   `push-sw.js`; use the new worker after updating an already installed app.
+
+Both `reminders:check` and `push:send` run every minute, so the app need not be open.
+The durable outbox retries transient failures up to five attempts, discards messages
+older than an hour, and deletes expired browser subscriptions. The database reminder
+log prevents duplicate reminder creation. Delivery is best effort; OS settings and
+browser policies can delay or suppress notifications. Notification text includes task
+names, which can appear on lock screens. Existing reminders use the server timezone.
+
+Push requires HTTPS in production; localhost works for development. On iOS/iPadOS,
+install the site on the Home Screen before enabling notifications. Unsupported browsers,
+blocked permissions, and missing server keys are explained in the notification panel.
+
+Authenticated endpoints: `GET /api/push/config`, `POST /api/push/subscriptions`,
+`DELETE /api/push/subscriptions`, and `POST /api/push/test` (three requests per minute).
+Subscriptions are scoped to the signed-in user and outbound delivery accepts only known
+browser push provider hosts. New reminders go to every subscribed device; the test
+endpoint targets only its supplied browser endpoint.
+
+Validation: `npm run build`, `npm run test:push`, and `cd backend && vendor/bin/phpunit`.
+Backend tests use an isolated in-memory SQLite database and mocked push providers.

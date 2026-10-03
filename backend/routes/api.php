@@ -48,6 +48,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/tasks/assign-due-dates',  [TaskController::class, 'assignDueDates']);
     Route::post('/tasks/categorize-uncategorized', [TaskController::class, 'categorizeUncategorized']);
 
+    Route::get('/push/config', [\App\Http\Controllers\PushSubscriptionController::class, 'config']);
+    Route::post('/push/subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'store']);
+    Route::delete('/push/subscriptions', [\App\Http\Controllers\PushSubscriptionController::class, 'destroy']);
+    Route::post('/push/test', [\App\Http\Controllers\PushSubscriptionController::class, 'test'])->middleware('throttle:3,1');
+
     // Notifications
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::patch('/notifications/{id}/read', [NotificationController::class, 'markRead']);

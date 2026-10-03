@@ -12,6 +12,19 @@ services:
     networks:
       - second_brain
 
+  scheduler:
+    image: second-brain-app
+    restart: unless-stopped
+    working_dir: /var/www
+    env_file:
+      - ./backend/.env
+    command: ["php", "artisan", "schedule:work"]
+    depends_on:
+      - app
+      - mariadb
+    networks:
+      - second_brain
+
   nginx:
     image: nginx:alpine
     container_name: second_brain_nginx

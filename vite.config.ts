@@ -79,6 +79,7 @@ export default defineConfig(({ mode }) => {
       react(),
       VitePWA({
         registerType: 'prompt',
+        devOptions: { enabled: true },
         includeAssets: ['pwa-icon.svg'],
         manifest: {
           name: 'Second Brain AI',
@@ -110,6 +111,7 @@ export default defineConfig(({ mode }) => {
           ],
         },
         workbox: {
+          importScripts: ['/push-sw.js'],
           globPatterns: ['**/*.{js,css,html,svg,png,ico,woff2}'],
           navigateFallback: 'index.html',
           navigateFallbackDenylist: [/^\/gas/],

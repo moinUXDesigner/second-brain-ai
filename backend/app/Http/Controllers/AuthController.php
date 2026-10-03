@@ -129,6 +129,11 @@ class AuthController extends Controller
 
     public function logout(Request $request): JsonResponse
     {
+        $data = $request->validate(['push_endpoint' => 'nullable|string|max:2048']);
+        if (!empty($data['push_endpoint'])) {
+            \App\Models\PushSubscription::where('user_id', $request->user()->id)
+                ->where('endpoint_hash', hash('sha256', $data['push_endpoint']))->delete();
+        }
         $request->user()->currentAccessToken()->delete();
         return response()->json(['success' => true, 'message' => 'Logged out']);
     }
