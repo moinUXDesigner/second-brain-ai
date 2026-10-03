@@ -7,6 +7,7 @@ import { PwaUpdatePrompt } from './components/pwa/PwaUpdatePrompt';
 
 function ThemeInit() {
   useEffect(() => {
+    window.dispatchEvent(new Event('app-ready'));
     const theme = localStorage.getItem('theme');
     if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
       document.documentElement.classList.add('dark');

@@ -10,6 +10,22 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="SecondBrain" />
     <title>Second Brain AI</title>
+    <!-- Kept inline so a missing JS/CSS bundle cannot leave an empty page. -->
+    <style>
+      #app-startup { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; padding: 24px; background: #f9fafb; color: #111827; font-family: system-ui, sans-serif; }
+      #app-startup[hidden] { display: none; }
+      #app-startup .startup-card { width: 100%; max-width: 360px; text-align: center; }
+      #app-startup .startup-logo { display: grid; place-items: center; margin: 0 auto 24px; width: 64px; height: 64px; border-radius: 18px; background: #dbeafe; color: #2563eb; font-size: 22px; font-weight: 700; }
+      #app-startup h1 { font-size: 22px; margin: 0 0 10px; }
+      #app-startup p { font-size: 14px; line-height: 1.6; color: #6b7280; }
+      .app-loading-track { overflow: hidden; height: 5px; border-radius: 999px; background: #dbeafe; }
+      .app-loading-track span { display: block; height: 100%; width: 40%; border-radius: inherit; background: #2563eb; animation: app-loading-slide 1.4s ease-in-out infinite; }
+      #app-startup button { margin-top: 20px; border: 0; border-radius: 8px; padding: 10px 20px; background: #2563eb; color: white; font: inherit; cursor: pointer; }
+      #app-startup button[hidden], #app-startup .app-loading-track[hidden] { display: none; }
+      @keyframes app-loading-slide { from { transform: translateX(-100%); } to { transform: translateX(350%); } }
+      @media (prefers-reduced-motion: reduce) { .app-loading-track span { animation: none; width: 100%; opacity: .65; } }
+      @media (prefers-color-scheme: dark) { #app-startup { background: #111827; color: #f9fafb; } #app-startup p { color: #9ca3af; } }
+    </style>
     <!-- GitHub Pages SPA redirect handler -->
     <script>
       (function () {
@@ -26,7 +42,45 @@
     </script>
   </head>
   <body>
+    <div id="app-startup" role="status" aria-live="polite" aria-busy="true">
+      <div class="startup-card">
+        <div class="startup-logo" aria-hidden="true">SB</div>
+        <h1 id="startup-title">Loading Second Brain AI</h1>
+        <p id="startup-message">Getting your app ready…</p>
+        <div id="startup-progress" class="app-loading-track" role="progressbar" aria-label="App loading"><span></span></div>
+        <button id="startup-retry" type="button" hidden>Try again</button>
+      </div>
+    </div>
     <div id="root"></div>
+    <script>
+      (function () {
+        var screen = document.getElementById('app-startup');
+        var title = document.getElementById('startup-title');
+        var message = document.getElementById('startup-message');
+        var progress = document.getElementById('startup-progress');
+        var retry = document.getElementById('startup-retry');
+        try {
+          if (sessionStorage.getItem('pwa-updating') === 'true') {
+            title.textContent = 'Updating your app';
+            message.textContent = 'Starting the latest version. Almost ready…';
+          }
+        } catch (_) {}
+        var timer = setTimeout(function () {
+          title.textContent = 'The app couldn’t finish loading';
+          message.textContent = 'Check your connection and try again. Your saved data has not been cleared.';
+          progress.hidden = true;
+          screen.setAttribute('aria-busy', 'false');
+          retry.hidden = false;
+        }, 20000);
+        retry.addEventListener('click', function () { window.location.reload(); });
+        window.addEventListener('app-ready', function () {
+          clearTimeout(timer);
+          screen.hidden = true;
+          screen.setAttribute('aria-busy', 'false');
+          try { sessionStorage.removeItem('pwa-updating'); } catch (_) {}
+        }, { once: true });
+      })();
+    </script>
     <script type="module" src="./src/main.tsx"></script>
   </body>
 </html>
