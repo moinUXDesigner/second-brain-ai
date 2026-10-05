@@ -83,7 +83,7 @@ export function DailyStatePage() {
   };
 
   const adjustTime = (delta: number) => {
-    setAvailableTime((prev) => Math.max(15, Math.min(720, prev + delta)));
+    setAvailableTime((prev) => Math.max(0, Math.min(720, prev + delta)));
   };
 
   const sliders = [
@@ -127,7 +127,7 @@ export function DailyStatePage() {
         {sliders.map((s) => (
           <div key={s.label} className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
+              <label htmlFor="daily-state-notes" className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
                 {s.emoji} {s.label}
               </label>
               <span
@@ -239,10 +239,15 @@ export function DailyStatePage() {
       </Card>
 
       <Card className="space-y-3">
-        <label className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
-          Notes (optional)
+        <label htmlFor="daily-state-notes" className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
+          Notes for recommendations
         </label>
+        <p id="daily-state-notes-help" className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+          Tell us your goals, constraints, or how you feel. When provided, these notes guide AI task recommendations.
+        </p>
         <textarea
+          id="daily-state-notes"
+          aria-describedby="daily-state-notes-help"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Any thoughts about today..."

@@ -9,7 +9,7 @@ import { useProjects } from '@/hooks/useProjects';
 import { useAudit } from '@/hooks/useAudit';
 import { Button } from '@/components/ui/Button';
 import { taskService } from '@/services/endpoints/taskService';
-import { todayService } from '@/services/endpoints/todayService';
+import { todayService, type SmartViewMetadata } from '@/services/endpoints/todayService';
 import { dailyStateFormValues, useDailyState, useSaveDailyState } from '@/hooks/useDailyState';
 import { useTodayRollover } from '@/hooks/useTodayRollover';
 import { QUERY_KEYS } from '@/constants';
@@ -185,6 +185,8 @@ export function SmartViewPage() {
   const [mood, setMood] = useState(5);
   const [focus, setFocus] = useState(5);
   const [availableTime, setAvailableTime] = useState(120);
+  const [notes, setNotes] = useState('');
+  const [generationFeedback, setGenerationFeedback] = useState<{ date: string; meta: SmartViewMetadata } | null>(null);
   const [activityPreference, setActivityPreference] = useState<ActivityPreference>('Any');
 
   const dailyState = useDailyState(currentDate, showModal);
@@ -203,6 +205,7 @@ export function SmartViewPage() {
     setFocus(values.focus);
     setAvailableTime(values.availableTime);
     setActivityPreference(values.activityPreference);
+    setNotes(values.notes);
     setFormDate(currentDate);
   }, [showModal, currentDate, dailyState.data, dailyState.isFetching, dailyState.isSuccess]);
 
@@ -221,11 +224,12 @@ export function SmartViewPage() {
         focus,
         availableTime,
         activityPreference,
-        notes: dailyState.data?.notes ?? '',
+        notes,
       });
 
       setLoaderPhase('generating');
       const result = await todayService.generateTodayView(currentDate);
+      setGenerationFeedback({ date: currentDate, meta: result.meta });
       log('RUN_PIPELINE', 'system');
 
       setLoaderPhase('loading');
@@ -241,7 +245,7 @@ export function SmartViewPage() {
       setLoaderPhase(null);
       toast.error('Failed to generate Smart View.');
     }
-  }, [energy, mood, focus, availableTime, activityPreference, queryClient, log, currentDate, formReady, saveDailyState, dailyState.data]);
+  }, [energy, mood, focus, availableTime, activityPreference, queryClient, log, currentDate, formReady, saveDailyState, notes]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -274,6 +278,18 @@ export function SmartViewPage() {
           </Button>
         </div>
       </div>
+
+      {generationFeedback?.date === currentDate && (
+        <div role="status" className="card p-4 space-y-2 text-sm">
+          {generationFeedback.meta.mode === 'rules' && (
+            <p>AI was unavailable. Tasks were selected using priority, energy, mood, focus, and activity preference. Your daily notes were saved but could not be interpreted by AI.</p>
+          )}
+          <p>{generationFeedback.meta.selectedMinutes} minutes selected · {generationFeedback.meta.availableMinutes} minutes available. Tasks scheduled for today remain included even when they exceed your available time.</p>
+          {generationFeedback.meta.scheduledOverflowMinutes > 0 && (
+            <p>Scheduled tasks exceed your available time by {generationFeedback.meta.scheduledOverflowMinutes} minutes.</p>
+          )}
+        </div>
+      )}
 
       {!isLoading && !isError && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -421,7 +437,7 @@ export function SmartViewPage() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 100, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="w-full max-w-md rounded-t-2xl sm:rounded-2xl overflow-hidden"
+              className="w-full max-w-md max-h-[90dvh] rounded-t-2xl sm:rounded-2xl overflow-y-auto overscroll-contain"
               style={{ backgroundColor: 'var(--color-surface)' }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -484,7 +500,7 @@ export function SmartViewPage() {
                     </span>
                     <div className="flex items-center justify-center gap-3">
                       <button
-                        onClick={() => setAvailableTime((prev) => Math.max(15, prev - 15))}
+                        onClick={() => setAvailableTime((prev) => Math.max(0, prev - 15))}
                         className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold"
                         style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                       >
@@ -550,6 +566,20 @@ export function SmartViewPage() {
                     </div>
                   </div>
 
+                  <div className="space-y-2">
+                    <label htmlFor="smart-view-notes" className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Notes for recommendations</label>
+                    <p id="smart-view-notes-help" className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
+                      Tell us your goals, constraints, or how you feel. When provided, these notes guide AI task recommendations.
+                    </p>
+                    <textarea
+                      aria-describedby="smart-view-notes-help"
+                      id="smart-view-notes"
+                      value={notes}
+                      onChange={(event) => setNotes(event.target.value)}
+                      placeholder="What should the AI consider today?"
+                      className="input-base min-h-[80px] resize-y text-sm"
+                    />
+                  </div>
                 </fieldset>
 
                 <div className="flex gap-3 pt-1">

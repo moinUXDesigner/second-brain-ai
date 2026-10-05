@@ -140,8 +140,8 @@ class InputController extends Controller
             'date' => 'nullable|date',
         ])['date'] ?? now()->toDateString();
 
-        $tasks = $this->pipeline->generateTodayView($date);
-        return response()->json(['success' => true, 'data' => $tasks]);
+        $result = $this->pipeline->generateSmartView($date);
+        return response()->json(['success' => true] + $result);
     }
 
     private function deriveCategory(array $rule): string

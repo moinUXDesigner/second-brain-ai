@@ -6,6 +6,7 @@ use App\Models\Task;
 use App\Models\DailyState;
 use App\Models\TodayView;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class PipelineService
 {
@@ -38,94 +39,107 @@ class PipelineService
         }
     }
 
-    public function calculateFitScores(): void
+    public function calculateFitScores(?string $date = null): void
     {
-        $state = DailyState::orderByDesc('date')->first();
-        if (!$state) return;
-
-        $tasks = Task::whereNotIn('status', ['Done', 'Deleted'])->get();
-
-        foreach ($tasks as $task) {
-            $fitScore = $this->classifier->calculateFitScore(
-                $task->effort ?? 5,
-                $task->time_estimate ?? '',
-                $state->energy,
-                $state->mood,
-                $state->focus
+        $state = DailyState::whereDate('date', $date ?: Carbon::today()->toDateString())->first();
+        foreach (Task::whereNotIn('status', ['Done', 'Deleted', 'Note', 'Idea'])->get() as $task) {
+            $task->fit_score = $this->classifier->calculateFitScore(
+                $task->effort ?? 5, $task->time_estimate ?? '',
+                $state?->energy ?? 5, $state?->mood ?? 5, $state?->focus ?? 5
             );
-            $task->fit_score = $fitScore;
             $task->save();
         }
     }
 
     public function generateTodayView(?string $date = null): array
     {
-        $state = DailyState::orderByDesc('date')->first();
-        $availableMinutes = $state?->available_time ?? 120;
-        $activityPreference = $state?->activity_preference ?? 'Any';
-        $energy = $state ? $this->toLevel($state->energy) : 'Medium';
+        return $this->generateSmartView($date)['data'];
+    }
+
+    public function generateSmartView(?string $date = null): array
+    {
         $today = $date ?: Carbon::today()->toDateString();
-
-        $tasks = Task::with('project')
-            ->whereNotIn('status', ['Done', 'Deleted'])
-            ->orderByDesc('priority')
-            ->get()
-            ->filter(fn(Task $task) => $this->isTaskEligibleForToday($task, $today))
-            ->values();
-
-        $tasks = $this->orderTasksForActivityPreference($tasks, $activityPreference);
-
-        TodayView::whereDate('date', $today)->delete();
-
-        $output = [];
-        $totalMins = 0;
-        $selectedTaskIds = [];
-
-        $scheduledToday = $tasks->filter(
-            fn(Task $task) => $task->recurrence
-                ? $this->recurringTaskOccursOnDate($task, $today)
-                : $task->due_date?->toDateString() === $today
-        );
-
-        foreach ($scheduledToday as $task) {
-            $result = $this->addTaskToTodayView($task, $today, $energy);
-            if (!$result) {
-                continue;
-            }
-
-            $output[] = $result;
-            $selectedTaskIds[$task->id] = true;
-            $totalMins += $result['taskMins'];
-        }
-
+        $state = DailyState::whereDate('date', $today)->first();
+        $context = [
+            'date' => $today, 'energy' => $state?->energy ?? 5,
+            'mood' => $state?->mood ?? 5, 'focus' => $state?->focus ?? 5,
+            'availableTime' => $state?->available_time ?? 120,
+            'activityPreference' => $state?->activity_preference ?? 'Any',
+            'notes' => $state?->notes ?? '',
+        ];
+        $tasks = Task::with('project')->whereNotIn('status', ['Done', 'Deleted', 'Note', 'Idea'])
+            ->get()->filter(fn (Task $task) => $this->isTaskEligibleForToday($task, $today))->values();
         foreach ($tasks as $task) {
-            if (isset($selectedTaskIds[$task->id])) {
-                continue;
-            }
-
-            $taskMins = $this->classifier->parseTimeEstimate($task->time_estimate ?? '', $task->effort ?? 5);
-
-            if ($totalMins + $taskMins > $availableMinutes && count($output) > 0) break;
-
-            $result = $this->addTaskToTodayView($task, $today, $energy);
-            if (!$result) {
-                continue;
-            }
-
-            $output[] = $result;
-            $totalMins += $result['taskMins'];
+            $task->fit_score = $this->classifier->calculateFitScore(
+                $task->effort ?? 5, $task->time_estimate ?? '',
+                $context['energy'], $context['mood'], $context['focus']
+            );
         }
-
-        return array_map(function (array $task) {
-            unset($task['taskMins']);
-            return $task;
-        }, $output);
+        $tasks = $tasks->sort(function (Task $a, Task $b) use ($context) {
+            $score = fn (Task $task) => ($task->priority ?? 0) + ($task->project?->priority ?? 0) * 0.2
+                + $task->fit_score + ($context['activityPreference'] === 'Any' ? 0 : $this->activityMatchScore($task, $context['activityPreference']) * 3);
+            return ($score($b) <=> $score($a)) ?: ($a->id <=> $b->id);
+        })->values();
+        $isScheduled = fn (Task $task) => $task->recurrence
+            ? $this->recurringTaskOccursOnDate($task, $today)
+            : $task->due_date?->toDateString() === $today;
+        $duration = fn (Task $task) => $this->classifier->parseTimeEstimate($task->time_estimate ?? '', $task->effort ?? 5);
+        $rank = $this->ai->rankSmartViewTasks($context, $tasks->map(fn (Task $task) => [
+            'id' => (string) $task->id, 'title' => $task->title, 'notes' => $task->notes,
+            'area' => $task->area, 'priority' => $task->priority, 'fitScore' => $task->fit_score,
+            'durationMinutes' => $duration($task), 'dueDate' => $task->due_date?->toDateString(),
+            'scheduled' => $isScheduled($task),
+            'project' => $task->project?->only(['title', 'domain', 'priority']),
+        ])->all());
+        if ($rank !== null) {
+            $positions = array_flip($rank);
+            $tasks = $tasks->sortBy(fn (Task $task) => $positions[(string) $task->id])->values();
+        }
+        $selected = $tasks->filter($isScheduled)->values();
+        $scheduledMinutes = $selected->sum($duration);
+        $totalMinutes = $scheduledMinutes;
+        foreach ($tasks->reject($isScheduled) as $task) {
+            $minutes = $duration($task);
+            if ($context['availableTime'] <= 0 || $totalMinutes + $minutes > $context['availableTime']) continue;
+            $selected->push($task);
+            $totalMinutes += $minutes;
+        }
+        $rows = $selected->map(function (Task $task, int $position) use ($today, $context) {
+            $priority = (int) (($task->priority ?? 0) + ($task->project?->priority ?? 0) * 0.2);
+            return [
+                'task_id' => $task->id, 'priority' => $priority, 'fit_score' => $task->fit_score,
+                'category' => $this->classifier->getCategory($priority, $task->fit_score, $this->toLevel($context['energy'])),
+                'status' => 'Pending', 'date' => $today, 'position' => $position,
+            ];
+        });
+        $output = DB::transaction(function () use ($today, $rows, $tasks, $selected) {
+            foreach ($tasks as $task) {
+                $task->save();
+            }
+            $output = $selected->map(function (Task $task, int $index) use ($rows) {
+                return array_merge(app(TaskFormatter::class)->format($task), [
+                    'priority' => $rows[$index]['priority'],
+                    'fitScore' => $rows[$index]['fit_score'],
+                    'category' => $rows[$index]['category'],
+                    'status' => $rows[$index]['status'],
+                ]);
+            })->all();
+            TodayView::whereDate('date', $today)->delete();
+            foreach ($rows as $row) {
+                TodayView::create($row);
+            }
+            return $output;
+        });
+        return ['data' => $output, 'meta' => [
+            'mode' => $rank === null ? 'rules' : 'ai',
+            'availableMinutes' => $context['availableTime'], 'selectedMinutes' => $totalMinutes,
+            'scheduledOverflowMinutes' => max(0, $scheduledMinutes - $context['availableTime']),
+        ]];
     }
 
     public function runFullPipeline(): array
     {
         $this->classifyAllTasks();
-        $this->calculateFitScores();
         return $this->generateTodayView();
     }
 
@@ -134,17 +148,6 @@ class PipelineService
         if ($val <= 3) return 'Low';
         if ($val <= 6) return 'Medium';
         return 'High';
-    }
-
-    private function orderTasksForActivityPreference($tasks, string $preference)
-    {
-        if ($preference === 'Any') {
-            return $tasks;
-        }
-
-        return $tasks->sortByDesc(
-            fn(Task $task) => $this->activityMatchScore($task, $preference)
-        )->values();
     }
 
     private function activityMatchScore(Task $task, string $preference): int
@@ -223,29 +226,5 @@ class PipelineService
             'Yearly' => $anchor->month === $target->month && $anchor->day === $target->day,
             default => false,
         };
-    }
-
-    private function addTaskToTodayView(Task $task, string $today, string $energy): ?array
-    {
-        $projectPriority = $task->project?->priority ?? 0;
-        $adjustedPriority = $task->priority + ($projectPriority * 0.2);
-        $category = $this->classifier->getCategory((int)$adjustedPriority, $task->fit_score ?? 0, $energy);
-        $taskMins = $this->classifier->parseTimeEstimate($task->time_estimate ?? '', $task->effort ?? 5);
-
-        TodayView::create([
-            'task_id'   => $task->id,
-            'priority'  => (int)$adjustedPriority,
-            'fit_score' => $task->fit_score ?? 0,
-            'category'  => $category,
-            'status'    => 'Pending',
-            'date'      => $today,
-        ]);
-
-        return array_merge($task->toArray(), [
-            'priority'  => (int)$adjustedPriority,
-            'fit_score' => $task->fit_score ?? 0,
-            'category'  => $category,
-            'taskMins'  => $taskMins,
-        ]);
     }
 }
