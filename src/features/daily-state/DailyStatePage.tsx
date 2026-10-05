@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { dailyStateService } from '@/services/endpoints/dailyStateService';
+import { dailyStateFormValues, useDailyState, useSaveDailyState } from '@/hooks/useDailyState';
 import { formatDateTime } from '@/utils/date';
 import { useTodayRollover } from '@/hooks/useTodayRollover';
 import { getEnergyEmoji, getFocusEmoji, getMoodEmoji } from '@/utils/wellbeing';
@@ -34,18 +34,6 @@ function formatTime(mins: number) {
   return `${h}h ${m}m`;
 }
 
-function getDefaultState() {
-  return {
-    energy: 5,
-    mood: 5,
-    focus: 5,
-    availableTime: 120,
-    activityPreference: 'Any' as ActivityPreference,
-    notes: '',
-    updatedAt: '',
-  };
-}
-
 export function DailyStatePage() {
   const currentDate = useTodayRollover();
   const [energy, setEnergy] = useState(5);
@@ -56,71 +44,36 @@ export function DailyStatePage() {
   const [notes, setNotes] = useState('');
   const [updatedAt, setUpdatedAt] = useState('');
   const [saving, setSaving] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  const [formDate, setFormDate] = useState('');
+  const dailyState = useDailyState(currentDate);
+  const saveDailyState = useSaveDailyState();
 
   useEffect(() => {
-    let active = true;
-    setLoaded(false);
-
-    dailyStateService
-      .get(currentDate)
-      .then((res) => {
-        if (!active) return;
-
-        if (res.data) {
-          setEnergy(res.data.energy || 5);
-          setMood(res.data.mood || 5);
-          setFocus(res.data.focus || 5);
-          setAvailableTime(res.data.availableTime || 120);
-          setActivityPreference(res.data.activityPreference || 'Any');
-          setNotes(res.data.notes || '');
-          setUpdatedAt(res.data.updatedAt || '');
-          return;
-        }
-
-        const defaults = getDefaultState();
-        setEnergy(defaults.energy);
-        setMood(defaults.mood);
-        setFocus(defaults.focus);
-        setAvailableTime(defaults.availableTime);
-        setActivityPreference(defaults.activityPreference);
-        setNotes(defaults.notes);
-        setUpdatedAt(defaults.updatedAt);
-      })
-      .catch(() => {
-        if (!active) return;
-
-        const defaults = getDefaultState();
-        setEnergy(defaults.energy);
-        setMood(defaults.mood);
-        setFocus(defaults.focus);
-        setAvailableTime(defaults.availableTime);
-        setActivityPreference(defaults.activityPreference);
-        setNotes(defaults.notes);
-        setUpdatedAt(defaults.updatedAt);
-      })
-      .finally(() => {
-        if (active) setLoaded(true);
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [currentDate]);
+    if (dailyState.isFetching || !dailyState.isSuccess) return;
+    const values = dailyStateFormValues(dailyState.data);
+    setEnergy(values.energy);
+    setMood(values.mood);
+    setFocus(values.focus);
+    setAvailableTime(values.availableTime);
+    setActivityPreference(values.activityPreference);
+    setNotes(values.notes);
+    setUpdatedAt(values.updatedAt);
+    setFormDate(currentDate);
+  }, [currentDate, dailyState.data, dailyState.isFetching, dailyState.isSuccess]);
 
   const handleSave = async () => {
+    if (formDate !== currentDate || !dailyState.isSuccess || dailyState.isFetching) return;
     setSaving(true);
     try {
-      const res = await dailyStateService.save({
+      await saveDailyState.mutateAsync({
         date: currentDate,
         energy,
         mood,
         focus,
         availableTime,
         activityPreference,
-        notes: notes || undefined,
+        notes,
       });
-      setUpdatedAt(res.data.updatedAt || '');
       toast.success('Daily state saved');
     } catch {
       toast.error('Failed to save. Backend may not be connected.');
@@ -139,7 +92,16 @@ export function DailyStatePage() {
     { label: 'Focus', value: focus, set: setFocus, emoji: getFocusEmoji(focus) },
   ];
 
-  if (!loaded) {
+  if (dailyState.isError && !dailyState.isFetching) {
+    return (
+      <Card className="space-y-3">
+        <p>Unable to load today's saved state.</p>
+        <Button onClick={() => void dailyState.refetch()}>Retry</Button>
+      </Card>
+    );
+  }
+
+  if (dailyState.isPending || dailyState.isFetching || formDate !== currentDate) {
     return (
       <div className="flex items-center justify-center h-40">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-200 border-t-primary-600" />

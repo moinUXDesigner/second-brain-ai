@@ -10,9 +10,9 @@ import { useAudit } from '@/hooks/useAudit';
 import { Button } from '@/components/ui/Button';
 import { taskService } from '@/services/endpoints/taskService';
 import { todayService } from '@/services/endpoints/todayService';
-import { dailyStateService } from '@/services/endpoints/dailyStateService';
+import { dailyStateFormValues, useDailyState, useSaveDailyState } from '@/hooks/useDailyState';
+import { useTodayRollover } from '@/hooks/useTodayRollover';
 import { QUERY_KEYS } from '@/constants';
-import { today } from '@/utils/date';
 import type { TaskStatus, Task } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -54,7 +54,7 @@ export function SmartViewPage() {
   const { data: tasks, isLoading, isError, dataUpdatedAt } = useSmartTodayTasks();
   const queryClient = useQueryClient();
   const { log } = useAudit();
-  const currentDate = today();
+  const currentDate = useTodayRollover();
   const [showModal, setShowModal] = useState(false);
   const [loaderPhase, setLoaderPhase] = useState<LoaderPhase>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -187,18 +187,41 @@ export function SmartViewPage() {
   const [availableTime, setAvailableTime] = useState(120);
   const [activityPreference, setActivityPreference] = useState<ActivityPreference>('Any');
 
+  const dailyState = useDailyState(currentDate, showModal);
+  const saveDailyState = useSaveDailyState();
+  const [formDate, setFormDate] = useState('');
+
+  useEffect(() => {
+    if (!showModal) {
+      setFormDate('');
+      return;
+    }
+    if (dailyState.isFetching || !dailyState.isSuccess) return;
+    const values = dailyStateFormValues(dailyState.data);
+    setEnergy(values.energy);
+    setMood(values.mood);
+    setFocus(values.focus);
+    setAvailableTime(values.availableTime);
+    setActivityPreference(values.activityPreference);
+    setFormDate(currentDate);
+  }, [showModal, currentDate, dailyState.data, dailyState.isFetching, dailyState.isSuccess]);
+
+  const formReady = formDate === currentDate && dailyState.isSuccess && !dailyState.isFetching;
+
   const handleSmartGenerate = useCallback(async () => {
+    if (!formReady) return;
     setShowModal(false);
 
     try {
       setLoaderPhase('saving');
-      await dailyStateService.save({
-        date: today(),
+      await saveDailyState.mutateAsync({
+        date: currentDate,
         energy,
         mood,
         focus,
         availableTime,
         activityPreference,
+        notes: dailyState.data?.notes ?? '',
       });
 
       setLoaderPhase('generating');
@@ -218,7 +241,7 @@ export function SmartViewPage() {
       setLoaderPhase(null);
       toast.error('Failed to generate Smart View.');
     }
-  }, [energy, mood, focus, availableTime, activityPreference, queryClient, log, currentDate]);
+  }, [energy, mood, focus, availableTime, activityPreference, queryClient, log, currentDate, formReady, saveDailyState, dailyState.data]);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
@@ -416,106 +439,118 @@ export function SmartViewPage() {
                   </p>
                 </div>
 
-                {[
-                  { label: 'Energy', emoji: '⚡', value: energy, set: setEnergy },
-                  { label: 'Mood', emoji: '😊', value: mood, set: setMood },
-                  { label: 'Focus', emoji: '🎯', value: focus, set: setFocus },
-                ].map((slider) => (
-                  <div key={slider.label} className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                        {slider.emoji} {slider.label}
-                      </span>
-                      <span
-                        className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold"
-                        style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-600)' }}
-                      >
-                        {slider.value}
-                      </span>
+                {dailyState.isError && !dailyState.isFetching ? (
+                  <div className="space-y-3">
+                    <p>Unable to load today's saved state.</p>
+                    <Button onClick={() => void dailyState.refetch()}>Retry</Button>
+                  </div>
+                ) : !formReady ? (
+                  <p role="status">Loading today's saved state...</p>
+                ) : null}
+
+                <fieldset disabled={!formReady} hidden={!formReady} className="space-y-5">
+                  {[
+                    { label: 'Energy', emoji: '⚡', value: energy, set: setEnergy },
+                    { label: 'Mood', emoji: '😊', value: mood, set: setMood },
+                    { label: 'Focus', emoji: '🎯', value: focus, set: setFocus },
+                  ].map((slider) => (
+                    <div key={slider.label} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                          {slider.emoji} {slider.label}
+                        </span>
+                        <span
+                          className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold"
+                          style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-600)' }}
+                        >
+                          {slider.value}
+                        </span>
+                      </div>
+                      <input
+                        type="range"
+                        min={1}
+                        max={10}
+                        value={slider.value}
+                        onChange={(e) => slider.set(Number(e.target.value))}
+                        className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                        style={{ backgroundColor: 'var(--color-muted)' }}
+                      />
                     </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={10}
-                      value={slider.value}
-                      onChange={(e) => slider.set(Number(e.target.value))}
-                      className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                      style={{ backgroundColor: 'var(--color-muted)' }}
-                    />
-                  </div>
-                ))}
+                  ))}
 
-                <div className="space-y-2">
-                  <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                    🕐 Available Time
-                  </span>
-                  <div className="flex items-center justify-center gap-3">
-                    <button
-                      onClick={() => setAvailableTime((prev) => Math.max(15, prev - 15))}
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold"
-                      style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
-                    >
-                      -
-                    </button>
-                    <span className="min-w-[80px] text-center text-xl font-bold tabular-nums" style={{ color: 'var(--primary-600)' }}>
-                      {formatTime(availableTime)}
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                      🕐 Available Time
                     </span>
-                    <button
-                      onClick={() => setAvailableTime((prev) => Math.min(720, prev + 15))}
-                      className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold"
-                      style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
-                    >
-                      +
-                    </button>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5 justify-center">
-                    {TIME_PRESETS.map((preset) => (
+                    <div className="flex items-center justify-center gap-3">
                       <button
-                        key={preset.mins}
-                        onClick={() => setAvailableTime(preset.mins)}
-                        className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
-                        style={{
-                          backgroundColor: availableTime === preset.mins ? 'var(--primary-600)' : 'var(--color-muted)',
-                          color: availableTime === preset.mins ? '#fff' : 'var(--color-text)',
-                        }}
+                        onClick={() => setAvailableTime((prev) => Math.max(15, prev - 15))}
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold"
+                        style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                       >
-                        {preset.label}
+                        -
                       </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
-                    Activity Preference
-                  </span>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {ACTIVITY_OPTIONS.map((option) => {
-                      const selected = activityPreference === option.value;
-                      return (
+                      <span className="min-w-[80px] text-center text-xl font-bold tabular-nums" style={{ color: 'var(--primary-600)' }}>
+                        {formatTime(availableTime)}
+                      </span>
+                      <button
+                        onClick={() => setAvailableTime((prev) => Math.min(720, prev + 15))}
+                        className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold"
+                        style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
+                      >
+                        +
+                      </button>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 justify-center">
+                      {TIME_PRESETS.map((preset) => (
                         <button
-                          key={option.value}
-                          type="button"
-                          onClick={() => setActivityPreference(option.value)}
-                          className="rounded-lg border px-2 py-2 text-left transition-colors"
+                          key={preset.mins}
+                          onClick={() => setAvailableTime(preset.mins)}
+                          className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
                           style={{
-                            borderColor: selected ? 'var(--primary-500)' : 'var(--color-border)',
-                            backgroundColor: selected ? 'var(--primary-50)' : 'var(--color-surface)',
-                            color: selected ? 'var(--primary-700)' : 'var(--color-text)',
+                            backgroundColor: availableTime === preset.mins ? 'var(--primary-600)' : 'var(--color-muted)',
+                            color: availableTime === preset.mins ? '#fff' : 'var(--color-text)',
                           }}
                         >
-                          <span className="block text-xs font-semibold">{option.label}</span>
-                          <span
-                            className="block text-[10px]"
-                            style={{ color: selected ? 'var(--primary-700)' : 'var(--color-text-secondary)' }}
-                          >
-                            {option.description}
-                          </span>
+                          {preset.label}
                         </button>
-                      );
-                    })}
+                      ))}
+                    </div>
                   </div>
-                </div>
+
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                      Activity Preference
+                    </span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {ACTIVITY_OPTIONS.map((option) => {
+                        const selected = activityPreference === option.value;
+                        return (
+                          <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setActivityPreference(option.value)}
+                            className="rounded-lg border px-2 py-2 text-left transition-colors"
+                            style={{
+                              borderColor: selected ? 'var(--primary-500)' : 'var(--color-border)',
+                              backgroundColor: selected ? 'var(--primary-50)' : 'var(--color-surface)',
+                              color: selected ? 'var(--primary-700)' : 'var(--color-text)',
+                            }}
+                          >
+                            <span className="block text-xs font-semibold">{option.label}</span>
+                            <span
+                              className="block text-[10px]"
+                              style={{ color: selected ? 'var(--primary-700)' : 'var(--color-text-secondary)' }}
+                            >
+                              {option.description}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                </fieldset>
 
                 <div className="flex gap-3 pt-1">
                   <button
@@ -527,6 +562,7 @@ export function SmartViewPage() {
                   </button>
                   <button
                     onClick={handleSmartGenerate}
+                    disabled={!formReady}
                     className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                     style={{ backgroundColor: 'var(--primary-600)', color: '#fff' }}
                   >
