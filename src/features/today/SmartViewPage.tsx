@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
@@ -58,7 +58,69 @@ export function SmartViewPage() {
   const currentDate = useTodayRollover();
   const location = useLocation();
   const [showModal, setShowModal] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const generateTriggerRef = useRef<HTMLButtonElement>(null);
+  const restoreTriggerFocus = useRef(false);
+
+  useEffect(() => {
+    if (!showModal) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const dialog = dialogRef.current;
+    dialog?.focus();
+    const viewport = window.visualViewport;
+    const resizeForKeyboard = () => {
+      if (!viewport || !dialog) return;
+      dialog.style.maxHeight = `${viewport.height * 0.9}px`;
+      if (dialog.parentElement) {
+        dialog.parentElement.style.bottom = `${Math.max(0, window.innerHeight - viewport.height - viewport.offsetTop)}px`;
+      }
+    };
+    resizeForKeyboard();
+    viewport?.addEventListener('resize', resizeForKeyboard);
+    viewport?.addEventListener('scroll', resizeForKeyboard);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setShowModal(false);
+      }
+      if (event.key !== 'Tab' || !dialog) return;
+      const controls = Array.from(dialog.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), input:not(:disabled), textarea:not(:disabled), [tabindex="0"]',
+      )).filter((element) => element.getClientRects().length > 0);
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first || !last) {
+        event.preventDefault();
+        dialog.focus();
+      } else if (event.shiftKey && (document.activeElement === first || !dialog.contains(document.activeElement) || document.activeElement === dialog)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !dialog.contains(document.activeElement) || document.activeElement === dialog)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      viewport?.removeEventListener('resize', resizeForKeyboard);
+      viewport?.removeEventListener('scroll', resizeForKeyboard);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener('keydown', onKeyDown);
+      restoreTriggerFocus.current = true;
+      if (!generateTriggerRef.current?.disabled) {
+        generateTriggerRef.current?.focus();
+        restoreTriggerFocus.current = false;
+      }
+    };
+  }, [showModal]);
   const [loaderPhase, setLoaderPhase] = useState<LoaderPhase>(null);
+  useEffect(() => {
+    if (!showModal && !loaderPhase && restoreTriggerFocus.current) {
+      generateTriggerRef.current?.focus();
+      restoreTriggerFocus.current = false;
+    }
+  }, [showModal, loaderPhase]);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const deleteTask = useDeleteTask();
@@ -276,7 +338,7 @@ export function SmartViewPage() {
               Update ({dirtyCount})
             </Button>
           )}
-          <Button onClick={() => setShowModal(true)} disabled={!!loaderPhase} variant="primary">
+          <Button ref={generateTriggerRef} onClick={() => setShowModal(true)} disabled={!!loaderPhase} variant="primary">
             <svg className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
@@ -389,11 +451,11 @@ export function SmartViewPage() {
                 style={{ backgroundColor: 'var(--primary-50)' }}
               >
                 {loaderPhase === 'done' ? (
-                  <svg className="h-8 w-8" style={{ color: 'var(--primary-600)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="h-11 w-11" style={{ color: 'var(--primary-600)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                 ) : (
-                  <svg className="h-8 w-8" style={{ color: 'var(--primary-600)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <svg className="h-11 w-11" style={{ color: 'var(--primary-600)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
                 )}
@@ -434,7 +496,7 @@ export function SmartViewPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+            className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
             style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}
             onClick={() => setShowModal(false)}
           >
@@ -443,7 +505,13 @@ export function SmartViewPage() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 100, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="w-full max-w-md max-h-[90dvh] rounded-t-2xl sm:rounded-2xl overflow-y-auto overscroll-contain"
+              ref={dialogRef}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="smart-view-dialog-title"
+              aria-describedby="smart-view-dialog-description"
+              tabIndex={-1}
+              className="flex flex-col w-full max-w-3xl max-h-[90dvh] rounded-t-2xl sm:rounded-2xl overflow-hidden outline-none"
               style={{ backgroundColor: 'var(--color-surface)' }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -451,16 +519,19 @@ export function SmartViewPage() {
                 <div className="w-10 h-1 rounded-full" style={{ backgroundColor: 'var(--color-border)' }} />
               </div>
 
-              <div className="px-5 pt-4 pb-5 space-y-5">
+              <div className="shrink-0 flex items-start justify-between gap-3 px-4 sm:px-5 py-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
                 <div>
-                  <h2 className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
+                  <h2 id="smart-view-dialog-title" className="text-lg font-semibold" style={{ color: 'var(--color-text)' }}>
                     How are you feeling?
                   </h2>
-                  <p className="text-caption mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
+                  <p id="smart-view-dialog-description" className="text-caption mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
                     This helps AI pick the right tasks for you today
                   </p>
                 </div>
 
+                <button type="button" aria-label="Close daily state form" onClick={() => setShowModal(false)} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg hover:bg-[var(--color-muted)] text-xl">×</button>
+                </div>
+                <div className="min-h-0 overflow-y-auto overscroll-contain p-4 sm:p-5">
                 {dailyState.isError && !dailyState.isFetching ? (
                   <div className="space-y-3">
                     <p>Unable to load today's saved state.</p>
@@ -470,7 +541,8 @@ export function SmartViewPage() {
                   <p role="status">Loading today's saved state...</p>
                 ) : null}
 
-                <fieldset disabled={!formReady} hidden={!formReady} className="space-y-5">
+                <fieldset disabled={!formReady} hidden={!formReady} className={formReady ? "grid grid-cols-1 md:grid-cols-2 gap-4" : "hidden"}>
+                  <div className="space-y-4">
                   {[
                     { label: 'Energy', emoji: '⚡', value: energy, set: setEnergy },
                     { label: 'Mood', emoji: '😊', value: mood, set: setMood },
@@ -478,9 +550,9 @@ export function SmartViewPage() {
                   ].map((slider) => (
                     <div key={slider.label} className="space-y-1">
                       <div className="flex items-center justify-between">
-                        <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                        <label htmlFor={`smart-view-${slider.label.toLowerCase()}`} className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
                           {slider.emoji} {slider.label}
-                        </span>
+                        </label>
                         <span
                           className="flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold"
                           style={{ backgroundColor: 'var(--primary-50)', color: 'var(--primary-600)' }}
@@ -489,25 +561,29 @@ export function SmartViewPage() {
                         </span>
                       </div>
                       <input
+                        id={`smart-view-${slider.label.toLowerCase()}`}
                         type="range"
                         min={1}
                         max={10}
                         value={slider.value}
                         onChange={(e) => slider.set(Number(e.target.value))}
-                        className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                        style={{ backgroundColor: 'var(--color-muted)' }}
+                        className="w-full h-11 cursor-pointer"
+                        style={{ accentColor: 'var(--primary-600)' }}
                       />
                     </div>
                   ))}
 
+                  </div>
+                  <div className="space-y-4">
                   <div className="space-y-2">
                     <span className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
                       🕐 Available Time
                     </span>
                     <div className="flex items-center justify-center gap-3">
                       <button
+                        aria-label="Decrease available time by 15 minutes"
                         onClick={() => setAvailableTime((prev) => Math.max(0, prev - 15))}
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold"
+                        className="flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold"
                         style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                       >
                         -
@@ -516,8 +592,9 @@ export function SmartViewPage() {
                         {formatTime(availableTime)}
                       </span>
                       <button
+                        aria-label="Increase available time by 15 minutes"
                         onClick={() => setAvailableTime((prev) => Math.min(720, prev + 15))}
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold"
+                        className="flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold"
                         style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                       >
                         +
@@ -527,8 +604,9 @@ export function SmartViewPage() {
                       {TIME_PRESETS.map((preset) => (
                         <button
                           key={preset.mins}
+                          aria-pressed={availableTime === preset.mins}
                           onClick={() => setAvailableTime(preset.mins)}
-                          className="px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
+                          className="min-h-11 px-2.5 py-1 rounded-full text-xs font-medium transition-colors"
                           style={{
                             backgroundColor: availableTime === preset.mins ? 'var(--primary-600)' : 'var(--color-muted)',
                             color: availableTime === preset.mins ? '#fff' : 'var(--color-text)',
@@ -551,8 +629,9 @@ export function SmartViewPage() {
                           <button
                             key={option.value}
                             type="button"
+                            aria-pressed={selected}
                             onClick={() => setActivityPreference(option.value)}
-                            className="rounded-lg border px-2 py-2 text-left transition-colors"
+                            className="min-h-11 rounded-lg border px-2 py-2 text-left transition-colors"
                             style={{
                               borderColor: selected ? 'var(--primary-500)' : 'var(--color-border)',
                               backgroundColor: selected ? 'var(--primary-50)' : 'var(--color-surface)',
@@ -561,7 +640,7 @@ export function SmartViewPage() {
                           >
                             <span className="block text-xs font-semibold">{option.label}</span>
                             <span
-                              className="block text-[10px]"
+                              className="block text-xs"
                               style={{ color: selected ? 'var(--primary-700)' : 'var(--color-text-secondary)' }}
                             >
                               {option.description}
@@ -572,14 +651,16 @@ export function SmartViewPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <label htmlFor="smart-view-notes" className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Notes for recommendations</label>
+                  </div>
+                  <div className="space-y-2 md:col-span-2">
+                    <label htmlFor="smart-view-notes" className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>Notes for recommendations (optional)</label>
                     <p id="smart-view-notes-help" className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-                      Tell us your goals, constraints, or how you feel. When provided, these notes guide AI task recommendations.
+                      Share goals or constraints to guide your recommendations.
                     </p>
                     <textarea
                       aria-describedby="smart-view-notes-help"
                       id="smart-view-notes"
+                      rows={3}
                       value={notes}
                       onChange={(event) => setNotes(event.target.value)}
                       placeholder="What should the AI consider today?"
@@ -588,10 +669,11 @@ export function SmartViewPage() {
                   </div>
                 </fieldset>
 
-                <div className="flex gap-3 pt-1">
+                </div>
+                <div className="shrink-0 flex gap-3 border-t px-4 sm:px-5 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" style={{ borderColor: 'var(--color-border)' }}>
                   <button
                     onClick={() => setShowModal(false)}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors"
+                    className="min-h-11 flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors"
                     style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
                   >
                     Cancel
@@ -599,7 +681,7 @@ export function SmartViewPage() {
                   <button
                     onClick={handleSmartGenerate}
                     disabled={!formReady}
-                    className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
+                    className="min-h-11 flex-1 py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2"
                     style={{ backgroundColor: 'var(--primary-600)', color: '#fff' }}
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -608,7 +690,6 @@ export function SmartViewPage() {
                     Generate
                   </button>
                 </div>
-              </div>
             </motion.div>
           </motion.div>
         </AnimatePresence>,

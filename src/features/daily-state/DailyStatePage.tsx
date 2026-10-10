@@ -131,7 +131,7 @@ export function DailyStatePage() {
 
   if (dailyState.isError && !dailyState.isFetching) {
     return (
-      <Card className="space-y-3">
+      <Card className="space-y-3 !p-4 sm:!p-5">
         <p>Unable to load today's saved state.</p>
         <Button onClick={() => void dailyState.refetch()}>Retry</Button>
       </Card>
@@ -147,7 +147,7 @@ export function DailyStatePage() {
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6 w-full max-w-2xl">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4 w-full max-w-5xl">
       <div>
         <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>
           Daily State
@@ -160,11 +160,12 @@ export function DailyStatePage() {
         </p>
       </div>
 
-      <Card className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <Card className="space-y-4 !p-4 sm:!p-5">
         {sliders.map((s) => (
           <div key={s.label} className="space-y-2">
             <div className="flex items-center justify-between">
-              <label htmlFor="daily-state-notes" className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
+              <label htmlFor={`daily-state-${s.label.toLowerCase()}`} className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
                 {s.emoji} {s.label}
               </label>
               <span
@@ -175,13 +176,14 @@ export function DailyStatePage() {
               </span>
             </div>
             <input
+              id={`daily-state-${s.label.toLowerCase()}`}
               type="range"
               min={1}
               max={10}
               value={s.value}
               onChange={(e) => s.set(Number(e.target.value))}
-              className="w-full h-2 rounded-full appearance-none cursor-pointer"
-              style={{ backgroundColor: 'var(--color-muted)' }}
+              className="w-full h-11 cursor-pointer"
+              style={{ accentColor: 'var(--primary-600)' }}
             />
             <div className="flex justify-between text-caption" style={{ color: 'var(--color-text-secondary)' }}>
               <span>Low</span>
@@ -191,20 +193,22 @@ export function DailyStatePage() {
         ))}
       </Card>
 
-      <Card className="space-y-4">
+      <div className="space-y-4">
+      <Card className="space-y-3 !p-4 sm:!p-5">
         <div>
           <h2 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>
             Time Available Today
           </h2>
           <p className="text-caption mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
-            How much time can you dedicate to tasks? The AI will pick tasks that fit your schedule.
+            Choose how much time you have today.
           </p>
         </div>
 
         <div className="flex items-center justify-center gap-3 py-2">
           <button
+            aria-label="Decrease available time by 15 minutes"
             onClick={() => adjustTime(-15)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold transition-colors"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold transition-colors"
             style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
           >
             -
@@ -216,8 +220,9 @@ export function DailyStatePage() {
             {formatTime(availableTime)}
           </span>
           <button
+            aria-label="Increase available time by 15 minutes"
             onClick={() => adjustTime(15)}
-            className="flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold transition-colors"
+            className="flex h-11 w-11 items-center justify-center rounded-full text-lg font-bold transition-colors"
             style={{ backgroundColor: 'var(--color-muted)', color: 'var(--color-text)' }}
           >
             +
@@ -229,7 +234,8 @@ export function DailyStatePage() {
             <button
               key={p.mins}
               onClick={() => setAvailableTime(p.mins)}
-              className="px-3.5 py-1.5 rounded-full text-small font-medium transition-colors"
+              aria-pressed={availableTime === p.mins}
+              className="min-h-11 px-3.5 py-1.5 rounded-full text-small font-medium transition-colors"
               style={{
                 backgroundColor: availableTime === p.mins ? 'var(--primary-600)' : 'var(--color-muted)',
                 color: availableTime === p.mins ? '#fff' : 'var(--color-text)',
@@ -241,24 +247,25 @@ export function DailyStatePage() {
         </div>
       </Card>
 
-      <Card className="space-y-3">
+      <Card className="space-y-3 !p-4 sm:!p-5">
         <div>
           <h2 className="text-body font-semibold" style={{ color: 'var(--color-text)' }}>
             Activity Preference
           </h2>
           <p className="text-caption mt-0.5" style={{ color: 'var(--color-text-secondary)' }}>
-            Smart Today will prioritize tasks that match this setting when it generates your list.
+            Prioritize tasks that suit your setting.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="grid grid-cols-3 gap-2">
           {ACTIVITY_OPTIONS.map((option) => {
             const selected = activityPreference === option.value;
             return (
               <button
                 key={option.value}
                 type="button"
+                aria-pressed={selected}
                 onClick={() => setActivityPreference(option.value)}
-                className="rounded-lg border px-3 py-2 text-left transition-colors"
+                className="min-h-11 rounded-lg border px-2 sm:px-3 py-2 text-left transition-colors"
                 style={{
                   borderColor: selected ? 'var(--primary-500)' : 'var(--color-border)',
                   backgroundColor: selected ? 'var(--primary-50)' : 'var(--color-surface)',
@@ -275,15 +282,19 @@ export function DailyStatePage() {
         </div>
       </Card>
 
-      <Card className="space-y-3">
+      </div>
+      </div>
+
+      <Card className="space-y-3 !p-4 sm:!p-5">
         <label htmlFor="daily-state-notes" className="text-body font-medium" style={{ color: 'var(--color-text)' }}>
-          Notes for recommendations
+          Notes for recommendations (optional)
         </label>
         <p id="daily-state-notes-help" className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-          Tell us your goals, constraints, or how you feel. When provided, these notes guide AI task recommendations.
+          Share goals or constraints to guide your recommendations.
         </p>
         <textarea
           id="daily-state-notes"
+          rows={3}
           aria-describedby="daily-state-notes-help"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
@@ -292,11 +303,11 @@ export function DailyStatePage() {
         />
       </Card>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-busy={action !== null}>
-        <Button onClick={() => void handleSave('save')} isLoading={action === 'save'} disabled={action !== null} className="w-full">
+      <div className="sticky bottom-0 z-10 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]" style={{ backgroundColor: 'var(--color-surface)', borderColor: 'var(--color-border)' }} aria-busy={action !== null}>
+        <Button onClick={() => void handleSave('save')} isLoading={action === 'save'} disabled={action !== null} className="w-full min-h-11">
           {action === 'save' ? 'Saving...' : 'Save Daily State'}
         </Button>
-        <Button onClick={() => void handleSave('smart')} variant="secondary" isLoading={action === 'smart'} disabled={action !== null} className="w-full">
+        <Button onClick={() => void handleSave('smart')} variant="secondary" isLoading={action === 'smart'} disabled={action !== null} className="w-full min-h-11">
           {action === 'smart' ? (phase === 'saving' ? 'Saving...' : 'Generating...') : 'Smart View'}
         </Button>
       </div>
