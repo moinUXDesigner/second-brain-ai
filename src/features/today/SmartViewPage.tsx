@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQueryClient } from '@tanstack/react-query';
+import { useLocation } from 'react-router-dom';
 import { TodayTable } from './components/TodayTable';
 import { EditTaskModal } from '@/features/tasks/components/EditTaskModal';
 import { useSmartTodayTasks, useDeleteTask } from '@/hooks/useTasks';
@@ -55,6 +56,7 @@ export function SmartViewPage() {
   const queryClient = useQueryClient();
   const { log } = useAudit();
   const currentDate = useTodayRollover();
+  const location = useLocation();
   const [showModal, setShowModal] = useState(false);
   const [loaderPhase, setLoaderPhase] = useState<LoaderPhase>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -187,6 +189,10 @@ export function SmartViewPage() {
   const [availableTime, setAvailableTime] = useState(120);
   const [notes, setNotes] = useState('');
   const [generationFeedback, setGenerationFeedback] = useState<{ date: string; meta: SmartViewMetadata } | null>(null);
+  useEffect(() => {
+    const feedback = (location.state as { generationFeedback?: { date: string; meta: SmartViewMetadata } } | null)?.generationFeedback;
+    if (feedback?.date === currentDate) setGenerationFeedback(feedback);
+  }, [location.key, location.state, currentDate]);
   const [activityPreference, setActivityPreference] = useState<ActivityPreference>('Any');
 
   const dailyState = useDailyState(currentDate, showModal);

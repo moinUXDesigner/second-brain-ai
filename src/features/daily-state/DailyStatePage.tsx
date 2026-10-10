@@ -1,9 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { dailyStateFormValues, useDailyState, useSaveDailyState } from '@/hooks/useDailyState';
-import { formatDateTime } from '@/utils/date';
+import { formatDateTime, today } from '@/utils/date';
+import { todayService } from '@/services/endpoints/todayService';
+import { QUERY_KEYS } from '@/constants';
+import { useAudit } from '@/hooks/useAudit';
 import { useTodayRollover } from '@/hooks/useTodayRollover';
 import { getEnergyEmoji, getFocusEmoji, getMoodEmoji } from '@/utils/wellbeing';
 import toast from 'react-hot-toast';
@@ -43,7 +48,12 @@ export function DailyStatePage() {
   const [activityPreference, setActivityPreference] = useState<ActivityPreference>('Any');
   const [notes, setNotes] = useState('');
   const [updatedAt, setUpdatedAt] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [action, setAction] = useState<'save' | 'smart' | null>(null);
+  const [phase, setPhase] = useState<'saving' | 'generating'>('saving');
+  const busy = useRef(false);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { log } = useAudit();
   const [formDate, setFormDate] = useState('');
   const dailyState = useDailyState(currentDate);
   const saveDailyState = useSaveDailyState();
@@ -61,12 +71,16 @@ export function DailyStatePage() {
     setFormDate(currentDate);
   }, [currentDate, dailyState.data, dailyState.isFetching, dailyState.isSuccess]);
 
-  const handleSave = async () => {
-    if (formDate !== currentDate || !dailyState.isSuccess || dailyState.isFetching) return;
-    setSaving(true);
+  const handleSave = async (requestedAction: 'save' | 'smart') => {
+    if (busy.current || formDate !== currentDate || currentDate !== today() || !dailyState.isSuccess || dailyState.isFetching) return;
+    const date = currentDate;
+    busy.current = true;
+    setAction(requestedAction);
+    setPhase('saving');
+    let saved = false;
     try {
       await saveDailyState.mutateAsync({
-        date: currentDate,
+        date,
         energy,
         mood,
         focus,
@@ -74,11 +88,34 @@ export function DailyStatePage() {
         activityPreference,
         notes,
       });
-      toast.success('Daily state saved');
+      saved = true;
+      if (requestedAction === 'save') {
+        toast.success('Daily state saved');
+        return;
+      }
+      if (date !== today()) {
+        toast.error('The day changed. Please generate Smart View for the new day.');
+        return;
+      }
+      setPhase('generating');
+      const result = await todayService.generateTodayView(date);
+      const queryKey = [...QUERY_KEYS.smartTodayTasks, date];
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.setQueryData(queryKey, result.data);
+      log('RUN_PIPELINE', 'system');
+      void queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+      if (date !== today()) {
+        toast.error('The day changed. Please generate Smart View for the new day.');
+        return;
+      }
+      navigate('/today/smart', { state: { generationFeedback: { date, meta: result.meta } } });
     } catch {
-      toast.error('Failed to save. Backend may not be connected.');
+      toast.error(saved
+        ? 'Daily state saved, but Smart View generation failed. Please try again.'
+        : 'Failed to save. Backend may not be connected.');
     } finally {
-      setSaving(false);
+      busy.current = false;
+      setAction(null);
     }
   };
 
@@ -255,9 +292,14 @@ export function DailyStatePage() {
         />
       </Card>
 
-      <Button onClick={handleSave} isLoading={saving} className="w-full">
-        Save Daily State
-      </Button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" aria-busy={action !== null}>
+        <Button onClick={() => void handleSave('save')} isLoading={action === 'save'} disabled={action !== null} className="w-full">
+          {action === 'save' ? 'Saving...' : 'Save Daily State'}
+        </Button>
+        <Button onClick={() => void handleSave('smart')} variant="secondary" isLoading={action === 'smart'} disabled={action !== null} className="w-full">
+          {action === 'smart' ? (phase === 'saving' ? 'Saving...' : 'Generating...') : 'Smart View'}
+        </Button>
+      </div>
     </motion.div>
   );
 }
