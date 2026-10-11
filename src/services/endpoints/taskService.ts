@@ -1,4 +1,5 @@
 import apiClient from '../apiClient';
+import { today } from '@/utils/date';
 import type { Task, ApiResponse, PaginatedResponse, TaskRevisionSuggestion } from '@/types';
 
 export const taskService = {
@@ -65,7 +66,7 @@ export const taskService = {
   },
 
   async scheduleToday(id: string): Promise<ApiResponse<Task>> {
-    const { data } = await apiClient.post(`/tasks/${id}/schedule-today`);
+    const { data } = await apiClient.post(`/tasks/${id}/schedule-today`, { date: today() });
     return data;
   },
 };

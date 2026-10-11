@@ -9,7 +9,7 @@ import { useProjects } from '@/hooks/useProjects';
 import { Button } from '@/components/ui/Button';
 import { taskService } from '@/services/endpoints/taskService';
 import { QUERY_KEYS } from '@/constants';
-import { today } from '@/utils/date';
+import { useTodayRollover } from '@/hooks/useTodayRollover';
 import type { TaskStatus, Task } from '@/types';
 import toast from 'react-hot-toast';
 
@@ -17,7 +17,7 @@ export function TodayPage() {
   const navigate = useNavigate();
   const { data: tasks, isLoading, isError, dataUpdatedAt } = useTodayTasks();
   const queryClient = useQueryClient();
-  const currentDate = today();
+  const currentDate = useTodayRollover();
 
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [searchQuery, setSearchQuery] = useState('');

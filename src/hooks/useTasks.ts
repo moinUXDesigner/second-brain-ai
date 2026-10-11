@@ -5,6 +5,7 @@ import { useTaskStore } from '@/app/store/taskStore';
 import { useAudit } from './useAudit';
 import { QUERY_KEYS } from '@/constants';
 import { today } from '@/utils/date';
+import { useTodayRollover } from './useTodayRollover';
 import type { Task } from '@/types';
 
 function updateProjectTaskStatusCache<T>(data: T, id: string, status: Task['status']) {
@@ -44,7 +45,7 @@ export function useTasks() {
 
 export function useTodayTasks() {
   const { setTodayTasks } = useTaskStore();
-  const currentDate = today();
+  const currentDate = useTodayRollover();
 
   return useQuery({
     queryKey: [...QUERY_KEYS.todayTasks, currentDate],
@@ -54,9 +55,9 @@ export function useTodayTasks() {
       return res.data;
     },
     staleTime: 30000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-    refetchOnReconnect: false,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
+    refetchOnReconnect: true,
     retry: 1,
   });
 }
@@ -233,6 +234,8 @@ export function useResetRecurringTask() {
     mutationFn: (id: string) => taskService.resetRecurringTask(id),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.todayTasks });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.smartTodayTasks });
     },
   });
 }

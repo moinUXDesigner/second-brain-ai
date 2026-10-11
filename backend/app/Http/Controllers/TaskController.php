@@ -344,7 +344,11 @@ class TaskController extends Controller
 
     public function scheduleToday(Request $request, Task $task, ReminderService $reminders): JsonResponse
     {
-        $task->update(['due_date' => now()->toDateString()]);
+        $date = $request->validate([
+            'date' => 'nullable|date_format:Y-m-d',
+        ])['date'] ?? now()->toDateString();
+
+        $task->update(['due_date' => $date]);
         $this->projectPriority->syncById($task->project_id);
         $task->refresh();
         $reminders->notifyScheduledToday($request->user(), $task);

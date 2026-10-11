@@ -22,6 +22,10 @@ class InputController extends Controller
 
     public function analyze(Request $request): JsonResponse
     {
+        $request->merge([
+            'aiEnabled' => $request->input('ai_enabled', $request->input('aiEnabled')),
+        ]);
+
         $data = $request->validate([
             'text'      => 'required|string',
             'area'      => 'nullable|string',
@@ -76,6 +80,13 @@ class InputController extends Controller
 
     public function create(Request $request): JsonResponse
     {
+        // The API client converts request fields to snake_case. Keep accepting
+        // camelCase for existing clients while preserving the selected date.
+        $request->merge([
+            'dueDate' => $request->input('due_date', $request->input('dueDate')),
+            'estimatedTime' => $request->input('estimated_time', $request->input('estimatedTime')),
+        ]);
+
         $data = $request->validate([
             'text'          => 'required|string',
             'type'          => 'required|in:task,project',
