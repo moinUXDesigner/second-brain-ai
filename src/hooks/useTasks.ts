@@ -129,6 +129,15 @@ export function useUpdateTaskStatus() {
     onSuccess: (response, { id, status }) => {
       if (response.data.status !== status) return;
       updateTaskInStore(id, response.data);
+      // Lists read React Query data, so publish the saved task before refetching.
+      const updateTasks = (tasks: Task[] | undefined) =>
+        tasks?.map((task) => task.id === id ? { ...task, ...response.data } : task);
+      queryClient.setQueriesData<Task[]>({ queryKey: QUERY_KEYS.tasks }, updateTasks);
+      queryClient.setQueriesData<Task[]>({ queryKey: QUERY_KEYS.todayTasks }, updateTasks);
+      queryClient.setQueriesData<Task[]>({ queryKey: QUERY_KEYS.smartTodayTasks }, updateTasks);
+      queryClient.setQueriesData({ queryKey: QUERY_KEYS.projects }, (old) =>
+        updateProjectTaskStatusCache(old, id, status),
+      );
       log('UPDATE_TASK', 'task', id, { status });
     },
     onSettled: () => {

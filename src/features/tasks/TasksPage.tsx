@@ -548,7 +548,9 @@ export function TasksPage() {
                 tasks={paginated}
                 onDelete={(id) => deleteTask.mutate(id)}
                 deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
-                onComplete={(id) => completeTask.mutate({ id, status: 'Done' })}
+                onComplete={(id) => completeTask.mutate({ id, status: 'Done' }, {
+                  onError: () => toast.error('Failed to complete task. Please try again.'),
+                })}
                 completingId={completeTask.isPending ? (completeTask.variables?.id ?? null) : null}
               />
             </div>
@@ -558,7 +560,9 @@ export function TasksPage() {
                 tasks={paginated}
                 onDelete={(id) => deleteTask.mutate(id)}
                 deletingId={deleteTask.isPending ? (deleteTask.variables ?? null) : null}
-                onComplete={(id) => completeTask.mutate({ id, status: 'Done' })}
+                onComplete={(id) => completeTask.mutate({ id, status: 'Done' }, {
+                  onError: () => toast.error('Failed to complete task. Please try again.'),
+                })}
                 completingId={completeTask.isPending ? (completeTask.variables?.id ?? null) : null}
               />
             </div>
