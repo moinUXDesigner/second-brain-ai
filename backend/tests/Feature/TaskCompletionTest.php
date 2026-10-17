@@ -17,6 +17,23 @@ class TaskCompletionTest extends TestCase
         $this->actingAs(User::create(['name' => 'Test', 'email' => 'completion@example.com', 'password' => 'password']));
     }
 
+    public function test_task_can_be_loaded_before_opening_the_completion_dialog(): void
+    {
+        $task = Task::create(['title' => 'Overdue task', 'status' => 'Pending', 'due_date' => '2026-01-01']);
+
+        $this->getJson("/api/tasks/{$task->id}")
+            ->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.title', 'Overdue task')
+            ->assertJsonPath('data.status', 'Pending')
+            ->assertJsonPath('data.dueDate', '2026-01-01');
+    }
+
+    public function test_loading_a_missing_task_returns_not_found(): void
+    {
+        $this->getJson('/api/tasks/999999999')->assertNotFound();
+    }
+
     public function test_completion_details_survive_reload_and_preserve_creation_date(): void
     {
         $task = Task::create(['title' => 'Buy cot', 'status' => 'Pending', 'notes' => 'Original notes']);

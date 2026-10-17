@@ -21,6 +21,11 @@ class TaskController extends Controller
         private ProjectPriorityService $projectPriority
     ) {}
 
+    public function show(Task $task): JsonResponse
+    {
+        return response()->json(['success' => true, 'data' => $this->format($task->load('project'))]);
+    }
+
     public function index(): JsonResponse
     {
         $tasks = Task::with('project')
