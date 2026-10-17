@@ -239,9 +239,19 @@ class TaskController extends Controller
 
     public function updateStatus(Request $request, Task $task): JsonResponse
     {
-        $data = $request->validate(['status' => 'required|in:Pending,Done,Deleted,Idea,Note']);
+        $data = $request->validate([
+            'status' => 'required|in:Pending,Done,Deleted,Idea,Note',
+            'started_at' => 'nullable|date',
+            'completed_at' => $request->filled('started_at') ? 'nullable|date|after_or_equal:started_at' : 'nullable|date',
+            'start_notes' => 'nullable|string|max:10000',
+            'completion_notes' => 'nullable|string|max:10000',
+            'notes' => 'nullable|string|max:10000',
+        ]);
+        if ($data['status'] === 'Done') {
+            $task->fill(collect($data)->only(['started_at', 'start_notes', 'completion_notes', 'notes'])->all());
+        }
         $task->status       = $data['status'];
-        $task->completed_at = $data['status'] === 'Done' ? now() : null;
+        $task->completed_at = $data['status'] === 'Done' ? ($data['completed_at'] ?? now()) : null;
         $task->save();
         $this->projectPriority->syncById($task->project_id);
 
@@ -249,7 +259,7 @@ class TaskController extends Controller
             ->whereDate('date', today())
             ->update(['status' => $data['status'] === 'Done' ? 'Done' : 'Pending']);
 
-        return response()->json(['success' => true, 'data' => ['id' => $task->id, 'status' => $task->status]]);
+        return response()->json(['success' => true, 'data' => $this->format($task->load('project'))]);
     }
 
     public function resetRecurring(Task $task): JsonResponse

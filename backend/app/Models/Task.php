@@ -13,7 +13,7 @@ class Task extends Model
         'confidence', 'priority', 'fit_score', 'status', 'source',
         'recurrence', 'due_date', 'deadline_date', 'tags', 'completed_at',
         'reminder_at', 'reminder_enabled', 'time_spent', 'timer_started_at', 'timer_running',
-        'images',
+        'images', 'started_at', 'start_notes', 'completion_notes',
     ];
 
     protected $casts = [
@@ -24,6 +24,7 @@ class Task extends Model
         'reminder_at'      => 'datetime',
         'reminder_enabled' => 'boolean',
         'completed_at'     => 'datetime',
+        'started_at'       => 'datetime',
         'timer_started_at' => 'datetime',
         'timer_running'    => 'boolean',
     ];

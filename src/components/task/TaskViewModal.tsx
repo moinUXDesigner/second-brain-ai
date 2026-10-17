@@ -428,6 +428,9 @@ export function TaskViewModal({ task, onClose }: TaskViewModalProps) {
             <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
               <DetailRow label="Due Date" value={formatDateDetail(task.dueDate)} />
               <DetailRow label="Deadline Date" value={formatDateDetail(task.deadlineDate)} />
+              <DetailRow label="Started At" value={task.startedAt ? new Date(task.startedAt).toLocaleString() : 'Not set'} />
+              <DetailRow label="Input when started" value={task.startNotes || 'Not set'} />
+              <DetailRow label="Input when completed" value={task.completionNotes || 'Not set'} />
               <DetailRow label="Completed At" value={formatDateDetail(task.completedAt)} />
               <DetailRow label="Created At" value={formatDateDetail(task.createdAt)} />
               <DetailRow label="Updated At" value={formatDateDetail(task.updatedAt)} />

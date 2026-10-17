@@ -69,7 +69,8 @@ export function RecurringTasksPage() {
   }, [tasks, recurrence]);
 
   const handleComplete = async (task: Task) => {
-    await completeTask.mutateAsync({ id: task.id, status: 'Done' });
+    const response = await completeTask.mutateAsync({ id: task.id, status: 'Done' });
+    if (response.data.status !== 'Done') return;
     toast.success(`"${task.title}" done! Resetting for next cycle…`, { duration: 2000 });
     setTimeout(() => {
       resetTask.mutate(task.id, {

@@ -39,7 +39,7 @@ function isTaskOverdue(task: Task, status: TaskStatus) {
 interface TodayTableProps {
   tasks: Task[];
   localStatus: Record<string, TaskStatus>;
-  onStatusChange: (id: string, status: TaskStatus) => void;
+  onStatusChange: (id: string, status: TaskStatus) => void | Promise<boolean | void>;
   onEditTask?: (task: Task) => void;
   onDeleteTask?: (id: string) => void;
   deletingId?: string | null;
@@ -107,7 +107,8 @@ export function TodayTable({
   const toggleTaskStatus = async (task: Task) => {
     const currentStatus = getStatus(task);
     const nextStatus: TaskStatus = currentStatus === 'Done' ? 'Pending' : 'Done';
-    await onStatusChange(task.id, nextStatus);
+    const saved = await onStatusChange(task.id, nextStatus);
+    if (saved === false) return;
     showUndoToast(task, currentStatus, nextStatus);
   };
 

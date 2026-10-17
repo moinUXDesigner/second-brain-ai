@@ -1,3 +1,4 @@
+import { requestTaskCompletion } from '@/app/store/taskCompletionStore';
 import apiClient from '../apiClient';
 import { today } from '@/utils/date';
 import type { Task, ApiResponse, PaginatedResponse, TaskRevisionSuggestion } from '@/types';
@@ -37,7 +38,16 @@ export const taskService = {
   },
 
   async updateTaskStatus(id: string, status: Task['status']): Promise<ApiResponse<Task>> {
+    if (status === 'Done') {
+      const response = await taskService.getTask(id);
+      return requestTaskCompletion(response.data);
+    }
     const { data } = await apiClient.patch(`/tasks/${id}/status`, { status });
+    return data;
+  },
+
+  async completeTask(id: string, details: { startedAt: string | null; completedAt: string; startNotes: string; completionNotes: string; notes: string }): Promise<ApiResponse<Task>> {
+    const { data } = await apiClient.patch(`/tasks/${id}/status`, { status: 'Done', ...details });
     return data;
   },
 

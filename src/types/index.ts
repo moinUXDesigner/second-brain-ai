@@ -66,6 +66,9 @@ export interface Task {
   status: TaskStatus;
   recurrence?: 'Daily' | 'Weekly' | 'Monthly' | 'Yearly';
   completedAt?: string;
+  startedAt?: string;
+  startNotes?: string;
+  completionNotes?: string;
   category?: TaskCategory | string;
   dueDate?: string;
   deadlineDate?: string;

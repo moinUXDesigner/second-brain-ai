@@ -132,18 +132,21 @@ export function SmartViewPage() {
   }, [tasks]);
 
   const handleStatusChange = async (id: string, status: TaskStatus) => {
-    setLocalStatus((prev) => ({ ...prev, [id]: status }));
+    if (status !== 'Done') setLocalStatus((prev) => ({ ...prev, [id]: status }));
 
     try {
-      await taskService.updateTaskStatus(id, status);
+      const response = await taskService.updateTaskStatus(id, status);
+      if (response.data.status !== status) return false;
+      setLocalStatus((prev) => ({ ...prev, [id]: status }));
       queryClient.setQueryData<Task[]>([...QUERY_KEYS.smartTodayTasks, currentDate], (old) => {
         if (!old) return old;
         return old.map((t) =>
-          t.id === id ? { ...t, status, completedAt: status === 'Done' ? new Date().toISOString() : undefined } : t,
+          t.id === id ? { ...t, ...response.data } : t,
         );
       });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.tasks });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.projects });
+      return true;
     } catch {
       setLocalStatus((prev) => {
         const next = { ...prev };
@@ -151,6 +154,7 @@ export function SmartViewPage() {
         return next;
       });
       toast.error('Failed to update task');
+      return false;
     }
   };
 

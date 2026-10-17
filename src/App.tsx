@@ -5,6 +5,8 @@ import { useEffect } from 'react';
 import { PwaInstallPrompt } from './components/pwa/PwaInstallPrompt';
 import { PwaUpdatePrompt } from './components/pwa/PwaUpdatePrompt';
 
+import { TaskCompletionDialog } from './components/task/TaskCompletionDialog';
+
 function ThemeInit() {
   useEffect(() => {
     window.dispatchEvent(new Event('app-ready'));
@@ -25,6 +27,7 @@ export default function App() {
     <AppProviders>
       <ThemeInit />
       <RouterProvider router={router} />
+      <TaskCompletionDialog />
       <PwaInstallPrompt />
       <PwaUpdatePrompt />
     </AppProviders>

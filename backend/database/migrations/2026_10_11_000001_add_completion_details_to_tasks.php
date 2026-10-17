@@ -1,0 +1,23 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::table('tasks', function (Blueprint $table) {
+            $table->timestamp('started_at')->nullable();
+            $table->text('start_notes')->nullable();
+            $table->text('completion_notes')->nullable();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('tasks', function (Blueprint $table) {
+            $table->dropColumn(['started_at', 'start_notes', 'completion_notes']);
+        });
+    }
+};

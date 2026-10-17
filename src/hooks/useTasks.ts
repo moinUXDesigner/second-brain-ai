@@ -88,16 +88,18 @@ export function useUpdateTaskStatus() {
     mutationFn: ({ id, status }: { id: string; status: Task['status'] }) =>
       taskService.updateTaskStatus(id, status),
     onMutate: async ({ id, status }) => {
+      // Completion opens a dialog first; update caches only after it is saved.
+      if (status === 'Done') return;
       await queryClient.cancelQueries({ queryKey: QUERY_KEYS.todayTasks });
       await queryClient.cancelQueries({ queryKey: QUERY_KEYS.tasks });
       await queryClient.cancelQueries({ queryKey: QUERY_KEYS.projects });
-      updateTaskInStore(id, { status, completedAt: status === 'Done' || status === 'Deleted' ? new Date().toISOString() : undefined });
+      updateTaskInStore(id, { status, completedAt: status === 'Deleted' ? new Date().toISOString() : undefined });
 
       queryClient.setQueryData<Task[]>(QUERY_KEYS.tasks, (old) => {
         if (!old) return old;
         return old.map((task) =>
           task.id === id
-            ? { ...task, status, completedAt: status === 'Done' || status === 'Deleted' ? new Date().toISOString() : undefined }
+            ? { ...task, status, completedAt: status === 'Deleted' ? new Date().toISOString() : undefined }
             : task,
         );
       });
@@ -106,7 +108,7 @@ export function useUpdateTaskStatus() {
         if (!old) return old;
         return old.map((task) =>
           task.id === id
-            ? { ...task, status, completedAt: status === 'Done' || status === 'Deleted' ? new Date().toISOString() : undefined }
+            ? { ...task, status, completedAt: status === 'Deleted' ? new Date().toISOString() : undefined }
             : task,
         );
       });
@@ -115,7 +117,7 @@ export function useUpdateTaskStatus() {
         if (!old) return old;
         return old.map((task) =>
           task.id === id
-            ? { ...task, status, completedAt: status === 'Done' || status === 'Deleted' ? new Date().toISOString() : undefined }
+            ? { ...task, status, completedAt: status === 'Deleted' ? new Date().toISOString() : undefined }
             : task,
         );
       });
@@ -124,7 +126,9 @@ export function useUpdateTaskStatus() {
         updateProjectTaskStatusCache(old, id, status),
       );
     },
-    onSuccess: (_, { id, status }) => {
+    onSuccess: (response, { id, status }) => {
+      if (response.data.status !== status) return;
+      updateTaskInStore(id, response.data);
       log('UPDATE_TASK', 'task', id, { status });
     },
     onSettled: () => {
