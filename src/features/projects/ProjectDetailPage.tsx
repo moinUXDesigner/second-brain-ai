@@ -572,16 +572,19 @@ export function ProjectDetailPage() {
   const [taskSortBy, setTaskSortBy] = useState<ProjectTaskSort>('priority');
   const [taskSortDirection, setTaskSortDirection] = useState<SortDirection>('desc');
 
-  const { pending, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
-    if (!project?.subtasks) return { pending: [], completed: [], overdue: [], highPriority: [], suggestedNext: null };
+  // Keep the list, progress, and suggestions based on the same project items.
+  const projectTasks = useMemo(() => (
+    project?.subtasks?.filter((task) => task.status !== 'Deleted') ?? []
+  ), [project?.subtasks]);
 
+  const { pending, completed, overdue, highPriority, suggestedNext } = useMemo(() => {
     const now = new Date();
     const p: Task[] = [];
     const c: Task[] = [];
     const od: Task[] = [];
     const hp: Task[] = [];
 
-    project.subtasks.forEach((t) => {
+    projectTasks.forEach((t) => {
       if (t.status === 'Done') {
         c.push(t);
       } else if (t.status !== 'Deleted') {
@@ -593,16 +596,13 @@ export function ProjectDetailPage() {
 
     p.sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
     return { pending: p, completed: c, overdue: od, highPriority: hp, suggestedNext: p[0] ?? null };
-  }, [project]);
+  }, [projectTasks]);
 
   const totalTasks = pending.length + completed.length;
   const progress = totalTasks > 0 ? Math.round((completed.length / totalTasks) * 100) : 0;
   const phases = project?.phases ?? [];
   const milestones = project?.milestones ?? [];
   const updatingStructureId = updateTask.isPending ? (updateTask.variables?.id ?? null) : null;
-  const projectTasks = useMemo(() => (
-    project?.subtasks?.filter((task) => task.status !== 'Deleted' && task.status !== 'Note') ?? []
-  ), [project?.subtasks]);
   const urgencyOptions = useMemo(() => {
     const options = new Set<string>();
     projectTasks.forEach((task) => {
