@@ -179,6 +179,10 @@ class TaskController extends Controller
         ]);
 
         $oldProjectId = $task->project_id;
+        if (array_key_exists('project_id', $data) && (string) $data['project_id'] !== (string) $oldProjectId) {
+            $data['phase_id'] = null;
+            $data['milestone_id'] = null;
+        }
         $task->update($data);
         $this->projectPriority->syncById($oldProjectId);
         $this->projectPriority->syncById($task->project_id);
@@ -292,13 +296,17 @@ class TaskController extends Controller
 
     public function linkToProject(Request $request, Task $task): JsonResponse
     {
-        $data = $request->validate(['project_id' => 'nullable|exists:projects,id']);
+        $data = $request->validate(['project_id' => 'present|nullable|exists:projects,id']);
         $oldProjectId = $task->project_id;
-        $task->update(['project_id' => $data['project_id']]);
+        if ($data['project_id'] === null || (string) $data['project_id'] !== (string) $oldProjectId) {
+            $data['phase_id'] = null;
+            $data['milestone_id'] = null;
+        }
+        $task->update($data);
         $this->projectPriority->syncById($oldProjectId);
         $this->projectPriority->syncById($task->project_id);
 
-        return response()->json(['success' => true, 'data' => ['taskId' => $task->id, 'projectId' => $task->project_id, 'linked' => true]]);
+        return response()->json(['success' => true, 'data' => ['taskId' => $task->id, 'projectId' => $task->project_id, 'linked' => $task->project_id !== null]]);
     }
 
     public function startTimer(Task $task): JsonResponse

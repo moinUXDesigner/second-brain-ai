@@ -1,3 +1,5 @@
+import { groupMilestonesByPhase } from '@/utils/projectMilestones';
+import { LinkToProjectModal } from '@/components/task/LinkToProjectModal';
 import { useEffect, useState, useMemo, type ChangeEvent } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -279,7 +281,7 @@ function TaskTimeSummary({ task, muted = false }: { task: Task; muted?: boolean 
   );
 }
 
-function TaskRow({ task, variant, phases, milestones, onToggle, onDelete, onEdit, onView, onPhaseChange, onMilestoneChange, onScheduleToday, deletingId, schedulingId, updatingStructureId }: {
+function TaskRow({ task, variant, phases, milestones, onToggle, onDelete, onEdit, onMove, onView, onPhaseChange, onMilestoneChange, onScheduleToday, deletingId, schedulingId, updatingStructureId }: {
   task: Task;
   variant: 'pending' | 'done';
   phases: ProjectPhase[];
@@ -287,6 +289,7 @@ function TaskRow({ task, variant, phases, milestones, onToggle, onDelete, onEdit
   onToggle: (id: string) => void;
   onDelete?: (id: string) => void;
   onEdit?: (task: Task) => void;
+  onMove: (task: Task) => void;
   onView: (task: Task) => void;
   onPhaseChange: (task: Task, phaseId: string) => void;
   onMilestoneChange: (task: Task, milestoneId: string) => void;
@@ -484,6 +487,15 @@ function TaskRow({ task, variant, phases, milestones, onToggle, onDelete, onEdit
             )}
           </button>
         )}
+        <button
+          onClick={(e) => { e.stopPropagation(); onMove(task); }}
+          className="p-1 rounded-md text-[11px] opacity-60 hover:opacity-100"
+          style={{ color: 'var(--primary-600)' }}
+          title="Move to project"
+          aria-label={`Move ${task.title} to project`}
+        >
+          Move
+        </button>
         {onEdit && !isDone && (
           <button
             onClick={(e) => {
@@ -547,6 +559,7 @@ export function ProjectDetailPage() {
   const [showAddPhase, setShowAddPhase] = useState(false);
   const [showAddMilestone, setShowAddMilestone] = useState(false);
   const [showViewTask, setShowViewTask] = useState<Task | null>(null);
+  const [moveTask, setMoveTask] = useState<Task | null>(null);
   const [showEditTask, setShowEditTask] = useState<Task | null>(null);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskImages, setNewTaskImages] = useState<File[]>([]);
@@ -602,6 +615,7 @@ export function ProjectDetailPage() {
   const progress = totalTasks > 0 ? Math.round((completed.length / totalTasks) * 100) : 0;
   const phases = project?.phases ?? [];
   const milestones = project?.milestones ?? [];
+  const milestoneGroups = groupMilestonesByPhase(phases, milestones, projectTasks);
   const updatingStructureId = updateTask.isPending ? (updateTask.variables?.id ?? null) : null;
   const urgencyOptions = useMemo(() => {
     const options = new Set<string>();
@@ -1228,7 +1242,7 @@ export function ProjectDetailPage() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {phases.map((phase) => {
               const counts = taskCountsByPhase.get(phase.id) ?? { total: 0, done: 0 };
-              const phaseMilestones = milestones.filter((m) => m.phaseId === phase.id);
+              const phaseMilestones = milestoneGroups.byPhase.get(phase.id) ?? [];
               return (
                 <div key={phase.id} className="rounded-lg border p-3 space-y-2" style={{ borderColor: 'var(--color-border)' }}>
                   <div className="flex items-start justify-between gap-2">
@@ -1271,11 +1285,11 @@ export function ProjectDetailPage() {
                 </div>
               );
             })}
-            {milestones.filter((m) => !m.phaseId).length > 0 && (
+            {milestoneGroups.unassigned.length > 0 && (
               <div className="rounded-lg border p-3 space-y-2" style={{ borderColor: 'var(--color-border)' }}>
                 <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text)' }}>Unassigned Milestones</h3>
                 <div className="flex flex-wrap gap-1">
-                  {milestones.filter((m) => !m.phaseId).map((milestone) => (
+                  {milestoneGroups.unassigned.map((milestone) => (
                     <span
                       key={milestone.id}
                       className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
@@ -1439,6 +1453,7 @@ export function ProjectDetailPage() {
                     phases={phases}
                     milestones={milestones}
                     onToggle={(tid) => updateStatus.mutate({ id: tid, status: 'Done' })}
+                    onMove={setMoveTask}
                     onView={setShowViewTask}
                     onPhaseChange={handlePhaseChange}
                     onMilestoneChange={handleMilestoneChange}
@@ -1486,6 +1501,7 @@ export function ProjectDetailPage() {
                       phases={phases}
                       milestones={milestones}
                       onToggle={(tid) => updateStatus.mutate({ id: tid, status: 'Pending' })}
+                      onMove={setMoveTask}
                       onView={setShowViewTask}
                       onPhaseChange={handlePhaseChange}
                       onMilestoneChange={handleMilestoneChange}
@@ -1894,6 +1910,7 @@ export function ProjectDetailPage() {
       )}
 
       {showViewTask && <TaskViewModal task={showViewTask} onClose={() => setShowViewTask(null)} />}
+      {moveTask && <LinkToProjectModal task={moveTask} onClose={() => setMoveTask(null)} />}
       {showEditTask && <EditTaskModal task={showEditTask} onClose={() => setShowEditTask(null)} />}
     </motion.div>
   );

@@ -52,7 +52,7 @@ export const taskService = {
   },
 
   async linkTaskToProject(taskId: string, projectId: string): Promise<ApiResponse<{ taskId: string; projectId: string; linked: boolean }>> {
-    const { data } = await apiClient.patch(`/tasks/${taskId}/link`, { project_id: projectId });
+    const { data } = await apiClient.patch(`/tasks/${taskId}/link`, { project_id: projectId || null });
     return data;
   },
 
