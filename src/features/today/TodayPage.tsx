@@ -149,9 +149,25 @@ export function TodayPage() {
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Today</h1>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-h1" style={{ color: 'var(--color-text)' }}>Today</h1>
+            {!isLoading && !isError && (
+              <div
+                className="inline-flex items-center gap-2 rounded-xl border px-3 py-2"
+                style={{ backgroundColor: 'var(--primary-50)', borderColor: 'var(--primary-200)', color: 'var(--primary-700)' }}
+                role="status"
+                aria-live="polite"
+                aria-atomic="true"
+              >
+                <span className="text-2xl font-bold leading-none tabular-nums">{visibleTasks.length}</span>
+                <span className="text-sm font-semibold leading-tight">
+                  {visibleTasks.length === 1 ? 'task' : 'tasks'} scheduled today
+                </span>
+              </div>
+            )}
+          </div>
           <p className="text-body mt-1" style={{ color: 'var(--color-text-secondary)' }}>
             Scheduled tasks for {currentDate}
             {dataUpdatedAt > 0 && (
@@ -214,11 +230,11 @@ export function TodayPage() {
               </button>
             )}
           </div>
-          <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }}>
-            {searchQuery.trim()
-              ? `${searchedTasks.length} of ${visibleTasks.length} shown`
-              : `${visibleTasks.length} task${visibleTasks.length === 1 ? '' : 's'}`}
-          </span>
+          {searchQuery.trim() && (
+            <span className="text-caption" style={{ color: 'var(--color-text-secondary)' }} role="status">
+              {searchedTasks.length} of {visibleTasks.length} shown
+            </span>
+          )}
         </div>
       )}
 
